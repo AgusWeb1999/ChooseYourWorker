@@ -9,10 +9,10 @@ function RootLayoutNav() {
   useEffect(() => {
     if (loading) return;
 
-    const inAuthGroup = segments[0] === 'auth';
+    const inAuthGroup = (segments[0] as string) === 'auth';
 
     if (!session && !inAuthGroup) {
-      router.replace('/auth/login');
+      router.replace('auth/login' as any);
     } else if (session && inAuthGroup) {
       router.replace('/(tabs)');
     }
@@ -27,6 +27,7 @@ function RootLayoutNav() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="auth/login" />
       <Stack.Screen name="auth/register" />
+      <Stack.Screen name="auth/complete-profile" />
     </Stack>
   );
 }

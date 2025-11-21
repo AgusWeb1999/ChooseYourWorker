@@ -155,32 +155,33 @@ export default function HomeScreen() {
       </View>
 
       {/* Profession filters */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filtersContainer}
-        contentContainerStyle={styles.filtersContent}
-      >
-        {PROFESSIONS.map((prof) => (
-          <TouchableOpacity
-            key={prof}
-            style={[
-              styles.filterChip,
-              selectedProfession === prof && styles.filterChipActive,
-            ]}
-            onPress={() => setSelectedProfession(prof)}
-          >
-            <Text
+      <View style={styles.filtersWrapper}>
+        <FlatList
+          horizontal
+          data={PROFESSIONS}
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item}
+          contentContainerStyle={styles.filtersContent}
+          renderItem={({ item }) => (
+            <TouchableOpacity
               style={[
-                styles.filterChipText,
-                selectedProfession === prof && styles.filterChipTextActive,
+                styles.filterChip,
+                selectedProfession === item && styles.filterChipActive,
               ]}
+              onPress={() => setSelectedProfession(item)}
             >
-              {prof}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+              <Text
+                style={[
+                  styles.filterChipText,
+                  selectedProfession === item && styles.filterChipTextActive,
+                ]}
+              >
+                {item}
+              </Text>
+            </TouchableOpacity>
+          )}
+        />
+      </View>
 
       {/* Results count */}
       <Text style={styles.resultsCount}>
@@ -245,22 +246,24 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  filtersContainer: {
+  filtersWrapper: {
+    height: 56,
     marginTop: 16,
-    maxHeight: 50,
   },
   filtersContent: {
     paddingHorizontal: 16,
-    gap: 8,
+    alignItems: 'center',
   },
   filterChip: {
     backgroundColor: '#FFF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 20,
+    height: 40,
     borderRadius: 20,
-    marginRight: 8,
+    marginRight: 10,
     borderWidth: 1,
     borderColor: '#E0E0E0',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   filterChipActive: {
     backgroundColor: '#4A90A4',

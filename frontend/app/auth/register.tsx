@@ -44,11 +44,20 @@ export default function RegisterScreen() {
         }
       }
 
-      Alert.alert(
-        'Success', 
-        'Account created! Please check your email to verify.',
-        [{ text: 'OK', onPress: () => router.replace('/auth/login') }]
-      );
+      // Redirigir según el tipo de usuario
+      if (userType === 'worker') {
+        Alert.alert(
+          'Éxito',
+          '¡Cuenta creada! Ahora completá tu perfil profesional.',
+          [{ text: 'OK', onPress: () => router.replace('auth/complete-profile' as any) }]
+        );
+      } else {
+        Alert.alert(
+          'Éxito', 
+          '¡Cuenta creada! Por favor verificá tu correo electrónico.',
+          [{ text: 'OK', onPress: () => router.replace('auth/login' as any) }]
+        );
+      }
     }
     setLoading(false);
   }
@@ -130,10 +139,11 @@ export default function RegisterScreen() {
       </TouchableOpacity>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Already have an account? </Text>
+        <Text style={styles.footerText}>¿Ya tenés cuenta? </Text>
+        {/* @ts-ignore */}
         <Link href="/auth/login" asChild>
           <TouchableOpacity>
-            <Text style={styles.link}>Sign In</Text>
+            <Text style={styles.link}>Iniciá Sesión</Text>
           </TouchableOpacity>
         </Link>
       </View>

@@ -10,28 +10,63 @@ export default function LoginScreen() {
 
   async function handleLogin() {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert('Error', 'Por favor completá todos los campos');
       return;
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
       Alert.alert('Error', error.message);
-    } else {
-      router.replace('/(tabs)');
+      setLoading(false);
+    } else if (data.user) {
+      // Obtener información del perfil del usuario
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('is_professional')
+        .eq('auth_uid', data.user.id)
+        .single();
+
+      if (!userError && userData) {
+        if (userData.is_professional) {
+          // Verificar si el trabajador completó su perfil
+          const { data: professionalData, error: profError } = await supabase
+            .from('professionals')
+            .select('id')
+            .eq('user_id', data.user.id)
+            .single();
+
+          if (profError || !professionalData) {
+            // Si es trabajador pero no completó el perfil, redirigir a complete-profile
+            Alert.alert(
+              'Perfil Incompleto',
+              'Por favor completá tu perfil profesional para continuar.',
+              [{ text: 'OK', onPress: () => router.replace('auth/complete-profile' as any) }]
+            );
+          } else {
+            // Perfil completo, ir a la app
+            router.replace('/(tabs)');
+          }
+        } else {
+          // Es cliente, ir directo a la app
+          router.replace('/(tabs)');
+        }
+      } else {
+        // Si no hay datos de usuario, ir a la app de todas formas
+        router.replace('/(tabs)');
+      }
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Choose Your Worker</Text>
-      <Text style={styles.subtitle}>Sign in to your account</Text>
+      <Text style={styles.subtitle}>Iniciá sesión en tu cuenta</Text>
 
       <TextInput
         style={styles.input}
@@ -45,7 +80,7 @@ export default function LoginScreen() {
 
       <TextInput
         style={styles.input}
-        placeholder="Password"
+        placeholder="Contraseña"
         placeholderTextColor="#999"
         value={password}
         onChangeText={setPassword}
@@ -58,15 +93,16 @@ export default function LoginScreen() {
         disabled={loading}
       >
         <Text style={styles.buttonText}>
-          {loading ? 'Signing in...' : 'Sign In'}
+          {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
         </Text>
       </TouchableOpacity>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Don't have an account? </Text>
+        <Text style={styles.footerText}>¿No tenés cuenta? </Text>
+        {/* @ts-ignore */}
         <Link href="/auth/register" asChild>
           <TouchableOpacity>
-            <Text style={styles.link}>Sign Up</Text>
+            <Text style={styles.link}>Registrate</Text>
           </TouchableOpacity>
         </Link>
       </View>
