@@ -1,91 +1,131 @@
 -- ================================================
--- BORRAR TODOS LOS CLIENTES Y REINICIAR
+-- RESET COMPLETO: Eliminar todo y empezar de cero
 -- ================================================
--- ⚠️ ADVERTENCIA: Este script eliminará todos los usuarios,
--- conversaciones, mensajes y reseñas. Solo usar en desarrollo.
+-- ⚠️ ADVERTENCIA: Esto eliminará TODO excepto profesionales
+-- Reviews, conversaciones, mensajes, y clientes serán eliminados
 
--- PASO 1: Eliminar todos los mensajes
-DELETE FROM messages;
-
--- PASO 2: Eliminar todas las conversaciones
-DELETE FROM conversations;
-
--- PASO 3: Eliminar todas las reseñas
-DELETE FROM reviews WHERE TRUE;
-
--- PASO 4: Eliminar todas las reseñas de clientes (si existe la tabla)
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'client_reviews') THEN
-    DELETE FROM client_reviews;
-  END IF;
-END $$;
-
--- PASO 5: Desasignar user_id de profesionales (no eliminarlos)
-UPDATE professionals SET user_id = NULL;
-
--- PASO 6: Eliminar todos los usuarios de public.users
-DELETE FROM public.users;
-
--- PASO 7: Eliminar todos los usuarios de auth.users
--- Esto eliminará permanentemente las cuentas de autenticación
-DELETE FROM auth.users;
-
--- PASO 8: Resetear secuencias (si las hay)
--- Si usas secuencias para IDs, esto las reinicia
-DO $$
-DECLARE
-  r RECORD;
-BEGIN
-  FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN ('users', 'messages', 'conversations', 'reviews')) LOOP
-    EXECUTE 'ALTER TABLE ' || quote_ident(r.tablename) || ' ALTER COLUMN id RESTART WITH 1' 
-    WHERE EXISTS (
-      SELECT 1 FROM information_schema.columns 
-      WHERE table_name = r.tablename 
-      AND column_name = 'id' 
-      AND column_default LIKE 'nextval%'
-    );
-  END LOOP;
-EXCEPTION
-  WHEN OTHERS THEN NULL;
-END $$;
-
--- VERIFICACIÓN FINAL
+-- Ver qué se va a eliminar
 SELECT 
-  'auth.users' as tabla,
-  COUNT(*) as registros,
-  CASE WHEN COUNT(*) = 0 THEN '✓ Limpio' ELSE '✗ Tiene datos' END as estado
-FROM auth.users
+    '=== ANTES DEL RESET ===' as info;
+
+SELECT 
+    'Usuarios totales' as tipo,
+    COUNT(*) as cantidad
+FROM users
 UNION ALL
 SELECT 
-  'public.users',
-  COUNT(*),
-  CASE WHEN COUNT(*) = 0 THEN '✓ Limpio' ELSE '✗ Tiene datos' END
-FROM public.users
+    'Profesionales',
+    COUNT(*)
+FROM professionals
 UNION ALL
 SELECT 
-  'conversations',
-  COUNT(*),
-  CASE WHEN COUNT(*) = 0 THEN '✓ Limpio' ELSE '✗ Tiene datos' END
-FROM conversations
-UNION ALL
-SELECT 
-  'messages',
-  COUNT(*),
-  CASE WHEN COUNT(*) = 0 THEN '✓ Limpio' ELSE '✗ Tiene datos' END
-FROM messages
-UNION ALL
-SELECT 
-  'reviews',
-  COUNT(*),
-  CASE WHEN COUNT(*) = 0 THEN '✓ Limpio' ELSE '✗ Tiene datos' END
+    'Reviews',
+    COUNT(*)
 FROM reviews
 UNION ALL
 SELECT 
-  'profesionales sin user_id',
-  COUNT(*),
-  CASE WHEN COUNT(*) = (SELECT COUNT(*) FROM professionals) THEN '✓ Todos desasignados' ELSE '⚠️ Algunos tienen user_id' END
-FROM professionals
-WHERE user_id IS NULL;
+    'Conversaciones',
+    COUNT(*)
+FROM conversations
+UNION ALL
+SELECT 
+    'Mensajes',
+    COUNT(*)
+FROM messages;
 
-SELECT '✅ LIMPIEZA COMPLETA - TODOS LOS CLIENTES ELIMINADOS' as resultado;
+-- PASO 1: Eliminar mensajes
+DELETE FROM messages;
+
+-- PASO 2: Eliminar conversaciones
+DELETE FROM conversations;
+
+-- PASO 3: Eliminar reviews
+DELETE FROM reviews;
+
+-- PASO 4: Eliminar clientes (usuarios que NO son profesionales)
+DELETE FROM users 
+WHERE NOT is_professional 
+AND id NOT IN (SELECT user_id FROM professionals WHERE user_id IS NOT NULL);
+
+-- PASO 5: Resetear ratings de profesionales
+UPDATE professionals
+SET 
+    rating = 0,
+    rating_count = 0;
+
+-- PASO 6: Sincronizar todos los usuarios de auth.users
+-- Esto incluye a los profesionales y cualquier usuario nuevo
+-- Esto eliminará permanentemente las cuentas de autenticación
+DELETE FROM auth.users;
+
+INSERT INTO public.users (id, email, full_name, is_professional, created_at, updated_at)
+SELECT 
+    au.id,
+    au.email,
+    COALESCE(au.raw_user_meta_data->>'full_name', split_part(au.email, '@', 1)),
+    CASE 
+        WHEN EXISTS(SELECT 1 FROM professionals WHERE user_id = au.id) THEN true
+        ELSE false
+    END,
+    au.created_at,
+    NOW()
+FROM auth.users au
+WHERE NOT EXISTS (
+    SELECT 1 FROM public.users WHERE id = au.id
+);
+
+-- Verificación final
+SELECT 
+  '=== DESPUÉS DEL RESET ===' as info;
+
+SELECT 
+  'Usuarios' as tabla,
+  COUNT(*) as cantidad
+FROM public.users
+UNION ALL
+SELECT 
+  'Profesionales',
+  COUNT(*)
+FROM professionals
+UNION ALL
+SELECT 
+  'Reviews',
+  COUNT(*)
+FROM reviews
+UNION ALL
+SELECT 
+  'Conversaciones',
+  COUNT(*)
+FROM conversations
+UNION ALL
+SELECT 
+  'Mensajes',
+  COUNT(*)
+FROM messages;
+
+-- Resumen
+DO $$
+DECLARE
+    users_count INTEGER;
+    professionals_count INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO users_count FROM users;
+    SELECT COUNT(*) INTO professionals_count FROM professionals;
+    
+    RAISE NOTICE '';
+    RAISE NOTICE '========================================';
+    RAISE NOTICE '✅ RESET COMPLETO EXITOSO';
+    RAISE NOTICE '========================================';
+    RAISE NOTICE '';
+    RAISE NOTICE '📊 Estado actual:';
+    RAISE NOTICE '  Usuarios: %', users_count;
+    RAISE NOTICE '  Profesionales: % (mantenidos)', professionals_count;
+    RAISE NOTICE '  Reviews: 0';
+    RAISE NOTICE '  Conversaciones: 0';
+    RAISE NOTICE '  Mensajes: 0';
+    RAISE NOTICE '';
+    RAISE NOTICE '✅ Sistema limpio y listo';
+    RAISE NOTICE '✅ Puedes registrarte y dejar reseñas';
+    RAISE NOTICE '';
+    RAISE NOTICE '========================================';
+END $$;
