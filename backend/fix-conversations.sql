@@ -4,6 +4,8 @@
 
 -- PASO 1: Sincronizar usuarios faltantes primero
 -- (por si hay usuarios en auth que no están en public)
+
+-- Sincronizar solo usuarios que NO existen (ni por ID ni por email)
 INSERT INTO public.users (id, email, full_name, is_professional, created_at, updated_at)
 SELECT 
     au.id,
@@ -15,13 +17,8 @@ SELECT
 FROM auth.users au
 WHERE NOT EXISTS (
     SELECT 1 FROM public.users pu 
-    WHERE pu.id = au.id
-)
-ON CONFLICT (id) DO UPDATE
-SET
-    email = EXCLUDED.email,
-    full_name = COALESCE(EXCLUDED.full_name, public.users.full_name),
-    updated_at = NOW();
+    WHERE pu.id = au.id OR pu.email = au.email
+);
 
 -- PASO 2: Eliminar conversaciones con foreign keys inválidas
 -- (conversaciones huérfanas que no se pueden reparar)
