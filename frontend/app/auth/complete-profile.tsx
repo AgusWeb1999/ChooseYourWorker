@@ -9,22 +9,22 @@ const PROFESSIONS = [
   'Electricista',
   'Plomero',
   'Pintor',
-  'Técnico HVAC',
+  'Técnico de HVAC',
   'Jardinero',
-  'Limpieza del hogar',
-  'Manitas',
-  'Mudanzas',
+  'Limpieza del Hogar',
+  'Mantenimiento General',
+  'Servicios de Mudanza',
   'Cerrajero',
-  'Albanil',
+  'Albañil',
   'Gasista',
   'Techista',
   'Decorador',
-  'Fumigador',
+  'Control de Plagas',
   'Otro',
 ];
 
 export default function CompleteProfileScreen() {
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, refreshProfiles } = useAuth();
   const [displayName, setDisplayName] = useState('');
   const [profession, setProfession] = useState('');
   const [customProfession, setCustomProfession] = useState('');
@@ -47,27 +47,27 @@ export default function CompleteProfileScreen() {
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit() {
-    // Determinar la profesión final
+    // Determine final profession
     const finalProfession = profession === 'Otro' ? customProfession : profession;
 
     if (!displayName || !finalProfession || !zipCode || !city || !state) {
-      Alert.alert('Error', 'Por favor complete todos los campos obligatorios');
+      Alert.alert('Error', 'Please complete all required fields');
       return;
     }
 
     if (profession === 'Otro' && !customProfession.trim()) {
-      Alert.alert('Error', 'Por favor ingrese su profesión');
+      Alert.alert('Error', 'Please enter your profession');
       return;
     }
 
     if (!identificationType || !identificationNumber) {
-      Alert.alert('Error', 'Por favor ingrese su tipo y número de identificación');
+      Alert.alert('Error', 'Please enter your identification type and number');
       return;
     }
 
-    // Validar campos de fecha
+    // Validate date fields
     if (!birthDay || !birthMonth || !birthYear) {
-      Alert.alert('Error', 'Por favor ingrese su fecha de nacimiento completa');
+      Alert.alert('Error', 'Please enter your complete date of birth');
       return;
     }
 
@@ -75,49 +75,77 @@ export default function CompleteProfileScreen() {
     const month = parseInt(birthMonth);
     const year = parseInt(birthYear);
 
-    // Validar valores numéricos
+    // Validate numeric values
     if (isNaN(day) || isNaN(month) || isNaN(year)) {
-      Alert.alert('Error', 'La fecha de nacimiento debe contener solo números');
+      Alert.alert('Error', 'Date of birth must contain only numbers');
       return;
     }
 
-    // Validar rangos
+    // Validate ranges
     if (day < 1 || day > 31) {
-      Alert.alert('Error', 'El día debe estar entre 1 y 31');
+      Alert.alert('Error', 'Day must be between 1 and 31');
       return;
     }
     if (month < 1 || month > 12) {
-      Alert.alert('Error', 'El mes debe estar entre 1 y 12');
+      Alert.alert('Error', 'Month must be between 1 and 12');
       return;
     }
     if (year < 1940 || year > new Date().getFullYear()) {
-      Alert.alert('Error', 'El año debe estar entre 1940 y el año actual');
+      Alert.alert('Error', 'Year must be between 1940 and current year');
       return;
     }
 
-    // Crear fecha de nacimiento
+    // Create date of birth
     const dateOfBirth = new Date(year, month - 1, day);
 
-    // Validar que la fecha sea válida
+    // Validate date is valid
     if (dateOfBirth.getDate() !== day || dateOfBirth.getMonth() !== month - 1) {
-      Alert.alert('Error', 'La fecha ingresada no es válida');
+      Alert.alert('Error', 'The entered date is not valid');
       return;
     }
 
-    // Validar edad mínima (18 años)
+    // Validate minimum age (18 years)
     const today = new Date();
     const age = today.getFullYear() - dateOfBirth.getFullYear();
     const monthDiff = today.getMonth() - dateOfBirth.getMonth();
     const dayDiff = today.getDate() - dateOfBirth.getDate();
     
     if (age < 18 || (age === 18 && (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)))) {
-      Alert.alert('Error', 'Debes tener al menos 18 años para registrarte como trabajador');
+      Alert.alert('Error', 'You must be at least 18 years old to register as a worker');
       return;
     }
 
     setLoading(true);
     
     try {
+      console.log('📝 Verificando si ya existe un perfil profesional...');
+      console.log('📝 User ID:', userProfile?.id);
+      
+      // Verificar si ya existe un perfil profesional
+      const { data: existingProfile, error: checkError } = await supabase
+        .from('professionals')
+        .select('id')
+        .eq('user_id', userProfile?.id)
+        .maybeSingle();
+      
+      if (checkError) {
+        console.error('❌ Error al verificar perfil existente:', checkError);
+        Alert.alert('Error', checkError.message);
+        setLoading(false);
+        return;
+      }
+      
+      if (existingProfile) {
+        console.log('⚠️ Ya existe un perfil profesional, navegando al home...');
+        router.replace('/(tabs)');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('📝 Creando perfil de profesional...');
+      console.log('📝 Display Name:', displayName);
+      console.log('📝 Profession:', finalProfession);
+      
       const { error } = await supabase.from('professionals').insert({
         user_id: userProfile?.id,
         display_name: displayName,
@@ -135,14 +163,39 @@ export default function CompleteProfileScreen() {
       });
 
       if (error) {
+        console.error('❌ Error al crear perfil:', error);
         Alert.alert('Error', error.message);
-      } else {
-        Alert.alert('Éxito', '¡Perfil completado!', [
-          { text: 'OK', onPress: () => router.replace('/(tabs)') }
-        ]);
+        setLoading(false);
+        return;
       }
+      
+      console.log('✅ Professional profile created successfully');
+      
+      // Actualizar el campo is_professional en public.users
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ is_professional: true })
+        .eq('id', userProfile?.id);
+      
+      if (updateError) {
+        console.error('⚠️ Error al actualizar is_professional:', updateError);
+      }
+      
+      // Esperar un momento para que la BD se actualice
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Refresh profiles to update context
+      console.log('🔄 Refreshing profiles...');
+      await refreshProfiles();
+      console.log('✅ Profiles refreshed');
+      
+      // Navegar directamente sin mostrar alert (para evitar bucle)
+      console.log('🏠 Navigating to home...');
+      router.replace('/(tabs)');
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Ocurrió un error al guardar el perfil');
+      console.error('❌ Error inesperado:', error);
+      Alert.alert('Error', error.message || 'An error occurred while saving the profile');
+      setLoading(false);
     } finally {
       setLoading(false);
     }
@@ -151,13 +204,13 @@ export default function CompleteProfileScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Completá tu Perfil</Text>
-        <Text style={styles.subtitle}>Contale a los clientes sobre vos</Text>
+        <Text style={styles.title}>Complete Your Profile</Text>
+        <Text style={styles.subtitle}>Tell clients about yourself</Text>
 
-        <Text style={styles.label}>Nombre para mostrar *</Text>
+        <Text style={styles.label}>Display Name *</Text>
         <TextInput
           style={styles.input}
-          placeholder="Cómo te verán los clientes"
+          placeholder="How clients will see you"
           placeholderTextColor="#999"
           value={displayName}
           onChangeText={setDisplayName}
@@ -197,7 +250,7 @@ export default function CompleteProfileScreen() {
           />
         </View>
 
-        <Text style={styles.label}>Tipo de Identificación *</Text>
+        <Text style={styles.label}>Identification Type *</Text>
         <View style={styles.idTypeContainer}>
           {(['DNI', 'CUIL', 'PASSPORT'] as const).map((type) => (
             <TouchableOpacity
@@ -218,7 +271,7 @@ export default function CompleteProfileScreen() {
           ))}
         </View>
 
-        <Text style={styles.label}>Número de Identificación *</Text>
+        <Text style={styles.label}>Identification Number *</Text>
         <TextInput
           style={styles.input}
           placeholder={identificationType === 'DNI' ? '12345678' : identificationType === 'CUIL' ? '20-12345678-9' : 'ABC123456'}
@@ -262,20 +315,20 @@ export default function CompleteProfileScreen() {
           </>
         )}
 
-        <Text style={styles.label}>Teléfono</Text>
+        <Text style={styles.label}>Phone</Text>
         <TextInput
           style={styles.input}
-          placeholder="Tu número de contacto"
+          placeholder="Your contact number"
           placeholderTextColor="#999"
           value={phone}
           onChangeText={setPhone}
           keyboardType="phone-pad"
         />
 
-        <Text style={styles.label}>Biografía</Text>
+        <Text style={styles.label}>Bio</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
-          placeholder="Describí tu experiencia y servicios..."
+          placeholder="Describe your experience and services..."
           placeholderTextColor="#999"
           value={bio}
           onChangeText={setBio}
@@ -283,11 +336,11 @@ export default function CompleteProfileScreen() {
           numberOfLines={4}
         />
 
-        <Text style={styles.label}>Ubicación *</Text>
+        <Text style={styles.label}>Location *</Text>
         <View style={styles.row}>
           <TextInput
             style={[styles.input, styles.inputSmall]}
-            placeholder="Código Postal"
+            placeholder="Zip Code"
             placeholderTextColor="#999"
             value={zipCode}
             onChangeText={setZipCode}
@@ -295,14 +348,14 @@ export default function CompleteProfileScreen() {
           />
           <TextInput
             style={[styles.input, styles.inputMedium]}
-            placeholder="Ciudad"
+            placeholder="City"
             placeholderTextColor="#999"
             value={city}
             onChangeText={setCity}
           />
           <TextInput
             style={[styles.input, styles.inputSmall]}
-            placeholder="Provincia"
+            placeholder="State"
             placeholderTextColor="#999"
             value={state}
             onChangeText={setState}
@@ -311,7 +364,7 @@ export default function CompleteProfileScreen() {
 
         <View style={styles.row}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Tarifa por Hora ($)</Text>
+            <Text style={styles.label}>Hourly Rate ($)</Text>
             <TextInput
               style={styles.input}
               placeholder="1500"
@@ -322,7 +375,7 @@ export default function CompleteProfileScreen() {
             />
           </View>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Años de Experiencia</Text>
+            <Text style={styles.label}>Years of Experience</Text>
             <TextInput
               style={styles.input}
               placeholder="5"
@@ -340,7 +393,7 @@ export default function CompleteProfileScreen() {
           disabled={loading}
         >
           <Text style={styles.buttonText}>
-            {loading ? 'Guardando...' : 'Completar Perfil'}
+            {loading ? 'Saving...' : 'Complete Profile'}
           </Text>
         </TouchableOpacity>
       </View>

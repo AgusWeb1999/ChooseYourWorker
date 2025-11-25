@@ -1,174 +1,181 @@
-import { useEffect, useState } from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  FlatList,
-  TextInput,
-  TouchableOpacity,
-  Image,
-  ActivityIndicator,
-  ScrollView,
-} from 'react-native';
+import { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
+import { router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 
-const PROFESSIONS = [
-  'All',
-  'Carpenter',
-  'Electrician',
-  'Plumber',
-  'Painter',
-  'Landscaper',
-  'Cleaner',
-];
-
-type Professional = {
+interface Professional {
   id: string;
   display_name: string;
   profession: string;
   city: string;
   state: string;
-  rating: number;
-  rating_count: number;
   hourly_rate: number;
-  years_experience: number;
-  profile_image: string | null;
+  average_rating: number;
+  total_reviews: number;
   bio: string;
-};
+}
 
 export default function HomeScreen() {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [filteredProfessionals, setFilteredProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchCity, setSearchCity] = useState('');
-  const [selectedProfession, setSelectedProfession] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedProfession, setSelectedProfession] = useState<string | null>(null);
+
+  const professions = [
+    'Todos',
+    'Carpintero',
+    'Electricista',
+    'Plomero',
+    'Pintor',
+    'Jardinero',
+    'Limpieza del Hogar',
+    'Mantenimiento General',
+  ];
 
   useEffect(() => {
     fetchProfessionals();
-  }, [selectedProfession]);
+  }, []);
+
+  useEffect(() => {
+    filterProfessionals();
+  }, [searchQuery, selectedProfession, professionals]);
 
   async function fetchProfessionals() {
-    setLoading(true);
-    setError(null);
+    try {
+      const { data, error } = await supabase
+        .from('professionals')
+        .select('*')
+        .order('average_rating', { ascending: false });
 
-    let query = supabase.from('professionals').select('*');
-
-    if (selectedProfession !== 'All') {
-      query = query.eq('profession', selectedProfession);
+      if (!error && data) {
+        setProfessionals(data);
+      }
+    } catch (error) {
+      console.error('Error fetching professionals:', error);
+    } finally {
+      setLoading(false);
     }
-
-    const { data, error } = await query;
-
-    if (error) {
-      setError(error.message);
-    } else {
-      setProfessionals(data || []);
-    }
-    setLoading(false);
   }
 
-  const filteredProfessionals = professionals.filter((p) =>
-    searchCity ? p.city?.toLowerCase().includes(searchCity.toLowerCase()) : true
-  );
+  function filterProfessionals() {
+    let filtered = [...professionals];
 
-  const renderStars = (rating: number) => {
+    // Filtrar por búsqueda
+    if (searchQuery) {
+      filtered = filtered.filter(
+        (prof) =>
+          prof.display_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          prof.profession?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          prof.city?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Filtrar por profesión
+    if (selectedProfession && selectedProfession !== 'Todos') {
+      filtered = filtered.filter((prof) => prof.profession === selectedProfession);
+    }
+
+    setFilteredProfessionals(filtered);
+  }
+
+  function renderStars(rating: number) {
     const stars = [];
+    const roundedRating = Math.round(rating);
     for (let i = 1; i <= 5; i++) {
       stars.push(
-        <Text key={i} style={{ color: i <= rating ? '#FFD700' : '#DDD', fontSize: 14 }}>
-          ★
+        <Text key={i} style={styles.star}>
+          {i <= roundedRating ? '⭐' : '☆'}
         </Text>
       );
     }
-    return <View style={{ flexDirection: 'row' }}>{stars}</View>;
-  };
+    return stars;
+  }
 
-  const renderProfessionalCard = ({ item }: { item: Professional }) => (
-    <TouchableOpacity style={styles.card}>
-      <View style={styles.cardHeader}>
-        <Image
-          source={{
-            uri: item.profile_image || 'https://via.placeholder.com/80',
-          }}
-          style={styles.avatar}
-        />
-        <View style={styles.cardInfo}>
-          <Text style={styles.name}>{item.display_name}</Text>
-          <Text style={styles.profession}>{item.profession}</Text>
-          <Text style={styles.location}>📍 {item.city}, {item.state}</Text>
+  function renderProfessionalCard({ item }: { item: Professional }) {
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => router.push(`/professional/${item.id}`)}
+      >
+        <View style={styles.cardHeader}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {item.display_name?.charAt(0)?.toUpperCase() || '?'}
+            </Text>
+          </View>
+          <View style={styles.cardInfo}>
+            <Text style={styles.name}>{item.display_name}</Text>
+            <Text style={styles.profession}>{item.profession}</Text>
+            <Text style={styles.location}>
+              📍 {item.city}, {item.state}
+            </Text>
+          </View>
         </View>
-      </View>
 
-      <View style={styles.cardDetails}>
-        <View style={styles.detailRow}>
-          {renderStars(item.rating)}
-          <Text style={styles.ratingText}>
-            ({item.rating_count} reviews)
+        {item.bio && (
+          <Text style={styles.bio} numberOfLines={2}>
+            {item.bio}
           </Text>
-        </View>
+        )}
 
-        <View style={styles.statsRow}>
-          {item.hourly_rate > 0 && (
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>${item.hourly_rate}</Text>
-              <Text style={styles.statLabel}>/hour</Text>
+        <View style={styles.cardFooter}>
+          <View style={styles.rating}>
+            <View style={styles.starsRow}>
+              {renderStars(item.average_rating || 0)}
+            </View>
+            <Text style={styles.ratingText}>
+              {item.average_rating > 0 ? item.average_rating.toFixed(1) : 'Sin calificaciones'}
+            </Text>
+            {item.total_reviews > 0 && (
+              <Text style={styles.reviewCount}>({item.total_reviews})</Text>
+            )}
+          </View>
+          {item.hourly_rate && (
+            <View style={styles.rateContainer}>
+              <Text style={styles.rate}>${item.hourly_rate}/hr</Text>
             </View>
           )}
-          {item.years_experience > 0 && (
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{item.years_experience}</Text>
-              <Text style={styles.statLabel}>years exp.</Text>
-            </View>
-          )}
         </View>
-      </View>
-
-      {item.bio && (
-        <Text style={styles.bio} numberOfLines={2}>
-          {item.bio}
-        </Text>
-      )}
-
-      <TouchableOpacity style={styles.contactButton}>
-        <Text style={styles.contactButtonText}>Contact</Text>
       </TouchableOpacity>
-    </TouchableOpacity>
-  );
+    );
+  }
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#1e3a5f" />
+        <Text style={styles.loadingText}>Cargando profesionales...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Find Professionals</Text>
-        <Text style={styles.subtitle}>Trusted workers near you</Text>
-      </View>
-
-      {/* Search by city */}
-      <View style={styles.searchContainer}>
+        <Text style={styles.title}>Buscar Profesionales</Text>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search by city..."
+          placeholder="Buscar por nombre, profesión o ciudad..."
           placeholderTextColor="#999"
-          value={searchCity}
-          onChangeText={setSearchCity}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
         />
       </View>
 
-      {/* Profession filters */}
-      <View style={styles.filtersWrapper}>
+      <View style={styles.filterContainer}>
         <FlatList
           horizontal
-          data={PROFESSIONS}
           showsHorizontalScrollIndicator={false}
+          data={professions}
           keyExtractor={(item) => item}
-          contentContainerStyle={styles.filtersContent}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={[
                 styles.filterChip,
                 selectedProfession === item && styles.filterChipActive,
               ]}
-              onPress={() => setSelectedProfession(item)}
+              onPress={() => setSelectedProfession(item === 'Todos' ? null : item)}
             >
               <Text
                 style={[
@@ -183,26 +190,21 @@ export default function HomeScreen() {
         />
       </View>
 
-      {/* Results count */}
-      <Text style={styles.resultsCount}>
-        {filteredProfessionals.length} professional{filteredProfessionals.length !== 1 ? 's' : ''} found
-      </Text>
-
-      {/* List */}
-      {loading ? (
-        <ActivityIndicator size="large" color="#4A90A4" style={{ marginTop: 40 }} />
-      ) : error ? (
-        <Text style={styles.error}>Error: {error}</Text>
+      {filteredProfessionals.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyIcon}>🔍</Text>
+          <Text style={styles.emptyText}>No se encontraron profesionales</Text>
+          <Text style={styles.emptySubtext}>
+            Intenta con otros términos de búsqueda
+          </Text>
+        </View>
       ) : (
         <FlatList
           data={filteredProfessionals}
-          renderItem={renderProfessionalCard}
           keyExtractor={(item) => item.id}
+          renderItem={renderProfessionalCard}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <Text style={styles.empty}>No professionals found</Text>
-          }
         />
       )}
     </View>
@@ -212,90 +214,78 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
   },
   header: {
-    backgroundColor: '#4A90A4',
+    padding: 20,
     paddingTop: 60,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    backgroundColor: '#1e3a5f',
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#FFF',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#E0F0F5',
-    marginTop: 4,
-  },
-  searchContainer: {
-    paddingHorizontal: 16,
-    marginTop: -20,
+    color: '#fff',
+    marginBottom: 16,
   },
   searchInput: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 14,
     fontSize: 16,
+  },
+  filterContainer: {
+    paddingVertical: 12,
+    paddingLeft: 20,
+    backgroundColor: '#f5f5f5',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  filterChipActive: {
+    backgroundColor: '#1e3a5f',
+    borderColor: '#1e3a5f',
+  },
+  filterChipText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  filterChipTextActive: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  list: {
+    padding: 16,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#eee',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  filtersWrapper: {
-    height: 56,
-    marginTop: 16,
-  },
-  filtersContent: {
-    paddingHorizontal: 16,
-    alignItems: 'center',
-  },
-  filterChip: {
-    backgroundColor: '#FFF',
-    paddingHorizontal: 20,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  filterChipActive: {
-    backgroundColor: '#4A90A4',
-    borderColor: '#4A90A4',
-  },
-  filterChipText: {
-    color: '#666',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  filterChipTextActive: {
-    color: '#FFF',
-  },
-  resultsCount: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    color: '#666',
-    fontSize: 14,
-  },
-  list: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-  },
-  card: {
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowRadius: 4,
     elevation: 3,
   },
   cardHeader: {
@@ -303,92 +293,114 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   avatar: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#E0E0E0',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#1e3a5f',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
   },
   cardInfo: {
-    marginLeft: 12,
     flex: 1,
     justifyContent: 'center',
   },
   name: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: 'bold',
     color: '#333',
+    marginBottom: 4,
   },
   profession: {
     fontSize: 14,
-    color: '#4A90A4',
-    fontWeight: '500',
-    marginTop: 2,
+    color: '#1e3a5f',
+    fontWeight: '600',
+    marginBottom: 2,
   },
   location: {
-    fontSize: 13,
-    color: '#888',
-    marginTop: 4,
-  },
-  cardDetails: {
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-    paddingTop: 12,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ratingText: {
-    marginLeft: 8,
-    color: '#888',
-    fontSize: 13,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    marginTop: 10,
-    gap: 20,
-  },
-  stat: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  statValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  statLabel: {
-    fontSize: 13,
-    color: '#888',
-    marginLeft: 2,
+    fontSize: 12,
+    color: '#999',
   },
   bio: {
-    marginTop: 12,
-    color: '#666',
     fontSize: 14,
+    color: '#666',
     lineHeight: 20,
+    marginBottom: 12,
   },
-  contactButton: {
-    backgroundColor: '#4A90A4',
-    borderRadius: 10,
-    paddingVertical: 12,
-    marginTop: 14,
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  rating: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  contactButtonText: {
-    color: '#FFF',
+  starsRow: {
+    flexDirection: 'row',
+    marginRight: 4,
+  },
+  star: {
     fontSize: 16,
+  },
+  ratingText: {
+    fontSize: 14,
     fontWeight: '600',
+    color: '#333',
+    marginLeft: 4,
   },
-  error: {
-    color: 'red',
-    textAlign: 'center',
-    marginTop: 40,
+  reviewCount: {
+    fontSize: 12,
+    color: '#999',
+    marginLeft: 2,
   },
-  empty: {
-    textAlign: 'center',
-    color: '#888',
-    marginTop: 40,
+  rateContainer: {
+    backgroundColor: '#f0f4f8',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  rate: {
     fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1e3a5f',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#999',
+  },
+  headerImage: {
+    color: '#808080',
+    bottom: -90,
+    left: -35,
+    position: 'absolute',
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    gap: 8,
   },
 });

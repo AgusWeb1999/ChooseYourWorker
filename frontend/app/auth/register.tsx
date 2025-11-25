@@ -12,11 +12,13 @@ export default function RegisterScreen() {
 
   async function handleRegister() {
     if (!email || !password || !fullName || !userType) {
-      Alert.alert('Error', 'Please fill in all fields and select account type');
+      Alert.alert('Error', 'Por favor completa todos los campos y selecciona el tipo de cuenta');
       return;
     }
 
     setLoading(true);
+    
+    console.log('🚀 Registering user:', { email, fullName, userType });
     
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -30,46 +32,45 @@ export default function RegisterScreen() {
     });
 
     if (error) {
+      console.log('❌ Registration error:', error);
       Alert.alert('Error', error.message);
-    } else {
-      // Update user record with is_professional flag
-      if (data.user) {
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({ is_professional: userType === 'worker' })
-          .eq('auth_uid', data.user.id);
+      setLoading(false);
+      return;
+    }
 
-        if (updateError) {
-          console.log('Error updating user type:', updateError);
-        }
-      }
+    console.log('✅ User registered successfully:', data);
 
-      // Redirigir según el tipo de usuario
-      if (userType === 'worker') {
-        Alert.alert(
-          'Éxito',
-          '¡Cuenta creada! Ahora completá tu perfil profesional.',
-          [{ text: 'OK', onPress: () => router.replace('auth/complete-profile' as any) }]
-        );
-      } else {
-        Alert.alert(
-          'Éxito', 
-          '¡Cuenta creada! Por favor verificá tu correo electrónico.',
-          [{ text: 'OK', onPress: () => router.replace('auth/login' as any) }]
-        );
+    // Update user record with is_professional flag
+    if (data.user) {
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ is_professional: userType === 'worker' })
+        .eq('auth_uid', data.user.id);
+
+      if (updateError) {
+        console.log('Error updating user type:', updateError);
       }
     }
+
+    // Wait a bit for database to update
+    console.log('⏳ Waiting for database update...');
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
     setLoading(false);
+    
+    // _layout.tsx will handle automatic redirection
+    // If worker without profile -> complete-profile
+    // If client -> main app (tabs)
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Create Account</Text>
-      <Text style={styles.subtitle}>Join Choose Your Worker</Text>
+      <Text style={styles.title}>Crear Cuenta</Text>
+      <Text style={styles.subtitle}>Únete a Choose Your Worker</Text>
 
     <TextInput
     style={styles.input}
-    placeholder="Full Name"
+    placeholder="Nombre Completo"
     placeholderTextColor="#999"
     value={fullName}
     onChangeText={setFullName}
@@ -78,7 +79,7 @@ export default function RegisterScreen() {
 
     <TextInput
         style={styles.input}
-        placeholder="Email"
+        placeholder="Correo Electrónico"
         placeholderTextColor="#999"
         value={email}
         onChangeText={setEmail}
@@ -88,14 +89,14 @@ export default function RegisterScreen() {
 
     <TextInput
         style={styles.input}
-        placeholder="Password"
+        placeholder="Contraseña"
         placeholderTextColor="#999"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
     />
 
-      <Text style={styles.label}>I am a:</Text>
+      <Text style={styles.label}>Soy:</Text>
       <View style={styles.typeContainer}>
         <TouchableOpacity
           style={[
@@ -108,7 +109,7 @@ export default function RegisterScreen() {
             styles.typeButtonText,
             userType === 'client' && styles.typeButtonTextActive,
           ]}>
-            🔍 Looking for workers
+            🔍 Buscando trabajadores
           </Text>
         </TouchableOpacity>
 
@@ -123,7 +124,7 @@ export default function RegisterScreen() {
             styles.typeButtonText,
             userType === 'worker' && styles.typeButtonTextActive,
           ]}>
-            🛠️ Offering services
+            🛠️ Ofreciendo servicios
           </Text>
         </TouchableOpacity>
       </View>
@@ -134,16 +135,16 @@ export default function RegisterScreen() {
         disabled={loading}
       >
         <Text style={styles.buttonText}>
-          {loading ? 'Creating account...' : 'Sign Up'}
+          {loading ? 'Creando cuenta...' : 'Registrarse'}
         </Text>
       </TouchableOpacity>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>¿Ya tenés cuenta? </Text>
+        <Text style={styles.footerText}>¿Ya tienes una cuenta? </Text>
         {/* @ts-ignore */}
         <Link href="/auth/login" asChild>
           <TouchableOpacity>
-            <Text style={styles.link}>Iniciá Sesión</Text>
+            <Text style={styles.link}>Iniciar Sesión</Text>
           </TouchableOpacity>
         </Link>
       </View>
