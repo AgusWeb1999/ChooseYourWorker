@@ -1,55 +1,138 @@
-# ChooseYourWorker - Backend
+# 🗄️ Backend - Scripts SQL
 
-Base de datos y scripts SQL para la plataforma ChooseYourWorker.
+Scripts esenciales para configurar y mantener la base de datos de **Choose Your Worker**.
 
-## 📁 Scripts Disponibles
+---
 
-### Scripts de Configuración
-- **`database-migrations.sql`** - Script principal de migración (tablas, índices, triggers, RLS)
-- **`create-auto-sync-trigger.sql`** - Sincronización automática de usuarios nuevos
-- **`fix-professional-ratings.sql`** - Sistema de calificaciones automático
-- **`repair-chat-complete.sql`** - Reparar/reinstalar el sistema de chat
+## 📚 Scripts Principales
 
-### Scripts de Utilidad
-- **`update-professions-to-spanish.sql`** - Actualizar profesiones a español
-- **`sync-users-now.sql`** - Sincronizar usuarios manualmente
-- **`delete-user-complete.sql`** - Eliminar un usuario específico
-- **`delete-clients-only.sql`** - Eliminar solo clientes (mantiene profesionales)
-- **`reset-all-clients.sql`** - ⚠️ Eliminar TODOS los clientes (uso con precaución)
+### 🚀 **Setup Inicial** (Ejecutar en orden)
 
-## 🚀 Instalación
-
-### Primera Vez
-1. Ejecuta `database-migrations.sql` en Supabase SQL Editor
-2. Ejecuta `create-auto-sync-trigger.sql` para sincronización automática
-3. Ejecuta `fix-professional-ratings.sql` para el sistema de ratings
-4. Habilita Realtime en el Dashboard para las tablas `messages` y `conversations`
-
-### Reparar Chat
-Si el sistema de chat tiene problemas:
-```sql
--- Ejecuta: backend/repair-chat-complete.sql
+```
+1. database-migrations.sql          # Estructura de BD + índices + RLS
+2. create-auto-sync-trigger.sql     # Sincroniza auth.users → public.users
+3. fix-professional-ratings.sql     # Sistema de calificaciones automático
+4. fix-email-duplicates-complete.sql # Limpia y previene emails duplicados
+5. repair-chat-complete.sql         # Sistema de chat
+6. update-professions-to-spanish.sql # Traduce profesiones
 ```
 
-## 🗃️ Estructura de Base de Datos
+### 🔧 **Mantenimiento**
 
-### Tablas Principales
-- **`users`** - Usuarios (clientes y profesionales)
-- **`professionals`** - Perfiles de profesionales
-- **`conversations`** - Conversaciones de chat
-- **`messages`** - Mensajes del chat
-- **`reviews`** - Reseñas de profesionales
-- **`client_reviews`** - Reseñas de clientes
+| Script | Cuándo Usar |
+|--------|-------------|
+| `sync-users-now.sql` | Sincronizar usuarios existentes manualmente |
+| `delete-user-complete.sql` | Eliminar un usuario y todos sus datos |
+| `delete-clients-only.sql` | Eliminar solo clientes (no profesionales) |
+| `reset-all-clients.sql` | ⚠️ Eliminar TODOS los clientes (solo dev) |
 
-### Características
-- ✅ Row Level Security (RLS) en todas las tablas
-- ✅ Realtime en `messages` y `conversations`
-- ✅ Triggers automáticos para timestamps y ratings
-- ✅ Sincronización automática de usuarios
+---
 
-## ⚠️ Notas
+## 🎯 Guía Rápida
 
-- Scripts diseñados para PostgreSQL/Supabase
-- Hacer backup antes de ejecutar scripts de migración
-- Scripts de eliminación son solo para desarrollo
-- El sistema de ratings se actualiza automáticamente con triggers
+### **Primera Vez**
+1. Abre [Supabase Dashboard](https://supabase.com) → Tu Proyecto → **SQL Editor**
+2. Ejecuta los 6 scripts del **Setup Inicial** en orden
+3. Listo! 🎉
+
+### **Ejecutar un Script**
+1. SQL Editor → **New Query**
+2. Copia y pega el script
+3. Click **RUN** (o `Cmd+Enter`)
+4. Lee los mensajes en la consola
+
+📖 **Guía Detallada**: [`GUIA-EJECUTAR-SCRIPTS.md`](./GUIA-EJECUTAR-SCRIPTS.md)
+
+---
+
+## 📦 Detalles de Cada Script
+
+### `database-migrations.sql`
+Crea/actualiza toda la estructura de la base de datos:
+- Tablas: users, professionals, jobs, reviews, etc.
+- Índices para performance
+- Row Level Security (RLS)
+- Triggers y funciones
+
+### `create-auto-sync-trigger.sql`
+Sincronización automática de usuarios:
+- Trigger: `auth.users` → `public.users`
+- Se ejecuta en cada registro nuevo
+- Previene duplicados con `ON CONFLICT`
+
+### `fix-professional-ratings.sql`
+Sistema automático de calificaciones:
+- Trigger que actualiza rating promedio
+- Recalcula ratings existentes
+- Actualiza contador de reseñas
+
+### `fix-email-duplicates-complete.sql` ✨
+**IMPORTANTE**: Solución completa para emails duplicados
+- ✅ Diagnóstico de duplicados
+- ✅ Limpieza inteligente (mantiene el más antiguo)
+- ✅ Constraint UNIQUE en email
+- ✅ Mejora del trigger de sincronización
+- ✅ Función de validación para el frontend
+
+**Ejecución**: Lee [`GUIA-EJECUTAR-SCRIPTS.md`](./GUIA-EJECUTAR-SCRIPTS.md)
+
+### `repair-chat-complete.sql`
+Sistema de chat y mensajería:
+- Verifica/crea tablas: conversations, messages
+- Políticas de seguridad
+- Índices optimizados
+
+### `update-professions-to-spanish.sql`
+Traduce profesiones al español:
+- Carpenter → Carpintero
+- Plumber → Plomero
+- etc.
+
+### `delete-user-complete.sql`
+⚠️ **PELIGRO**: Elimina un usuario y TODOS sus datos
+```sql
+-- 1. Edita la línea 19
+v_email TEXT := 'usuario@ejemplo.com'; -- 👈 Cambia esto
+
+-- 2. Ejecuta el script
+-- 3. Verifica con las queries al final
+```
+
+---
+
+## 🆘 Problemas Comunes
+
+| Error | Solución |
+|-------|----------|
+| `relation does not exist` | Ejecuta `database-migrations.sql` primero |
+| `trigger already exists` | Normal, el script usa `DROP TRIGGER IF EXISTS` |
+| `permission denied` | Verifica que estás en el proyecto correcto |
+| `duplicate key violation` | Ejecuta `fix-email-duplicates-complete.sql` |
+
+---
+
+## 📁 Estructura del Directorio
+
+```
+backend/
+├── README.md                           ← Estás aquí
+├── GUIA-EJECUTAR-SCRIPTS.md           ← Guía detallada
+│
+├── 🚀 Setup Inicial
+├── database-migrations.sql            
+├── create-auto-sync-trigger.sql       
+├── fix-professional-ratings.sql       
+├── fix-email-duplicates-complete.sql  
+├── repair-chat-complete.sql           
+├── update-professions-to-spanish.sql  
+│
+├── 🔧 Mantenimiento
+├── sync-users-now.sql                 
+├── delete-user-complete.sql           
+├── delete-clients-only.sql            
+└── reset-all-clients.sql              
+```
+
+---
+
+**Última actualización**: 2025-11-25

@@ -20,6 +20,27 @@ export default function RegisterScreen() {
     
     console.log('🚀 Registering user:', { email, fullName, userType });
     
+    // Validar que el email no exista antes de registrar
+    console.log('🔍 Checking if email is available...');
+    const { data: emailCheck, error: emailCheckError } = await supabase
+      .rpc('check_email_available', { p_email: email });
+    
+    if (emailCheckError) {
+      console.log('❌ Error checking email:', emailCheckError);
+      Alert.alert('Error', 'No se pudo verificar el email');
+      setLoading(false);
+      return;
+    }
+    
+    if (!emailCheck) {
+      console.log('❌ Email already exists');
+      Alert.alert('Error', 'Este email ya está registrado. Por favor usa otro email o inicia sesión.');
+      setLoading(false);
+      return;
+    }
+    
+    console.log('✅ Email is available');
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -45,7 +66,7 @@ export default function RegisterScreen() {
       const { error: updateError } = await supabase
         .from('users')
         .update({ is_professional: userType === 'worker' })
-        .eq('auth_uid', data.user.id);
+        .eq('id', data.user.id);  // Usar 'id' en lugar de 'auth_uid'
 
       if (updateError) {
         console.log('Error updating user type:', updateError);
