@@ -4,12 +4,12 @@
 
 -- PASO 1: Sincronizar usuarios faltantes primero
 -- (por si hay usuarios en auth que no están en public)
-INSERT INTO public.users (id, email, display_name, role, created_at, updated_at)
+INSERT INTO public.users (id, email, full_name, is_professional, created_at, updated_at)
 SELECT 
     au.id,
     au.email,
-    COALESCE(au.raw_user_meta_data->>'full_name', split_part(au.email, '@', 1)) as display_name,
-    COALESCE(au.raw_user_meta_data->>'role', 'client') as role,
+    COALESCE(au.raw_user_meta_data->>'full_name', split_part(au.email, '@', 1)) as full_name,
+    COALESCE((au.raw_user_meta_data->>'role')::text = 'professional', false) as is_professional,
     au.created_at,
     NOW()
 FROM auth.users au
