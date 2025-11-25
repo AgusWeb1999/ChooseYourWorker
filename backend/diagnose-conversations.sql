@@ -48,30 +48,30 @@ FROM auth.users au
 LEFT JOIN public.users pu ON au.id = pu.id
 WHERE pu.id IS NULL;
 
--- 5. Verificar conversaciones existentes
+-- 5. Ver todas las conversaciones existentes (con nombres de usuarios)
 SELECT 
     c.id,
-    c.user1_id,
-    c.user2_id,
-    u1.display_name as user1_name,
-    u2.display_name as user2_name,
+    c.participant1_id,
+    c.participant2_id,
+    u1.display_name as participant1_name,
+    u2.display_name as participant2_name,
     c.created_at
 FROM conversations c
-LEFT JOIN users u1 ON c.user1_id = u1.id
-LEFT JOIN users u2 ON c.user2_id = u2.id
+LEFT JOIN users u1 ON c.participant1_id = u1.id
+LEFT JOIN users u2 ON c.participant2_id = u2.id
 ORDER BY c.created_at DESC
 LIMIT 10;
 
 -- 6. Buscar conversaciones con foreign keys inválidas
 SELECT 
     c.id,
-    c.user1_id,
-    c.user2_id,
-    CASE WHEN u1.id IS NULL THEN '❌ user1_id inválido' ELSE '✅' END as user1_status,
-    CASE WHEN u2.id IS NULL THEN '❌ user2_id inválido' ELSE '✅' END as user2_status
+    c.participant1_id,
+    c.participant2_id,
+    CASE WHEN u1.id IS NULL THEN '❌ participant1_id inválido' ELSE '✅' END as participant1_status,
+    CASE WHEN u2.id IS NULL THEN '❌ participant2_id inválido' ELSE '✅' END as participant2_status
 FROM conversations c
-LEFT JOIN users u1 ON c.user1_id = u1.id
-LEFT JOIN users u2 ON c.user2_id = u2.id
+LEFT JOIN users u1 ON c.participant1_id = u1.id
+LEFT JOIN users u2 ON c.participant2_id = u2.id
 WHERE u1.id IS NULL OR u2.id IS NULL;
 
 -- Resumen
@@ -85,8 +85,8 @@ BEGIN
     
     SELECT COUNT(*) INTO invalid_conversations 
     FROM conversations c
-    LEFT JOIN users u1 ON c.user1_id = u1.id
-    LEFT JOIN users u2 ON c.user2_id = u2.id
+    LEFT JOIN users u1 ON c.participant1_id = u1.id
+    LEFT JOIN users u2 ON c.participant2_id = u2.id
     WHERE u1.id IS NULL OR u2.id IS NULL;
     
     SELECT COUNT(*) INTO missing_users
@@ -112,7 +112,8 @@ BEGIN
     
     IF missing_users > 0 THEN
         RAISE NOTICE '⚠️  HAY USUARIOS SIN SINCRONIZAR';
-        RAISE NOTICE '   Necesitas ejecutar: sync-users-now.sql';
+        RAISE NOTICE '   Ejecuta primero: sync-users-now.sql';
+        RAISE NOTICE '   Y luego: fix-conversations.sql';
     END IF;
     
     IF invalid_conversations = 0 AND missing_users = 0 THEN

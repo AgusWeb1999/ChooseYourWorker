@@ -23,8 +23,8 @@ DELETE FROM conversations
 WHERE id IN (
     SELECT c.id
     FROM conversations c
-    LEFT JOIN users u1 ON c.user1_id = u1.id
-    LEFT JOIN users u2 ON c.user2_id = u2.id
+    LEFT JOIN users u1 ON c.participant1_id = u1.id
+    LEFT JOIN users u2 ON c.participant2_id = u2.id
     WHERE u1.id IS NULL OR u2.id IS NULL
 );
 
@@ -60,15 +60,15 @@ BEGIN
     -- Buscar conversación existente (en cualquier orden)
     SELECT id INTO conversation_id
     FROM conversations
-    WHERE (conversations.user1_id = get_or_create_conversation.user1_id 
-           AND conversations.user2_id = get_or_create_conversation.user2_id)
-       OR (conversations.user1_id = get_or_create_conversation.user2_id 
-           AND conversations.user2_id = get_or_create_conversation.user1_id)
+    WHERE (conversations.participant1_id = get_or_create_conversation.user1_id 
+           AND conversations.participant2_id = get_or_create_conversation.user2_id)
+       OR (conversations.participant1_id = get_or_create_conversation.user2_id 
+           AND conversations.participant2_id = get_or_create_conversation.user1_id)
     LIMIT 1;
     
     -- Si no existe, crear nueva conversación
     IF conversation_id IS NULL THEN
-        INSERT INTO conversations (user1_id, user2_id)
+        INSERT INTO conversations (participant1_id, participant2_id)
         VALUES (user1_id, user2_id)
         RETURNING id INTO conversation_id;
     END IF;
@@ -83,19 +83,19 @@ DO $$
 BEGIN
     -- Eliminar constraints antiguas si existen
     ALTER TABLE conversations 
-        DROP CONSTRAINT IF EXISTS conversations_user1_id_fkey,
-        DROP CONSTRAINT IF EXISTS conversations_user2_id_fkey;
+        DROP CONSTRAINT IF EXISTS conversations_participant1_id_fkey,
+        DROP CONSTRAINT IF EXISTS conversations_participant2_id_fkey;
     
     -- Crear las foreign keys correctas
     ALTER TABLE conversations
-        ADD CONSTRAINT conversations_user1_id_fkey 
-        FOREIGN KEY (user1_id) 
+        ADD CONSTRAINT conversations_participant1_id_fkey 
+        FOREIGN KEY (participant1_id) 
         REFERENCES users(id) 
         ON DELETE CASCADE;
     
     ALTER TABLE conversations
-        ADD CONSTRAINT conversations_user2_id_fkey 
-        FOREIGN KEY (user2_id) 
+        ADD CONSTRAINT conversations_participant2_id_fkey 
+        FOREIGN KEY (participant2_id) 
         REFERENCES users(id) 
         ON DELETE CASCADE;
         
@@ -149,8 +149,8 @@ SELECT
     'Conversaciones válidas',
     COUNT(*)
 FROM conversations c
-INNER JOIN users u1 ON c.user1_id = u1.id
-INNER JOIN users u2 ON c.user2_id = u2.id
+INNER JOIN users u1 ON c.participant1_id = u1.id
+INNER JOIN users u2 ON c.participant2_id = u2.id
 
 UNION ALL
 
@@ -171,8 +171,8 @@ BEGIN
     
     SELECT COUNT(*) INTO invalid_conversations
     FROM conversations c
-    LEFT JOIN users u1 ON c.user1_id = u1.id
-    LEFT JOIN users u2 ON c.user2_id = u2.id
+    LEFT JOIN users u1 ON c.participant1_id = u1.id
+    LEFT JOIN users u2 ON c.participant2_id = u2.id
     WHERE u1.id IS NULL OR u2.id IS NULL;
     
     RAISE NOTICE '';
