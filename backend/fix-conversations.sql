@@ -13,9 +13,10 @@ SELECT
     au.created_at,
     NOW()
 FROM auth.users au
-LEFT JOIN public.users pu ON au.id = pu.id
-WHERE pu.id IS NULL
-ON CONFLICT (id) DO NOTHING;
+WHERE NOT EXISTS (
+    SELECT 1 FROM public.users pu 
+    WHERE pu.id = au.id OR pu.email = au.email
+);
 
 -- PASO 2: Eliminar conversaciones con foreign keys inválidas
 -- (conversaciones huérfanas que no se pueden reparar)
