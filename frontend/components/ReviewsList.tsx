@@ -58,13 +58,13 @@ export default function ReviewsList({ professionalId }: ReviewsListProps) {
     try {
       const { data, error } = await supabase
         .from('professionals')
-        .select('average_rating, total_reviews')
+        .select('rating, rating_count')
         .eq('id', professionalId)
         .single();
 
       if (!error && data) {
-        setAverageRating(data.average_rating || 0);
-        setTotalReviews(data.total_reviews || 0);
+        setAverageRating(data.rating || 0);
+        setTotalReviews(data.rating_count || 0);
       }
     } catch (error) {
       console.error('Error fetching rating:', error);

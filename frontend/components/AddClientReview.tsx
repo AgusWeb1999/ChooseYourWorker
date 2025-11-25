@@ -1,5 +1,18 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, Modal } from 'react-native';
+import { 
+  StyleSheet, 
+  Text, 
+  View, 
+  TextInput, 
+  TouchableOpacity, 
+  Alert, 
+  Modal, 
+  KeyboardAvoidingView, 
+  ScrollView, 
+  TouchableWithoutFeedback, 
+  Keyboard,
+  Platform 
+} from 'react-native';
 import { supabase } from '../src/lib/supabase';
 
 interface AddClientReviewProps {
@@ -91,48 +104,63 @@ export default function AddClientReview({
       transparent={true}
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.title}>Calificar Cliente</Text>
-          
-          <Text style={styles.label}>Calificación *</Text>
-          {renderStars()}
-          
-          <Text style={styles.label}>Comentario (opcional)</Text>
-          <TextInput
-            style={styles.textArea}
-            value={comment}
-            onChangeText={setComment}
-            placeholder="Comparte tu experiencia trabajando con este cliente..."
-            multiline
-            numberOfLines={4}
-            maxLength={500}
-          />
-          <Text style={styles.charCount}>
-            {comment.length}/500 caracteres
-          </Text>
+      <KeyboardAvoidingView 
+        style={styles.modalOverlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <ScrollView 
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                <View style={styles.modalContent}>
+                  <Text style={styles.title}>Calificar Cliente</Text>
+                  
+                  <Text style={styles.label}>Calificación *</Text>
+                  {renderStars()}
+                  
+                  <Text style={styles.label}>Comentario (opcional)</Text>
+                  <TextInput
+                    style={styles.textArea}
+                    value={comment}
+                    onChangeText={setComment}
+                    placeholder="Comparte tu experiencia trabajando con este cliente..."
+                    multiline
+                    numberOfLines={4}
+                    maxLength={500}
+                  />
+                  <Text style={styles.charCount}>
+                    {comment.length}/500 caracteres
+                  </Text>
 
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
-              onPress={onClose}
-              disabled={loading}
-            >
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
-            </TouchableOpacity>
+                  <View style={styles.buttonRow}>
+                    <TouchableOpacity
+                      style={[styles.button, styles.cancelButton]}
+                      onPress={onClose}
+                      disabled={loading}
+                    >
+                      <Text style={styles.cancelButtonText}>Cancelar</Text>
+                    </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.button, styles.submitButton, loading && styles.buttonDisabled]}
-              onPress={handleSubmit}
-              disabled={loading}
-            >
-              <Text style={styles.submitButtonText}>
-                {loading ? 'Enviando...' : 'Enviar'}
-              </Text>
-            </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.button, styles.submitButton, loading && styles.buttonDisabled]}
+                      onPress={handleSubmit}
+                      disabled={loading}
+                    >
+                      <Text style={styles.submitButtonText}>
+                        {loading ? 'Enviando...' : 'Enviar'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </ScrollView>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
-      </View>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -143,6 +171,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
   },
   modalContent: {
     backgroundColor: '#fff',

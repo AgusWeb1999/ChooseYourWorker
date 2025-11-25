@@ -56,15 +56,20 @@ export default function ClientReviewsList({ clientId }: ClientReviewsListProps) 
 
   async function fetchClientRating() {
     try {
+      // Calcular el rating promedio directamente de las reseñas
       const { data, error } = await supabase
-        .from('users')
-        .select('average_rating, total_reviews')
-        .eq('id', clientId)
-        .single();
+        .from('client_reviews')
+        .select('rating')
+        .eq('client_id', clientId);
 
       if (!error && data) {
-        setAverageRating(data.average_rating || 0);
-        setTotalReviews(data.total_reviews || 0);
+        const totalCount = data.length;
+        const avgRating = totalCount > 0 
+          ? data.reduce((sum, review) => sum + review.rating, 0) / totalCount 
+          : 0;
+        
+        setAverageRating(avgRating);
+        setTotalReviews(totalCount);
       }
     } catch (error) {
       console.error('Error fetching client rating:', error);

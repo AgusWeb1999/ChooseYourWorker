@@ -21,7 +21,8 @@ interface Professional {
   hourly_rate: number;
   years_experience: number;
   phone: string;
-  average_rating: number;
+  rating: number;  // ← Cambiado de average_rating
+  rating_count: number;  // ← Cambiado de total_reviews
   total_reviews: number;
 }
 
@@ -180,13 +181,13 @@ export default function ProfessionalProfileScreen() {
           <Text style={styles.name}>{professional.display_name}</Text>
           <Text style={styles.profession}>{professional.profession}</Text>
           
-          {professional.average_rating > 0 && (
+          {professional.rating > 0 && (
             <View style={styles.ratingBadge}>
               <Text style={styles.ratingText}>
-                ⭐ {professional.average_rating.toFixed(1)}
+                ⭐ {professional.rating.toFixed(1)}
               </Text>
               <Text style={styles.reviewCountText}>
-                ({professional.total_reviews} {professional.total_reviews === 1 ? 'reseña' : 'reseñas'})
+                ({professional.rating_count} {professional.rating_count === 1 ? 'reseña' : 'reseñas'})
               </Text>
             </View>
           )}

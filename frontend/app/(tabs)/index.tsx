@@ -10,8 +10,8 @@ interface Professional {
   city: string;
   state: string;
   hourly_rate: number;
-  average_rating: number;
-  total_reviews: number;
+  rating: number;
+  rating_count: number;
   bio: string;
 }
 
@@ -46,7 +46,7 @@ export default function HomeScreen() {
       const { data, error } = await supabase
         .from('professionals')
         .select('*')
-        .order('average_rating', { ascending: false });
+        .order('rating', { ascending: false });
 
       if (!error && data) {
         setProfessionals(data);
@@ -122,13 +122,13 @@ export default function HomeScreen() {
         <View style={styles.cardFooter}>
           <View style={styles.rating}>
             <View style={styles.starsRow}>
-              {renderStars(item.average_rating || 0)}
+              {renderStars(item.rating || 0)}
             </View>
             <Text style={styles.ratingText}>
-              {item.average_rating > 0 ? item.average_rating.toFixed(1) : 'Sin calificaciones'}
+              {(item.rating && item.rating > 0) ? item.rating.toFixed(1) : 'Sin calificaciones'}
             </Text>
-            {item.total_reviews > 0 && (
-              <Text style={styles.reviewCount}>({item.total_reviews})</Text>
+            {item.rating_count > 0 && (
+              <Text style={styles.reviewCount}>({item.rating_count})</Text>
             )}
           </View>
           {item.hourly_rate && (

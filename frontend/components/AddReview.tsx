@@ -1,5 +1,18 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, Modal } from 'react-native';
+import { 
+  StyleSheet, 
+  Text, 
+  View, 
+  TextInput, 
+  TouchableOpacity, 
+  Alert, 
+  Modal, 
+  KeyboardAvoidingView, 
+  ScrollView, 
+  TouchableWithoutFeedback, 
+  Keyboard,
+  Platform 
+} from 'react-native';
 import { supabase } from '../src/lib/supabase';
 
 interface AddReviewProps {
@@ -98,7 +111,11 @@ export default function AddReview({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={styles.container}>
+      <KeyboardAvoidingView 
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
         <View style={styles.header}>
           <Text style={styles.title}>Calificar Profesional</Text>
           <TouchableOpacity onPress={onClose}>
@@ -106,51 +123,60 @@ export default function AddReview({
           </TouchableOpacity>
         </View>
 
-        <View style={styles.content}>
-          <Text style={styles.label}>¿Cómo fue tu experiencia?</Text>
-          {renderStarSelector()}
-          
-          {rating > 0 && (
-            <Text style={styles.ratingText}>
-              {rating === 1 && '😞 Muy malo'}
-              {rating === 2 && '😕 Malo'}
-              {rating === 3 && '😐 Regular'}
-              {rating === 4 && '😊 Bueno'}
-              {rating === 5 && '🤩 Excelente'}
-            </Text>
-          )}
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.content}>
+              <Text style={styles.label}>¿Cómo fue tu experiencia?</Text>
+              {renderStarSelector()}
+              
+              {rating > 0 && (
+                <Text style={styles.ratingText}>
+                  {rating === 1 && '😞 Muy malo'}
+                  {rating === 2 && '😕 Malo'}
+                  {rating === 3 && '😐 Regular'}
+                  {rating === 4 && '😊 Bueno'}
+                  {rating === 5 && '🤩 Excelente'}
+                </Text>
+              )}
 
-          <Text style={styles.label}>Comentario (opcional)</Text>
-          <TextInput
-            style={styles.textArea}
-            placeholder="Cuéntanos sobre tu experiencia con este profesional..."
-            placeholderTextColor="#999"
-            value={comment}
-            onChangeText={setComment}
-            multiline
-            numberOfLines={6}
-            maxLength={500}
-          />
-          <Text style={styles.charCount}>{comment.length}/500</Text>
+              <Text style={styles.label}>Comentario (opcional)</Text>
+              <TextInput
+                style={styles.textArea}
+                placeholder="Cuéntanos sobre tu experiencia con este profesional..."
+                placeholderTextColor="#999"
+                value={comment}
+                onChangeText={setComment}
+                multiline
+                numberOfLines={6}
+                maxLength={500}
+              />
+              <Text style={styles.charCount}>{comment.length}/500</Text>
 
-          <TouchableOpacity
-            style={[styles.submitButton, (loading || rating === 0) && styles.buttonDisabled]}
-            onPress={handleSubmit}
-            disabled={loading || rating === 0}
-          >
-            <Text style={styles.submitButtonText}>
-              {loading ? 'Publicando...' : 'Publicar Reseña'}
-            </Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.submitButton, (loading || rating === 0) && styles.buttonDisabled]}
+                onPress={handleSubmit}
+                disabled={loading || rating === 0}
+              >
+                <Text style={styles.submitButtonText}>
+                  {loading ? 'Publicando...' : 'Publicar Reseña'}
+                </Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={onClose}
-          >
-            <Text style={styles.cancelButtonText}>Cancelar</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={onClose}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -179,8 +205,15 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '300',
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
   content: {
     padding: 20,
+    paddingBottom: 40,
   },
   label: {
     fontSize: 16,

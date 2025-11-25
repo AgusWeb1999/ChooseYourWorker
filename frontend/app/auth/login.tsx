@@ -24,41 +24,10 @@ export default function LoginScreen() {
       Alert.alert('Error', error.message);
       setLoading(false);
     } else if (data.user) {
-      // Obtener información del perfil del usuario
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('is_professional')
-        .eq('auth_uid', data.user.id)
-        .single();
-
-      if (!userError && userData) {
-        if (userData.is_professional) {
-          // Verificar si el trabajador completó su perfil
-          const { data: professionalData, error: profError } = await supabase
-            .from('professionals')
-            .select('id')
-            .eq('user_id', data.user.id)
-            .single();
-
-          if (profError || !professionalData) {
-            // Si es trabajador pero no completó el perfil, redirigir a complete-profile
-            Alert.alert(
-              'Perfil Incompleto',
-              'Por favor completá tu perfil profesional para continuar.',
-              [{ text: 'OK', onPress: () => router.replace('auth/complete-profile' as any) }]
-            );
-          } else {
-            // Perfil completo, ir a la app
-            router.replace('/(tabs)');
-          }
-        } else {
-          // Es cliente, ir directo a la app
-          router.replace('/(tabs)');
-        }
-      } else {
-        // Si no hay datos de usuario, ir a la app de todas formas
-        router.replace('/(tabs)');
-      }
+      // El AuthContext ya maneja la navegación automáticamente
+      // Solo necesitamos redirigir a tabs, el _layout.tsx se encargará del resto
+      console.log('✅ Login successful, redirecting to tabs...');
+      router.replace('/(tabs)');
       setLoading(false);
     }
   }

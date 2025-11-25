@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/contexts/AuthContext';
@@ -24,7 +24,7 @@ const PROFESSIONS = [
 ];
 
 export default function CompleteProfileScreen() {
-  const { user, userProfile, refreshProfiles } = useAuth();
+  const { user, userProfile, professionalProfile, needsProfileCompletion, refreshProfiles } = useAuth();
   const [displayName, setDisplayName] = useState('');
   const [profession, setProfession] = useState('');
   const [customProfession, setCustomProfession] = useState('');
@@ -45,6 +45,24 @@ export default function CompleteProfileScreen() {
   const [identificationType, setIdentificationType] = useState<'DNI' | 'CUIL' | 'PASSPORT' | null>(null);
   
   const [loading, setLoading] = useState(false);
+
+  // Verificar si el usuario ya tiene perfil completo
+  useEffect(() => {
+    if (!needsProfileCompletion && professionalProfile) {
+      console.log('⚡ Profile already complete in complete-profile screen, redirecting immediately...');
+      router.replace('/(tabs)');
+    }
+  }, [needsProfileCompletion, professionalProfile]);
+
+  // Si ya tiene perfil completo, mostrar loading mientras redirige
+  if (!needsProfileCompletion && professionalProfile) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#1e3a5f" />
+        <Text style={styles.loadingText}>Redirecting...</Text>
+      </View>
+    );
+  }
 
   async function handleSubmit() {
     // Determine final profession
@@ -405,6 +423,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
   },
   content: {
     padding: 20,

@@ -93,19 +93,19 @@ export default function ProfileScreen() {
             </TouchableOpacity>
             
             {/* Mostrar Rating del Profesional */}
-            {professionalProfile.average_rating > 0 && (
+            {professionalProfile.rating > 0 && (
               <View style={styles.ratingCard}>
                 <Text style={styles.ratingTitle}>Tu Calificación como Trabajador</Text>
                 <View style={styles.ratingRow}>
-                  <Text style={styles.ratingNumber}>⭐ {professionalProfile.average_rating.toFixed(1)}</Text>
+                  <Text style={styles.ratingNumber}>⭐ {professionalProfile.rating.toFixed(1)}</Text>
                   <Text style={styles.ratingCount}>
-                    ({professionalProfile.total_reviews} {professionalProfile.total_reviews === 1 ? 'reseña' : 'reseñas'})
+                    ({professionalProfile.rating_count} {professionalProfile.rating_count === 1 ? 'reseña' : 'reseñas'})
                   </Text>
                 </View>
               </View>
             )}
             
-            {/* Mostrar Rating como Cliente */}
+            {/* Mostrar Rating como Cliente - Temporalmente deshabilitado
             {userProfile.average_rating > 0 && (
               <View style={styles.ratingCard}>
                 <Text style={styles.ratingTitle}>Tu Calificación como Cliente</Text>
@@ -117,6 +117,7 @@ export default function ProfileScreen() {
                 </View>
               </View>
             )}
+            */}
           </>
         ) : (
           <>
@@ -127,7 +128,7 @@ export default function ProfileScreen() {
               <Text style={styles.menuText}>✏️ Editar Mi Perfil</Text>
             </TouchableOpacity>
             
-            {/* Mostrar Rating del Cliente */}
+            {/* Mostrar Rating del Cliente - Temporalmente deshabilitado
             {userProfile && userProfile.average_rating > 0 && (
               <View style={styles.ratingCard}>
                 <Text style={styles.ratingTitle}>Tu Calificación como Cliente</Text>
@@ -139,6 +140,7 @@ export default function ProfileScreen() {
                 </View>
               </View>
             )}
+            */}
           </>
         )}
         <TouchableOpacity style={styles.menuItem} onPress={handleSettings}>
