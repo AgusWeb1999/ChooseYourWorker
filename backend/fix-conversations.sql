@@ -15,8 +15,13 @@ SELECT
 FROM auth.users au
 WHERE NOT EXISTS (
     SELECT 1 FROM public.users pu 
-    WHERE pu.id = au.id OR pu.email = au.email
-);
+    WHERE pu.id = au.id
+)
+ON CONFLICT (id) DO UPDATE
+SET
+    email = EXCLUDED.email,
+    full_name = COALESCE(EXCLUDED.full_name, public.users.full_name),
+    updated_at = NOW();
 
 -- PASO 2: Eliminar conversaciones con foreign keys inválidas
 -- (conversaciones huérfanas que no se pueden reparar)
