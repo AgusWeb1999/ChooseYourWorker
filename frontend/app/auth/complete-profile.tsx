@@ -182,7 +182,17 @@ export default function CompleteProfileScreen() {
 
       if (error) {
         console.error('❌ Error al crear perfil:', error);
-        Alert.alert('Error', error.message);
+        
+        // Mensaje más amigable para error de duplicado
+        if (error.code === '23505') {
+          Alert.alert(
+            'Error',
+            'Este número de identificación ya está registrado. Si ya tenés una cuenta, iniciá sesión en lugar de registrarte.'
+          );
+        } else {
+          Alert.alert('Error', error.message);
+        }
+        
         setLoading(false);
         return;
       }

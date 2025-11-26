@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Image } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 
@@ -13,6 +13,7 @@ interface Professional {
   rating: number;
   rating_count: number;
   bio: string;
+  avatar_url: string | null;
 }
 
 export default function HomeScreen() {
@@ -100,9 +101,16 @@ export default function HomeScreen() {
       >
         <View style={styles.cardHeader}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {item.display_name?.charAt(0)?.toUpperCase() || '?'}
-            </Text>
+            {item.avatar_url ? (
+              <Image 
+                source={{ uri: item.avatar_url }} 
+                style={styles.avatarImage}
+              />
+            ) : (
+              <Text style={styles.avatarText}>
+                {item.display_name?.charAt(0)?.toUpperCase() || '?'}
+              </Text>
+            )}
           </View>
           <View style={styles.cardInfo}>
             <Text style={styles.name}>{item.display_name}</Text>
@@ -300,6 +308,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
   },
   avatarText: {
     fontSize: 24,

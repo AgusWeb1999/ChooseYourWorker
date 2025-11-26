@@ -56,10 +56,6 @@ export default function AvatarUpload({
     try {
       setUploading(true);
 
-      // Convertir URI a blob
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      
       // Crear nombre único para el archivo
       const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
       const fileName = `avatar-${Date.now()}.${fileExt}`;
@@ -67,10 +63,15 @@ export default function AvatarUpload({
 
       console.log('📤 Subiendo imagen:', filePath);
 
+      // Convertir URI a ArrayBuffer para React Native
+      const response = await fetch(uri);
+      const arrayBuffer = await response.arrayBuffer();
+      const fileData = new Uint8Array(arrayBuffer);
+
       // Subir a Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, blob, { 
+        .upload(filePath, fileData, { 
           cacheControl: '3600',
           upsert: false,
           contentType: `image/${fileExt}`
@@ -100,6 +101,17 @@ export default function AvatarUpload({
       if (updateError) {
         console.error('Error updating user:', updateError);
         throw updateError;
+      }
+
+      // También actualizar en professionals si existe
+      const { error: profUpdateError } = await supabase
+        .from('professionals')
+        .update({ avatar_url: publicUrl })
+        .eq('user_id', userId);
+
+      // No lanzar error si no hay professional profile (puede ser cliente)
+      if (profUpdateError) {
+        console.log('ℹ️ No se actualizó professional (puede ser cliente):', profUpdateError);
       }
 
       // Eliminar la imagen anterior si existe

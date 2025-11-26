@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Linking } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Linking, Image } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/contexts/AuthContext';
@@ -21,9 +21,10 @@ interface Professional {
   hourly_rate: number;
   years_experience: number;
   phone: string;
-  rating: number;  // ← Cambiado de average_rating
-  rating_count: number;  // ← Cambiado de total_reviews
+  rating: number;
+  rating_count: number;
   total_reviews: number;
+  avatar_url: string | null;
 }
 
 export default function ProfessionalProfileScreen() {
@@ -174,9 +175,16 @@ export default function ProfessionalProfileScreen() {
         {/* Info Principal */}
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {professional.display_name?.charAt(0)?.toUpperCase() || '?'}
-            </Text>
+            {professional.avatar_url ? (
+              <Image 
+                source={{ uri: professional.avatar_url }} 
+                style={styles.avatarImage}
+              />
+            ) : (
+              <Text style={styles.avatarText}>
+                {professional.display_name?.charAt(0)?.toUpperCase() || '?'}
+              </Text>
+            )}
           </View>
           <Text style={styles.name}>{professional.display_name}</Text>
           <Text style={styles.profession}>{professional.profession}</Text>
@@ -382,6 +390,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
   avatarText: {
     fontSize: 40,

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
@@ -18,6 +19,7 @@ interface Conversation {
   other_user_id: string;
   other_user_name: string;
   other_user_profession: string | null;
+  other_user_avatar: string | null;
   unread_count: number;
   last_message_content: string | null;
   last_message_sender_id: string | null;
@@ -58,13 +60,56 @@ export default function MessagesScreen() {
 
   async function fetchConversations() {
     try {
-      const { data, error } = await supabase
+      // Primero obtenemos las conversaciones básicas
+      const { data: conversationsData, error: conversationsError } = await supabase
         .from('conversation_list')
         .select('*')
         .order('last_message_at', { ascending: false });
 
-      if (!error && data) {
-        setConversations(data);
+      if (conversationsError) throw conversationsError;
+
+      console.log('📊 Conversaciones básicas:', conversationsData);
+
+      // Luego obtenemos los avatares desde professionals (que tiene user_id y avatar_url)
+      if (conversationsData && conversationsData.length > 0) {
+        const userIds = conversationsData.map(c => c.other_user_id);
+        console.log('👥 User IDs para buscar avatares:', userIds);
+        
+        // Intentar buscar en professionals primero
+        const { data: professionalsData, error: profsError } = await supabase
+          .from('professionals')
+          .select('user_id, avatar_url')
+          .in('user_id', userIds);
+
+        console.log('🖼️ Avatares desde professionals:', professionalsData);
+
+        // También buscar en users como fallback
+        const { data: usersData, error: usersError } = await supabase
+          .from('users')
+          .select('id, avatar_url')
+          .in('id', userIds);
+
+        console.log('🖼️ Avatares desde users:', usersData);
+
+        if (professionalsData || usersData) {
+          // Combinar los datos, priorizando professionals
+          const conversationsWithAvatars = conversationsData.map(conv => {
+            const profAvatar = professionalsData?.find(p => p.user_id === conv.other_user_id)?.avatar_url;
+            const userAvatar = usersData?.find(u => u.id === conv.other_user_id)?.avatar_url;
+            const finalAvatar = profAvatar || userAvatar || null;
+            
+            console.log(`🔗 Usuario ${conv.other_user_name} (${conv.other_user_id}) -> avatar: ${finalAvatar}`);
+            return {
+              ...conv,
+              other_user_avatar: finalAvatar
+            };
+          });
+          setConversations(conversationsWithAvatars);
+        } else {
+          setConversations(conversationsData);
+        }
+      } else {
+        setConversations([]);
       }
     } catch (error) {
       console.error('Error fetching conversations:', error);
@@ -115,11 +160,16 @@ export default function MessagesScreen() {
       >
         <View style={styles.avatarContainer}>
           <View style={styles.avatar}>
-            <IconSymbol
-              name="person.fill"
-              size={28}
-              color="#FFF"
-            />
+            {item.other_user_avatar ? (
+              <Image 
+                source={{ uri: item.other_user_avatar }} 
+                style={styles.avatarImage}
+              />
+            ) : (
+              <Text style={styles.avatarText}>
+                {item.other_user_name?.charAt(0)?.toUpperCase() || '?'}
+              </Text>
+            )}
           </View>
           {item.unread_count > 0 && (
             <View style={styles.unreadBadge}>
@@ -283,6 +333,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
+  avatarText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
   },
   unreadBadge: {
     position: 'absolute',
