@@ -5,6 +5,7 @@ import EditProfessionalProfile from '../../components/EditProfessionalProfile';
 import EditClientProfile from '../../components/EditClientProfile';
 import ReviewsList from '../../components/ReviewsList';
 import ClientReviewsList from '../../components/ClientReviewsList';
+import AvatarUpload from '../../components/AvatarUpload';
 
 export default function ProfileScreen() {
   const { user, userProfile, professionalProfile, signOut, refreshProfiles } = useAuth();
@@ -68,11 +69,15 @@ export default function ProfileScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {userProfile?.full_name?.charAt(0)?.toUpperCase() || '?'}
-          </Text>
-        </View>
+        <AvatarUpload
+          userId={userProfile?.id || ''}
+          currentUrl={userProfile?.avatar_url}
+          onUpload={async () => {
+            await refreshProfiles();
+          }}
+          size={100}
+          editable={true}
+        />
         <Text style={styles.name}>{userProfile?.full_name || 'Usuario'}</Text>
         <Text style={styles.email}>{user?.email}</Text>
         <View style={styles.badge}>
