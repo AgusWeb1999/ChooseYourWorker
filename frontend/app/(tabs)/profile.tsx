@@ -13,6 +13,7 @@ export default function ProfileScreen() {
   const [editClientModalVisible, setEditClientModalVisible] = useState(false);
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
   const [helpModalVisible, setHelpModalVisible] = useState(false);
+  const [aboutModalVisible, setAboutModalVisible] = useState(false);
   
   // Settings state
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -46,6 +47,10 @@ export default function ProfileScreen() {
 
   function handleHelp() {
     setHelpModalVisible(true);
+  }
+
+  function handleAbout() {
+    setAboutModalVisible(true);
   }
 
   function handleDeleteAccount() {
@@ -153,6 +158,9 @@ export default function ProfileScreen() {
         </TouchableOpacity>
         <TouchableOpacity style={styles.menuItem} onPress={handleHelp}>
           <Text style={styles.menuText}>❓ Ayuda</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem} onPress={handleAbout}>
+          <Text style={styles.menuText}>ℹ️ Acerca de Nosotros</Text>
         </TouchableOpacity>
       </View>
 
@@ -292,7 +300,7 @@ export default function ProfileScreen() {
             <View style={styles.helpItem}>
               <Text style={styles.helpQuestion}>¿Cómo funciona la plataforma?</Text>
               <Text style={styles.helpAnswer}>
-                Choose Your Worker conecta clientes con profesionales calificados. 
+                WorkingGo conecta clientes con profesionales calificados. 
                 Los clientes pueden buscar trabajadores por profesión y ubicación, 
                 mientras que los trabajadores pueden ofrecer sus servicios.
               </Text>
@@ -311,7 +319,7 @@ export default function ProfileScreen() {
             <View style={styles.helpItem}>
               <Text style={styles.helpQuestion}>¿Cómo me comunico con soporte?</Text>
               <Text style={styles.helpAnswer}>
-                Puedes contactarnos enviando un email a support@chooseyourworker.com 
+                Puedes contactarnos enviando un email a support@workinggo.com 
                 o llamando al 1-800-WORKER-1.
               </Text>
             </View>
@@ -336,7 +344,121 @@ export default function ProfileScreen() {
 
             <View style={styles.versionInfo}>
               <Text style={styles.versionText}>Versión 1.0.0</Text>
-              <Text style={styles.versionText}>© 2025 Choose Your Worker</Text>
+              <Text style={styles.versionText}>© 2025 WorkingGo</Text>
+            </View>
+          </View>
+        </ScrollView>
+      </Modal>
+
+      {/* About Us Modal */}
+      <Modal
+        visible={aboutModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setAboutModalVisible(false)}
+      >
+        <ScrollView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Acerca de Nosotros</Text>
+            <TouchableOpacity onPress={() => setAboutModalVisible(false)}>
+              <Text style={styles.closeButton}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.modalContent}>
+            <View style={styles.aboutSection}>
+              <Text style={styles.aboutTitle}>🚀 WorkingGo</Text>
+              <Text style={styles.aboutText}>
+                WorkingGo es una plataforma creada por dos estudiantes de ingenieria,
+                donde queremos ayudar a personas que tienen algun servicio, ofrecerlo y hacerlo llegar a mas publico.
+                Nuestra misión es simplificar la búsqueda de servicios profesionales de 
+                calidad y ayudar a los trabajadores a hacer crecer su negocio.
+              </Text>
+            </View>
+
+            <View style={styles.aboutSection}>
+              <Text style={styles.sectionTitle}>🎯 Nuestra Misión</Text>
+              <Text style={styles.aboutText}>
+                Crear un ecosistema confiable donde clientes y profesionales 
+                puedan conectarse de manera segura, eficiente y transparente. 
+                Facilitamos el acceso a servicios de calidad mientras 
+                empoderamos a los trabajadores con herramientas para 
+                administrar y expandir sus negocios o empezarlos.
+              </Text>
+            </View>
+
+            <View style={styles.aboutSection}>
+              <Text style={styles.sectionTitle}>💡 ¿Qué nos hace diferentes?</Text>
+              <View style={styles.featureItem}>
+                <Text style={styles.featureIcon}>✓</Text>
+                <Text style={styles.featureText}>
+                  <Text style={styles.featureBold}>Verificación de Profesionales:</Text> Todos 
+                  nuestros trabajadores pasan por un proceso de validación.
+                </Text>
+              </View>
+              <View style={styles.featureItem}>
+                <Text style={styles.featureIcon}>✓</Text>
+                <Text style={styles.featureText}>
+                  <Text style={styles.featureBold}>Sistema de Reseñas Transparente:</Text> Lee 
+                  opiniones reales de clientes anteriores.
+                </Text>
+              </View>
+              <View style={styles.featureItem}>
+                <Text style={styles.featureIcon}>✓</Text>
+                <Text style={styles.featureText}>
+                  <Text style={styles.featureBold}>Comunicación Directa:</Text> Chatea 
+                  directamente con los 
+                  profesionales antes de contratar.
+                </Text>
+              </View>
+              <View style={styles.featureItem}>
+                <Text style={styles.featureIcon}>✓</Text>
+                <Text style={styles.featureText}>
+                  <Text style={styles.featureBold}>Amplia Variedad de Servicios:</Text> Desde 
+                  plomería hasta desarrollo web, encuentra lo que necesitas.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.aboutSection}>
+              <Text style={styles.sectionTitle}>Y TENEMOS UNA BUENA NOTICIA...</Text>
+              
+              <View style={styles.promoBox}>
+                <Text style={styles.promoTitle}>🎁 ¡Oferta de Lanzamiento!</Text>
+                <Text style={styles.promoText}>
+                  Si estas buscando ofrecer servicios, el <Text style={styles.promoBold}>primer mes es 
+                  completamente GRATIS</Text>. Queremos ayudarte a crecer tu negocio sin costos iniciales.
+                </Text>
+                <Text style={styles.promoSubtext}>
+                  En el futuro implementaremos planes accesibles (mensuales o por comisión), 
+                  pero ahora estamos enfocados en construir una comunidad sólida de profesionales 
+                  y clientes. ¡Únete hoy y sé parte de WorkingGo desde el inicio!
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.aboutSection}>
+              <Text style={styles.sectionTitle}>📞 Contáctanos</Text>
+              <View style={styles.contactInfo}>
+                <Text style={styles.contactItem}>📧 Email: info@workinggo.com</Text>
+                <Text style={styles.contactItem}>📱 Teléfono: 1-800-WORKER-1</Text>
+                <Text style={styles.contactItem}>🌐 Web: www.workinggo.com</Text>
+              </View>
+            </View>
+
+            <View style={styles.aboutSection}>
+              <Text style={styles.sectionTitle}>🌟 Únete a WorkingGo</Text>
+              <Text style={styles.aboutText}>
+                Ya seas un profesional buscando expandir tu negocio,
+                recien empezando uno o un 
+                cliente en busca de servicios, WorkingGo es tu 
+                plataforma ideal. ¡Comienza hoy GRATIS!
+              </Text>
+            </View>
+
+            <View style={styles.versionInfo}>
+              <Text style={styles.versionText}>Versión 1.0.0</Text>
+              <Text style={styles.versionText}>© 2025 WorkingGo. Todos los derechos reservados.</Text>
             </View>
           </View>
         </ScrollView>
@@ -549,5 +671,109 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     marginBottom: 4,
+  },
+  aboutSection: {
+    marginBottom: 24,
+    paddingBottom: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  aboutTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1e3a5f',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  aboutText: {
+    fontSize: 15,
+    color: '#666',
+    lineHeight: 24,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    alignItems: 'flex-start',
+  },
+  featureIcon: {
+    fontSize: 20,
+    color: '#4CAF50',
+    marginRight: 12,
+    marginTop: 2,
+  },
+  featureText: {
+    flex: 1,
+    fontSize: 15,
+    color: '#666',
+    lineHeight: 22,
+  },
+  featureBold: {
+    fontWeight: '600',
+    color: '#333',
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 16,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1e3a5f',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+  contactInfo: {
+    marginTop: 8,
+  },
+  contactItem: {
+    fontSize: 15,
+    color: '#666',
+    marginBottom: 12,
+    lineHeight: 22,
+  },
+  promoBox: {
+    backgroundColor: '#e8f5e9',
+    padding: 20,
+    borderRadius: 12,
+    marginTop: 24,
+    borderWidth: 2,
+    borderColor: '#4CAF50',
+    shadowColor: '#4CAF50',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  promoTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2e7d32',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  promoText: {
+    fontSize: 16,
+    color: '#333',
+    lineHeight: 24,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  promoBold: {
+    fontWeight: 'bold',
+    color: '#2e7d32',
+  },
+  promoSubtext: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 22,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });

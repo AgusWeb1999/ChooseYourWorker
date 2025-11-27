@@ -1,4 +1,4 @@
-# Changelog - Choose Your Worker
+# Changelog - WorkingGo
 
 ## [1.0.0] - 2025-11-25
 

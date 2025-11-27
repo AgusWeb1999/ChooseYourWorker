@@ -95,7 +95,7 @@ export default function ProfessionalProfileScreen() {
     const cleanPhone = phone.replace(/\D/g, '');
     
     // Mensaje predefinido
-    const message = `Hola ${name}, vi tu perfil en ChooseYourWorker y me gustaría contactarte.`;
+    const message = `Hola ${name}, vi tu perfil en WorkingGo y me gustaría contactarte.`;
     
     // URL de WhatsApp
     const whatsappUrl = `whatsapp://send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`;

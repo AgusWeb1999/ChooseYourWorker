@@ -1,4 +1,4 @@
-# ChooseYourWorker
+# WorkingGo
 
 Plataforma móvil para conectar clientes con trabajadores y profesionales de servicios.
 
@@ -14,7 +14,7 @@ Esta es una aplicación React Native con Expo que permite:
 ## 🏗️ Estructura del Proyecto
 
 ```
-chooseYourWorker/
+workinggo/
 ├── frontend/          # Aplicación React Native (Expo)
 │   ├── app/          # Rutas y pantallas
 │   ├── components/   # Componentes reutilizables
@@ -75,4 +75,4 @@ Este proyecto es privado y está en desarrollo.
 
 ## 👥 Autores
 
-ChooseYourWorker Team
+WorkingGo Team

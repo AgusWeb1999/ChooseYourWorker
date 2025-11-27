@@ -34,7 +34,7 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Choose Your Worker</Text>
+      <Text style={styles.title}>WorkingGo</Text>
       <Text style={styles.subtitle}>Iniciá sesión en tu cuenta</Text>
 
       <TextInput

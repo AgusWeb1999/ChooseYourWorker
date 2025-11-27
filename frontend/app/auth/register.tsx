@@ -61,10 +61,21 @@ export default function RegisterScreen() {
 
     console.log('✅ User registered successfully:', data);
 
-    // El trigger handle_new_user() ya estableció is_professional correctamente
-    // Solo esperamos un momento para que se complete la sincronización
-    console.log('⏳ Waiting for database sync...');
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Update user record with is_professional flag
+    if (data.user) {
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ is_professional: userType === 'worker' })
+        .eq('id', data.user.id);  // Usar 'id' en lugar de 'auth_uid'
+
+      if (updateError) {
+        console.log('Error updating user type:', updateError);
+      }
+    }
+
+    // Wait a bit for database to update
+    console.log('⏳ Waiting for database update...');
+    await new Promise(resolve => setTimeout(resolve, 1500));
 
     setLoading(false);
     
@@ -76,7 +87,7 @@ export default function RegisterScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Crear Cuenta</Text>
-      <Text style={styles.subtitle}>Únete a Choose Your Worker</Text>
+      <Text style={styles.subtitle}>Únete a WorkingGo</Text>
 
     <TextInput
     style={styles.input}

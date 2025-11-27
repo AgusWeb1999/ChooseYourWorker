@@ -2,14 +2,14 @@
 
 ## ✅ Estado: PRODUCCIÓN READY
 
-El proyecto **Choose Your Worker** está completamente funcional, limpio y documentado.
+El proyecto **WorkingGo** está completamente funcional, limpio y documentado.
 
 ---
 
 ## 📁 Estructura Final
 
 ```
-chooseYourWorker/
+workinggo/
 ├── README.md                     # Documentación principal
 ├── CHANGELOG.md                  # Historial de cambios
 │
