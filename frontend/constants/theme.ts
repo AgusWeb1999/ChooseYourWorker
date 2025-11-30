@@ -27,6 +27,22 @@ export const Colors = {
   },
 };
 
+// Theme object for easier usage
+export const theme = {
+  colors: {
+    primary: '#0a7ea4',
+    secondary: '#687076',
+    success: '#28a745',
+    error: '#dc3545',
+    warning: '#ffc107',
+    text: '#11181C',
+    textLight: '#687076',
+    background: '#fff',
+    card: '#fff',
+    border: '#E5E5E5',
+  },
+};
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */

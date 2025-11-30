@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert, Modal, ScrollView, Switch } from 'react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { useRouter } from 'expo-router';
 import EditProfessionalProfile from '../../components/EditProfessionalProfile';
 import EditClientProfile from '../../components/EditClientProfile';
 import ReviewsList from '../../components/ReviewsList';
 import ClientReviewsList from '../../components/ClientReviewsList';
 import AvatarUpload from '../../components/AvatarUpload';
+import PremiumBanner from '../../components/PremiumBanner';
 
 export default function ProfileScreen() {
-  const { user, userProfile, professionalProfile, signOut, refreshProfiles } = useAuth();
+  const { user, userProfile, professionalProfile, signOut, refreshProfiles, isPremium, isSubscriptionActive } = useAuth();
+  const router = useRouter();
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editClientModalVisible, setEditClientModalVisible] = useState(false);
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
@@ -92,6 +95,9 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      {/* Premium Banner */}
+      <PremiumBanner variant="banner" />
+
       <View style={styles.section}>
         {userProfile?.is_professional && professionalProfile ? (
           <>
@@ -153,6 +159,14 @@ export default function ProfileScreen() {
             */}
           </>
         )}
+        <TouchableOpacity 
+          style={styles.menuItem} 
+          onPress={() => router.push(isSubscriptionActive ? '/subscription/manage' as any : '/subscription/plan' as any)}
+        >
+          <Text style={styles.menuText}>
+            {isSubscriptionActive ? '💳 Gestionar Suscripción' : '⭐ Ver Planes Premium'}
+          </Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.menuItem} onPress={handleSettings}>
           <Text style={styles.menuText}>⚙️ Configuración</Text>
         </TouchableOpacity>

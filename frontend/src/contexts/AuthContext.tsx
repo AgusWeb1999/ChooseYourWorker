@@ -9,6 +9,8 @@ type AuthContextType = {
   professionalProfile: any | null;
   loading: boolean;
   needsProfileCompletion: boolean;
+  isPremium: boolean;
+  isSubscriptionActive: boolean;
   signOut: () => Promise<void>;
   refreshProfiles: () => Promise<void>;
 };
@@ -20,6 +22,8 @@ const AuthContext = createContext<AuthContextType>({
   professionalProfile: null,
   loading: true,
   needsProfileCompletion: false,
+  isPremium: false,
+  isSubscriptionActive: false,
   signOut: async () => {},
   refreshProfiles: async () => {},
 });
@@ -151,12 +155,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     userProfile?.is_professional === true && 
     professionalProfile === null;
 
+  // Check if user has premium subscription
+  const isPremium = userProfile?.subscription_type === 'premium';
+  
+  // Check if subscription is active
+  const isSubscriptionActive = 
+    isPremium && 
+    userProfile?.subscription_status === 'active' &&
+    userProfile?.subscription_end_date &&
+    new Date(userProfile.subscription_end_date) > new Date();
+
   console.log('📊 Auth State:', {
     hasSession: !!session,
     hasUserProfile: !!userProfile,
     isWorker: userProfile?.is_professional,
     hasProfessionalProfile: !!professionalProfile,
     needsProfileCompletion,
+    isPremium,
+    isSubscriptionActive,
   });
 
   return (
@@ -167,6 +183,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       professionalProfile,
       loading,
       needsProfileCompletion,
+      isPremium,
+      isSubscriptionActive,
       signOut,
       refreshProfiles,
     }}>
