@@ -18,6 +18,7 @@ import { supabase } from '../src/lib/supabase';
 interface AddReviewProps {
   professionalId: string;
   clientId: string;
+  hireId: string;
   visible: boolean;
   onClose: () => void;
   onSuccess: () => void;
@@ -26,6 +27,7 @@ interface AddReviewProps {
 export default function AddReview({ 
   professionalId, 
   clientId, 
+  hireId,
   visible, 
   onClose,
   onSuccess 
@@ -36,7 +38,8 @@ export default function AddReview({
 
   console.log('🟢 AddReview renderizado:', { 
     professionalId, 
-    clientId, 
+    clientId,
+    hireId,
     visible,
     hasOnClose: !!onClose,
     hasOnSuccess: !!onSuccess
@@ -56,13 +59,14 @@ export default function AddReview({
         .insert({
           professional_id: professionalId,
           client_id: clientId,
+          hire_id: hireId,
           rating,
           comment: comment.trim() || null,
         });
 
       if (error) {
         if (error.code === '23505') {
-          Alert.alert('Error', 'Ya has calificado a este profesional anteriormente');
+          Alert.alert('Error', 'Ya has dejado una reseña para este trabajo');
         } else {
           Alert.alert('Error', error.message);
         }

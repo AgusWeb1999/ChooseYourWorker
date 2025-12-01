@@ -25,6 +25,19 @@ interface Professional {
   rating_count: number;
   total_reviews: number;
   avatar_url: string | null;
+  completed_hires_count: number;
+}
+
+interface Hire {
+  id: string;
+  client_id: string;
+  professional_id: string;
+  status: 'in_progress' | 'completed' | 'cancelled';
+  started_at: string;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export default function ProfessionalProfileScreen() {
@@ -34,10 +47,18 @@ export default function ProfessionalProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [clientUserId, setClientUserId] = useState<string | null>(null);
+  const [activeHire, setActiveHire] = useState<Hire | null>(null);
+  const [completedHire, setCompletedHire] = useState<Hire | null>(null);
+  const [hasReviewed, setHasReviewed] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     fetchProfessional();
-  }, [id]);
+    if (userProfile && !userProfile.is_professional) {
+      fetchActiveHire();
+      fetchCompletedHireAndReview();
+    }
+  }, [id, userProfile]);
 
   async function fetchProfessional() {
     try {
@@ -63,74 +84,145 @@ export default function ProfessionalProfileScreen() {
     }
   }
 
-  function handleReviewSuccess() {
-    fetchProfessional();
+  async function fetchActiveHire() {
+    if (!userProfile?.id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('hires')
+        .select('*')
+        .eq('client_id', userProfile.id)
+        .eq('professional_id', id)
+        .eq('status', 'in_progress')
+        .maybeSingle();
+
+      if (!error && data) {
+        setActiveHire(data);
+      }
+    } catch (error) {
+      console.error('Error fetching active hire:', error);
+    }
   }
 
-  function handleContact() {
-    if (!professional?.phone) return;
+  async function fetchCompletedHireAndReview() {
+    if (!userProfile?.id) return;
+
+    try {
+      // Buscar el último hire completado
+      const { data: hireData, error: hireError } = await supabase
+        .from('hires')
+        .select('*')
+        .eq('client_id', userProfile.id)
+        .eq('professional_id', id)
+        .eq('status', 'completed')
+        .order('completed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!hireError && hireData) {
+        setCompletedHire(hireData);
+
+        // Verificar si ya hay una review para este hire
+        const { data: reviewData, error: reviewError } = await supabase
+          .from('reviews')
+          .select('id')
+          .eq('hire_id', hireData.id)
+          .maybeSingle();
+
+        setHasReviewed(!!reviewData);
+      }
+    } catch (error) {
+      console.error('Error fetching completed hire:', error);
+    }
+  }
+
+  async function handleHire() {
+    if (!userProfile?.id || !professional?.id) return;
+
+    setActionLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('hires')
+        .insert({
+          client_id: userProfile.id,
+          professional_id: professional.id,
+          status: 'in_progress',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setActiveHire(data);
+      Alert.alert(
+        '¡Contratado!',
+        `Has contratado a ${professional.display_name}. Ahora puedes ver su teléfono y contactarlo.`
+      );
+    } catch (error: any) {
+      console.error('Error creating hire:', error);
+      Alert.alert(
+        'Error',
+        error.message || 'No se pudo crear la contratación. Intenta de nuevo.'
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleCompleteJob() {
+    if (!activeHire?.id) return;
 
     Alert.alert(
-      'Contactar a ' + professional?.display_name,
-      'Elige cómo quieres contactar:',
+      'Finalizar Trabajo',
+      `¿Confirmas que el trabajo con ${professional?.display_name} ha sido completado?`,
       [
+        { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'WhatsApp',
-          onPress: () => openWhatsApp(professional.phone, professional.display_name),
-        },
-        {
-          text: 'Llamar',
-          onPress: () => makePhoneCall(professional.phone),
-        },
-        {
-          text: 'Cancelar',
-          style: 'cancel',
+          text: 'Finalizar',
+          style: 'default',
+          onPress: async () => {
+            setActionLoading(true);
+            try {
+              const { error } = await supabase
+                .from('hires')
+                .update({ status: 'completed' })
+                .eq('id', activeHire.id);
+
+              if (error) throw error;
+
+              setCompletedHire({ ...activeHire, status: 'completed', completed_at: new Date().toISOString() });
+              setActiveHire(null);
+              setHasReviewed(false);
+              
+              Alert.alert(
+                '¡Trabajo finalizado!',
+                'Ahora puedes dejar una reseña sobre este profesional.',
+                [
+                  {
+                    text: 'Dejar reseña',
+                    onPress: () => setShowReviewModal(true),
+                  },
+                  { text: 'Más tarde', style: 'cancel' },
+                ]
+              );
+              
+              fetchProfessional();
+            } catch (error: any) {
+              console.error('Error completing hire:', error);
+              Alert.alert('Error', 'No se pudo finalizar el trabajo.');
+            } finally {
+              setActionLoading(false);
+            }
+          },
         },
       ]
     );
   }
 
-  async function openWhatsApp(phone: string, name: string) {
-    // Limpiar el número de teléfono (remover espacios, guiones, etc.)
-    const cleanPhone = phone.replace(/\D/g, '');
-    
-    // Mensaje predefinido
-    const message = `Hola ${name}, vi tu perfil en WorkingGo y me gustaría contactarte.`;
-    
-    // URL de WhatsApp
-    const whatsappUrl = `whatsapp://send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`;
-    
-    try {
-      const canOpen = await Linking.canOpenURL(whatsappUrl);
-      if (canOpen) {
-        await Linking.openURL(whatsappUrl);
-      } else {
-        Alert.alert(
-          'WhatsApp no disponible',
-          'Por favor instala WhatsApp o usa la opción de llamada.',
-          [{ text: 'OK' }]
-        );
-      }
-    } catch (error) {
-      console.error('Error opening WhatsApp:', error);
-      Alert.alert('Error', 'No se pudo abrir WhatsApp');
-    }
-  }
-
-  async function makePhoneCall(phone: string) {
-    const phoneUrl = `tel:${phone}`;
-    
-    try {
-      const canOpen = await Linking.canOpenURL(phoneUrl);
-      if (canOpen) {
-        await Linking.openURL(phoneUrl);
-      } else {
-        Alert.alert('Error', 'No se puede realizar la llamada desde este dispositivo');
-      }
-    } catch (error) {
-      console.error('Error making phone call:', error);
-      Alert.alert('Error', 'No se pudo realizar la llamada');
-    }
+  function handleReviewSuccess() {
+    fetchProfessional();
+    fetchCompletedHireAndReview();
+    setShowReviewModal(false);
   }
 
   if (loading) {
@@ -235,42 +327,99 @@ export default function ProfessionalProfileScreen() {
             </View>
           )}
 
-          {professional.phone && (
+          {professional.completed_hires_count > 0 && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>✅ Trabajos completados:</Text>
+              <Text style={styles.infoValue}>{professional.completed_hires_count}</Text>
+            </View>
+          )}
+
+          {/* Mostrar teléfono solo si hay hire activo */}
+          {activeHire && professional.phone && (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>📞 Teléfono:</Text>
               <Text style={styles.infoValue}>{professional.phone}</Text>
+              <Text style={styles.phoneNote}>
+                * Disponible porque lo has contratado
+              </Text>
             </View>
           )}
         </View>
 
-        {/* Botones de Contacto */}
+        {/* Botones de Acción para Clientes */}
         {isClient && (
-          <View style={styles.contactContainer}>
+          <View style={styles.actionContainer}>
+            {/* Botón de Mensaje (siempre visible) */}
             <TouchableOpacity 
-              style={[styles.contactButton, styles.messageButton]} 
+              style={[styles.actionButton, styles.messageButton]} 
               onPress={() => router.push(`/chat/${professional.user_id}`)}
             >
               <IconSymbol name="bubble.left.and.bubble.right.fill" size={20} color="#FFF" />
-              <Text style={styles.contactButtonText}>Enviar Mensaje</Text>
+              <Text style={styles.actionButtonText}>Mensaje</Text>
             </TouchableOpacity>
-            
-            {professional.phone && (
-              <>
-                <TouchableOpacity 
-                  style={[styles.contactButton, styles.whatsappButton]} 
-                  onPress={() => openWhatsApp(professional.phone, professional.display_name)}
-                >
-                  <Text style={styles.contactButtonText}>💬 WhatsApp</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={[styles.contactButton, styles.phoneButton]} 
-                  onPress={() => makePhoneCall(professional.phone)}
-                >
-                  <Text style={styles.contactButtonText}>📞 Llamar</Text>
-                </TouchableOpacity>
-              </>
+
+            {/* Botón de Contratar o Estado del Trabajo */}
+            {!activeHire && !completedHire && (
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.hireButton]}
+                onPress={handleHire}
+                disabled={actionLoading}
+              >
+                {actionLoading ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <>
+                    <Text style={styles.actionButtonIcon}>💼</Text>
+                    <Text style={styles.actionButtonText}>Contratar</Text>
+                  </>
+                )}
+              </TouchableOpacity>
             )}
+
+            {activeHire && (
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.completeButton]}
+                onPress={handleCompleteJob}
+                disabled={actionLoading}
+              >
+                {actionLoading ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <>
+                    <Text style={styles.actionButtonIcon}>✅</Text>
+                    <Text style={styles.actionButtonText}>Finalizar Trabajo</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {/* Estado del Trabajo */}
+        {isClient && activeHire && (
+          <View style={styles.jobStatusCard}>
+            <Text style={styles.jobStatusTitle}>📋 Trabajo en Progreso</Text>
+            <Text style={styles.jobStatusText}>
+              Contrataste a {professional.display_name} el {new Date(activeHire.started_at).toLocaleDateString('es-ES')}
+            </Text>
+            <Text style={styles.jobStatusHint}>
+              Cuando finalices el trabajo, podrás dejar una reseña.
+            </Text>
+          </View>
+        )}
+
+        {isClient && completedHire && !hasReviewed && (
+          <View style={styles.jobStatusCard}>
+            <Text style={styles.jobStatusTitle}>⭐ Trabajo Completado</Text>
+            <Text style={styles.jobStatusText}>
+              Completaste un trabajo con {professional.display_name}.
+            </Text>
+            <TouchableOpacity
+              style={styles.reviewPromptButton}
+              onPress={() => setShowReviewModal(true)}
+            >
+              <Text style={styles.reviewPromptButtonText}>Dejar Reseña Ahora</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -278,17 +427,10 @@ export default function ProfessionalProfileScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Reseñas de Clientes</Text>
-            {isClient && (
+            {isClient && completedHire && !hasReviewed && (
               <TouchableOpacity
                 style={styles.addReviewButton}
-                onPress={() => {
-                  console.log('🔴 Botón clickeado!');
-                  console.log('🔴 Profesional ID:', professional.id);
-                  console.log('🔴 Cliente ID:', userProfile?.id);
-                  console.log('🔴 Antes - showReviewModal:', showReviewModal);
-                  setShowReviewModal(true);
-                  console.log('🔴 Después - llamó setShowReviewModal(true)');
-                }}
+                onPress={() => setShowReviewModal(true)}
               >
                 <Text style={styles.addReviewButtonText}>+ Dejar reseña</Text>
               </TouchableOpacity>
@@ -310,10 +452,11 @@ export default function ProfessionalProfileScreen() {
       </ScrollView>
 
       {/* Modal para agregar reseña (Cliente califica a Trabajador) */}
-      {isClient && userProfile && (
+      {isClient && userProfile && completedHire && (
         <AddReview
           professionalId={professional.id}
           clientId={userProfile.id}
+          hireId={completedHire.id}
           visible={showReviewModal}
           onClose={() => setShowReviewModal(false)}
           onSuccess={handleReviewSuccess}
@@ -460,13 +603,19 @@ const styles = StyleSheet.create({
     color: '#333',
     lineHeight: 24,
   },
-  contactContainer: {
+  phoneNote: {
+    fontSize: 12,
+    color: '#25D366',
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+  actionContainer: {
     flexDirection: 'row',
     marginHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 16,
     gap: 12,
   },
-  contactButton: {
+  actionButton: {
     flex: 1,
     padding: 16,
     borderRadius: 8,
@@ -475,18 +624,59 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
+  actionButtonIcon: {
+    fontSize: 18,
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   messageButton: {
     backgroundColor: '#007AFF',
   },
-  whatsappButton: {
-    backgroundColor: '#25D366',
+  hireButton: {
+    backgroundColor: '#34C759',
   },
-  phoneButton: {
-    backgroundColor: '#1e3a5f',
+  completeButton: {
+    backgroundColor: '#FF9500',
   },
-  contactButtonText: {
-    color: '#fff',
+  jobStatusCard: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: '#f0f9ff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  jobStatusTitle: {
     fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1e3a8a',
+    marginBottom: 8,
+  },
+  jobStatusText: {
+    fontSize: 14,
+    color: '#1e40af',
+    marginBottom: 4,
+  },
+  jobStatusHint: {
+    fontSize: 12,
+    color: '#64748b',
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+  reviewPromptButton: {
+    marginTop: 12,
+    backgroundColor: '#1e3a5f',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  reviewPromptButtonText: {
+    color: '#fff',
+    fontSize: 14,
     fontWeight: '600',
   },
   addReviewButton: {

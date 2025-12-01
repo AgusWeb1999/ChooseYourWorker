@@ -1,43 +1,46 @@
 # 🗄️ WorkingGo - Backend Database Scripts
 
-Scripts SQL esenciales para configuración y mantenimiento de la base de datos Supabase.
+Scripts SQL para configuración del sistema de contrataciones en Supabase.
 
-## 📋 Archivos Disponibles
+## 📋 Archivo Principal
 
-### 1. `1-setup-inicial.sql` ⚙️
-**Ejecutar UNA SOLA VEZ al crear el proyecto**
+### `setup-hires-REAL.sql` ⚡ **PRINCIPAL**
+**Ejecutar UNA VEZ para configurar el sistema de contrataciones**
 
-Configura todo el sistema desde cero:
-- ✅ Sistema de avatares (columnas + storage + políticas RLS)
-- ✅ Trigger de sincronización de usuarios (auth → public)
-- ✅ Trigger de sincronización de avatares (users → professionals)
-- ✅ Trigger de ratings automáticos (reviews → professionals)
+Configura:
+- ✅ Tabla `hires` (contrataciones cliente → profesional)
+- ✅ Columnas: `phone`, `hires_count`, `completed_hires_count`
+- ✅ Columna `hire_id` en tabla `reviews`
+- ✅ RLS y políticas de seguridad
+- ✅ Trigger para actualizar contadores automáticamente
+- ✅ Índices para optimización
 
-### 2. `2-reparacion.sql` 🔧
-**Ejecutar cuando haya problemas o inconsistencias**
+**Ver instrucciones:** `../INICIO-RAPIDO.md`
 
-Repara problemas comunes:
-- 🔄 Elimina usuarios duplicados
-- 🔄 Sincroniza usuarios de auth a public
-- 🔄 Sincroniza avatares entre tablas
-- 🔄 Repara professionals sin user_id válido
-- 🔄 Repara conversaciones y mensajes rotos
-- 🔄 Recalcula todos los ratings
+---
 
-### 3. `3-utilidades.sql` 🛠️
-**Scripts útiles para mantenimiento**
+## 🔧 Archivos de Diagnóstico (Opcionales)
 
-Incluye:
-- 🗑️ Eliminar un usuario completo
-- 🗑️ Resetear todos los clientes (solo desarrollo)
-- 🌐 Actualizar profesiones a español
-- 🧹 Limpiar avatares huérfanos
-- 📊 Ver estadísticas generales
-- ✅ Verificar integridad de datos
+### `diagnose-and-fix-users.sql`
+Para diagnosticar problemas con usuarios duplicados o inconsistentes.
 
-## 🚀 Cómo Ejecutar
+### `diagnose-client-id.sql`
+Para verificar referencias de `client_id` en las tablas.
 
-### En Supabase Dashboard:
+---
+
+## � Cómo Ejecutar
+
+### Método 1: Desde Terminal (macOS/Linux)
+
+```bash
+# Copiar script al portapapeles
+cat setup-hires-REAL.sql | pbcopy
+
+# Luego pegar en Supabase SQL Editor y ejecutar
+```
+
+### Método 2: En Supabase Dashboard
 
 1. **Ir al SQL Editor**
    ```
@@ -46,26 +49,58 @@ Incluye:
 
 2. **Crear Nueva Query**
    - Click en "New Query"
-   - Copiar y pegar el contenido del script
+   - Copiar y pegar el contenido de `setup-hires-REAL.sql`
    - Click en "Run" o `Cmd/Ctrl + Enter`
 
-3. **Verificar Resultados**
-   - Revisar los mensajes de éxito/error
-   - Verificar los SELECT al final de cada script
+3. **Verificar Éxito**
+   - Debes ver mensajes de confirmación al final
+   - Verificar que la tabla `hires` existe en Table Editor
+
+---
+
+## 📚 Documentación Adicional
+
+- **Inicio Rápido:** `../INICIO-RAPIDO.md`
+- **Implementación Completa:** `../IMPLEMENTACION-HIRES-COMPLETA.md`
+- **Archivos Obsoletos:** `LIMPIEZA-SQL.md`
+
+---
+
+## 🗑️ Archivos Movidos
+
+Los scripts antiguos fueron movidos a `_old_scripts/`:
+- `1-setup-inicial*.sql`
+- `2-reparacion.sql`
+- `3-utilidades.sql`
+- `setup-contracts*.sql`
+- `setup-minimal.sql`
+- etc.
+
+Puedes eliminar la carpeta `_old_scripts/` si ya verificaste que todo funciona.
+
+---
 
 ## ⚠️ Importante
 
-- **Backup**: Siempre haz backup antes de ejecutar scripts de reparación
-- **Desarrollo vs Producción**: Algunos scripts son SOLO para desarrollo
-- **Orden**: Ejecutar `1-setup-inicial.sql` primero, luego los demás según necesidad
-- **Idempotencia**: Los scripts se pueden ejecutar múltiples veces sin problemas
+- ✅ Solo necesitas ejecutar `setup-hires-REAL.sql` una vez
+- ✅ El script es idempotente (se puede ejecutar múltiples veces sin problemas)
+- ✅ Usa bloques `IF NOT EXISTS` para evitar duplicados
+- ⚠️ Haz backup antes si ya tienes datos en producción
+
+---
 
 ## 🆘 Troubleshooting
 
 | Problema | Solución |
 |----------|----------|
-| Usuarios no se sincronizan | Ejecutar `2-reparacion.sql` |
-| Avatares no se ven | Ejecutar `2-reparacion.sql` |
+| Error "table already exists" | Normal, el script continúa sin problemas |
+| Error "column already exists" | Normal, el script continúa sin problemas |
+| Reviews no se vinculan a hires | Verifica que `hire_id` existe en tabla `reviews` |
+| Frontend no encuentra `hires` | Verifica RLS políticas en Supabase Dashboard |
+
+---
+
+**Última actualización:** 28 de noviembre de 2025
 | Ratings no se actualizan | Ejecutar `2-reparacion.sql` |
 | Error de foreign key | Ejecutar `2-reparacion.sql` |
 
