@@ -21,7 +21,19 @@ export default function LoginScreen() {
     });
 
     if (error) {
-      Alert.alert('Error', error.message);
+      // Mensajes de error más claros y amigables
+      let errorMessage = 'Las credenciales ingresadas son incorrectas. Volvé a intentarlo o solicitá cambio de clave si la olvidaste.';
+      
+      // Casos específicos de error
+      if (error.message.includes('Invalid login credentials')) {
+        errorMessage = 'Las credenciales ingresadas son incorrectas. Verificá tu email y contraseña.';
+      } else if (error.message.includes('Email not confirmed')) {
+        errorMessage = 'Debés confirmar tu email antes de iniciar sesión. Revisá tu bandeja de entrada.';
+      } else if (error.message.includes('User not found')) {
+        errorMessage = 'No existe una cuenta con este email. ¿Querés registrarte?';
+      }
+      
+      Alert.alert('Error de inicio de sesión', errorMessage);
       setLoading(false);
     } else if (data.user) {
       // El AuthContext ya maneja la navegación automáticamente
@@ -29,6 +41,23 @@ export default function LoginScreen() {
       console.log('✅ Login successful, redirecting to tabs...');
       router.replace('/(tabs)');
       setLoading(false);
+    }
+  }
+
+  async function handlePasswordReset() {
+    if (!email) {
+      Alert.alert('Email requerido', 'Por favor ingresá tu email para recuperar tu contraseña');
+      return;
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://working-go.com/auth/reset-password',
+    });
+
+    if (error) {
+      Alert.alert('Error', 'No se pudo enviar el email de recuperación. Intentá de nuevo.');
+    } else {
+      Alert.alert('Email enviado', 'Revisá tu bandeja de entrada para restablecer tu contraseña');
     }
   }
 
@@ -64,6 +93,13 @@ export default function LoginScreen() {
         <Text style={styles.buttonText}>
           {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
         </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={styles.forgotPassword}
+        onPress={handlePasswordReset}
+      >
+        <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
       </TouchableOpacity>
 
       <View style={styles.footer}>
@@ -121,6 +157,15 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: '600',
+  },
+  forgotPassword: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  forgotPasswordText: {
+    color: '#1e3a5f',
+    fontSize: 14,
+    textDecorationLine: 'underline',
   },
   footer: {
     flexDirection: 'row',
