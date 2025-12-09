@@ -126,3 +126,6 @@ yarn-error.*
 # Logs
 logs
 *.log
+
+# Web build
+frontend/dist/
