@@ -1,9 +1,13 @@
 import { useEffect } from 'react';
+import { View } from 'react-native';
 import { Stack, router, useSegments } from 'expo-router';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
+import { ToastProvider, useToast } from '../contexts/ToastContext';
+import { ToastContainer } from '../components/Toast';
 
 function RootLayoutNav() {
   const { session, loading, needsProfileCompletion, userProfile } = useAuth();
+  const { toasts, dismissToast } = useToast();
   const segments = useSegments();
 
   useEffect(() => {
@@ -55,19 +59,24 @@ function RootLayoutNav() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="auth/login" />
-      <Stack.Screen name="auth/register" />
-      <Stack.Screen name="auth/complete-profile" />
-    </Stack>
+    <View style={{ flex: 1 }}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="auth/login" />
+        <Stack.Screen name="auth/register" />
+        <Stack.Screen name="auth/complete-profile" />
+      </Stack>
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+    </View>
   );
 }
 
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <RootLayoutNav />
+      <ToastProvider>
+        <RootLayoutNav />
+      </ToastProvider>
     </AuthProvider>
   );
 }

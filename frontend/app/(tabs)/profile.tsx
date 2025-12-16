@@ -8,6 +8,8 @@ import ReviewsList from '../../components/ReviewsList';
 import ClientReviewsList from '../../components/ClientReviewsList';
 import AvatarUpload from '../../components/AvatarUpload';
 import PremiumBanner from '../../components/PremiumBanner';
+import ClientHirings from '../../components/ClientHirings';
+import ProfessionalJobs from '../../components/ProfessionalJobs';
 
 export default function ProfileScreen() {
   const { user, userProfile, professionalProfile, signOut, refreshProfiles, isPremium, isSubscriptionActive } = useAuth();
@@ -17,6 +19,8 @@ export default function ProfileScreen() {
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
   const [helpModalVisible, setHelpModalVisible] = useState(false);
   const [aboutModalVisible, setAboutModalVisible] = useState(false);
+  const [hiringsModalVisible, setHiringsModalVisible] = useState(false);
+  const [jobsModalVisible, setJobsModalVisible] = useState(false);
   
   // Settings state
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -75,7 +79,7 @@ export default function ProfileScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <AvatarUpload
           userId={userProfile?.id || ''}
@@ -159,6 +163,24 @@ export default function ProfileScreen() {
             */}
           </>
         )}
+
+        {/* Nueva sección: Mis Trabajos o Contrataciones */}
+        {userProfile?.is_professional ? (
+          <TouchableOpacity 
+            style={[styles.menuItem, styles.menuItemHighlight]}
+            onPress={() => setJobsModalVisible(true)}
+          >
+            <Text style={styles.menuTextHighlight}>💼 Mis Trabajos</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity 
+            style={[styles.menuItem, styles.menuItemHighlight]}
+            onPress={() => setHiringsModalVisible(true)}
+          >
+            <Text style={styles.menuTextHighlight}>📋 Mis Contrataciones</Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity 
           style={styles.menuItem} 
           onPress={() => router.push(isSubscriptionActive ? '/subscription/manage' as any : '/subscription/plan' as any)}
@@ -364,6 +386,42 @@ export default function ProfileScreen() {
         </ScrollView>
       </Modal>
 
+      {/* Client Hirings Modal */}
+      <Modal
+        visible={hiringsModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setHiringsModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Mis Contrataciones</Text>
+            <TouchableOpacity onPress={() => setHiringsModalVisible(false)}>
+              <Text style={styles.closeButton}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          {userProfile && <ClientHirings userId={userProfile.id} />}
+        </View>
+      </Modal>
+
+      {/* Professional Jobs Modal */}
+      <Modal
+        visible={jobsModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setJobsModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Mis Trabajos</Text>
+            <TouchableOpacity onPress={() => setJobsModalVisible(false)}>
+              <Text style={styles.closeButton}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          {professionalProfile && <ProfessionalJobs professionalId={professionalProfile.id} />}
+        </View>
+      </Modal>
+
       {/* About Us Modal */}
       <Modal
         visible={aboutModalVisible}
@@ -477,19 +535,24 @@ export default function ProfileScreen() {
           </View>
         </ScrollView>
       </Modal>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f7fa',
   },
   header: {
     alignItems: 'center',
     paddingVertical: 40,
-    backgroundColor: '#1e3a5f',
+    backgroundColor: '#6366f1',
+    shadowColor: '#4f46e5',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
   },
   avatar: {
     width: 80,
@@ -499,11 +562,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   avatarText: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#1e3a5f',
+    color: '#6366f1',
   },
   name: {
     fontSize: 22,
@@ -517,10 +585,15 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   badge: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.25)',
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   badgeText: {
     color: '#fff',
@@ -531,22 +604,50 @@ const styles = StyleSheet.create({
   },
   menuItem: {
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   menuText: {
     fontSize: 16,
     color: '#333',
+    fontWeight: '500',
+  },
+  menuItemHighlight: {
+    backgroundColor: '#6366f1',
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  menuTextHighlight: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
   },
   logoutButton: {
     margin: 20,
     padding: 16,
-    backgroundColor: '#fee',
-    borderRadius: 8,
+    backgroundColor: '#fff',
+    borderRadius: 12,
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#ff4444',
+    shadowColor: '#ff4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
   logoutText: {
-    color: '#c00',
+    color: '#ff4444',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -579,7 +680,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1e3a5f',
+    color: '#6366f1',
     marginBottom: 16,
   },
   sectionTitleMargin: {
@@ -605,22 +706,32 @@ const styles = StyleSheet.create({
     maxWidth: '80%',
   },
   dangerButton: {
-    backgroundColor: '#fee',
+    backgroundColor: '#fff',
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
     marginTop: 16,
-    borderWidth: 1,
-    borderColor: '#fdd',
+    borderWidth: 2,
+    borderColor: '#ff4444',
+    shadowColor: '#ff4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
   ratingCard: {
-    backgroundColor: '#f0f4f8',
+    backgroundColor: '#fff',
     padding: 16,
     borderRadius: 12,
     marginVertical: 8,
     marginHorizontal: 20,
     borderWidth: 1,
-    borderColor: '#e0e8f0',
+    borderColor: '#e0e7ff',
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
   },
   ratingTitle: {
     fontSize: 14,
@@ -635,7 +746,7 @@ const styles = StyleSheet.create({
   ratingNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1e3a5f',
+    color: '#6366f1',
     marginRight: 8,
   },
   ratingCount: {

@@ -5,41 +5,54 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
+// Paleta de colores moderna y vivida
+const tintColorLight = '#6366f1'; // Indigo vibrante
 const tintColorDark = '#fff';
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
+    text: '#1e293b',
+    background: '#f8fafc',
     tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
+    icon: '#64748b',
+    tabIconDefault: '#94a3b8',
     tabIconSelected: tintColorLight,
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
+    text: '#f1f5f9',
+    background: '#0f172a',
     tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
+    icon: '#cbd5e1',
+    tabIconDefault: '#94a3b8',
     tabIconSelected: tintColorDark,
   },
 };
 
-// Theme object for easier usage
+// Theme object moderno con colores más vividos
 export const theme = {
   colors: {
-    primary: '#0a7ea4',
-    secondary: '#687076',
-    success: '#28a745',
-    error: '#dc3545',
-    warning: '#ffc107',
-    text: '#11181C',
-    textLight: '#687076',
-    background: '#fff',
-    card: '#fff',
-    border: '#E5E5E5',
+    primary: '#6366f1', // Indigo vibrante
+    primaryDark: '#4f46e5',
+    primaryLight: '#818cf8',
+    secondary: '#8b5cf6', // Púrpura
+    accent: '#06b6d4', // Cyan
+    success: '#10b981', // Verde esmeralda
+    error: '#ef4444', // Rojo vibrante
+    warning: '#f59e0b', // Ámbar
+    info: '#3b82f6', // Azul
+    text: '#1e293b',
+    textLight: '#64748b',
+    textMuted: '#94a3b8',
+    background: '#f8fafc',
+    backgroundAlt: '#f1f5f9',
+    card: '#ffffff',
+    border: '#e2e8f0',
+    borderLight: '#f1f5f9',
+  },
+  gradients: {
+    primary: ['#6366f1', '#8b5cf6'],
+    secondary: ['#06b6d4', '#3b82f6'],
+    success: ['#10b981', '#059669'],
   },
 };
 
