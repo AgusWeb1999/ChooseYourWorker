@@ -488,10 +488,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 3,
     borderWidth: 1,
     borderColor: '#e8f0f8',
-    elevation: 3,
   },
   avatarContainer: {
     width: 70,

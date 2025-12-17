@@ -79,8 +79,13 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
+    <View style={styles.container}>
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
         <AvatarUpload
           userId={userProfile?.id || ''}
           currentUrl={userProfile?.avatar_url}
@@ -536,6 +541,7 @@ export default function ProfileScreen() {
         </ScrollView>
       </Modal>
     </ScrollView>
+    </View>
   );
 }
 
@@ -543,6 +549,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f7fa',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingBottom: 40,
   },
   header: {
     alignItems: 'center',
