@@ -554,7 +554,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
   header: {
     alignItems: 'center',
@@ -646,7 +646,8 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     margin: 20,
-    padding: 16,
+    marginBottom: 40,
+    padding: 18,
     backgroundColor: '#fff',
     borderRadius: 12,
     alignItems: 'center',
@@ -657,6 +658,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 3,
+    minHeight: 56,
+    justifyContent: 'center',
   },
   logoutText: {
     color: '#ff4444',
