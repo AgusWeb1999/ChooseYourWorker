@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, Image } from 'react-native';
 import { Link, router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 
@@ -63,6 +63,14 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.logoContainer}>
+        <Image 
+          source={require('../../assets/images/icon.png')} 
+          style={styles.logo}
+          resizeMode="contain"
+        />
+      </View>
+      
       <Text style={styles.title}>WorkingGo</Text>
       <Text style={styles.subtitle}>Iniciá sesión en tu cuenta</Text>
 
@@ -121,6 +129,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
     backgroundColor: '#f5f7fa',
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  logo: {
+    width: 120,
+    height: 120,
   },
   title: {
     fontSize: 32,
