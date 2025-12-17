@@ -28,14 +28,23 @@ export default function ProfileScreen() {
   const [showProfile, setShowProfile] = useState(true);
 
   function handleLogout() {
-    Alert.alert(
-      'Cerrar Sesión',
-      '¿Estás seguro que deseas cerrar sesión?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Cerrar Sesión', style: 'destructive', onPress: signOut },
-      ]
-    );
+    // En web, usar confirm() nativo que funciona mejor que Alert.alert
+    if (typeof window !== 'undefined' && window.confirm) {
+      const confirmed = window.confirm('¿Estás seguro que deseas cerrar sesión?');
+      if (confirmed) {
+        signOut();
+      }
+    } else {
+      // Fallback para mobile
+      Alert.alert(
+        'Cerrar Sesión',
+        '¿Estás seguro que deseas cerrar sesión?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Cerrar Sesión', style: 'destructive', onPress: signOut },
+        ]
+      );
+    }
   }
 
   async function handleProfileSaved() {
