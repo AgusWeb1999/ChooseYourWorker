@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { router } from 'expo-router';
 import { supabase } from '../src/lib/supabase';
 import { useToast } from '../contexts/ToastContext';
 import { notificationTemplates, createNotification } from '../services/notificationService';
+import AddReview from './AddReview';
 
 interface Hiring {
   id: string;
@@ -13,7 +15,8 @@ interface Hiring {
   professional_phone?: string;
   professional_address?: string;
   professional_email?: string;
-  status: 'pending' | 'accepted' | 'rejected' | 'in_progress' | 'completed' | 'cancelled';
+  professional_user_id?: string;
+  status: 'pending' | 'accepted' | 'rejected' | 'in_progress' | 'completed' | 'cancelled' | 'waiting_client_approval';
   accepted_status?: 'pending_acceptance' | 'accepted' | 'rejected' | 'waiting_your_approval';
   service_date: string;
   notes: string;
@@ -29,18 +32,68 @@ interface ClientHiringsProps {
 export default function ClientHirings({ userId }: ClientHiringsProps) {
   const [hirings, setHirings] = useState<Hiring[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reviewHire, setReviewHire] = useState<Hiring | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
   const { showToast } = useToast();
 
   useEffect(() => {
     fetchHirings();
   }, [userId]);
 
+  function openWhatsApp(phoneNumber: string) {
+    const cleanPhone = phoneNumber.replace(/\D/g, '');
+    const url = `https://wa.me/${cleanPhone}`;
+    window.open(url, '_blank');
+  }
+
   async function fetchHirings() {
     try {
-      // Por ahora simulamos datos ya que la tabla no existe aún
-      // TODO: Crear tabla 'hirings' en Supabase
-      // Reemplazar con llamada a API cuando esté lista
-      setHirings([]);
+      // Fetch hires
+      const { data: hiresData, error: hiresError } = await supabase
+        .from('hires')
+        .select(`
+          id, created_at, status, proposal_message, professional_id, started_at, completed_at,
+          professional:professional_id ( id, user_id, display_name, profession, phone )
+        `)
+        .eq('client_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (hiresError) throw hiresError;
+
+      // Fetch reviews for these hires
+      const hireIds = (hiresData || []).map(h => h.id);
+      const { data: reviewsData } = await supabase
+        .from('reviews')
+        .select('hire_id, rating, comment')
+        .in('hire_id', hireIds);
+
+      // Create a map of hire_id -> review
+      const reviewsMap = new Map();
+      (reviewsData || []).forEach(review => {
+        reviewsMap.set(review.hire_id, review);
+      });
+
+      const mapped: Hiring[] = (hiresData || []).map((item: any) => {
+        const review = reviewsMap.get(item.id);
+        return {
+          id: item.id,
+          created_at: item.created_at,
+          professional_id: item.professional_id,
+          professional_user_id: item.professional?.user_id,
+          professional_name: item.professional?.display_name || 'Profesional',
+          profession: item.professional?.profession || '',
+          professional_phone: item.professional?.phone || undefined,
+          status: item.status,
+          accepted_status: item.status === 'pending' ? 'pending_acceptance' : item.status === 'rejected' ? 'rejected' : item.status === 'waiting_client_approval' ? 'waiting_your_approval' : 'accepted',
+          service_date: item.started_at || item.created_at,
+          notes: '',
+          message: item.proposal_message || '',
+          rating: review?.rating,
+          review: review?.comment,
+        };
+      });
+
+      setHirings(mapped);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching hirings:', error);
@@ -65,6 +118,7 @@ export default function ClientHirings({ userId }: ClientHiringsProps) {
       case 'in_progress': return 'En Proceso';
       case 'accepted': return 'Aceptado';
       case 'pending': return 'Pendiente';
+      case 'waiting_client_approval': return 'Esperando tu confirmación';
       case 'cancelled': return 'Cancelado';
       default: return status;
     }
@@ -73,23 +127,37 @@ export default function ClientHirings({ userId }: ClientHiringsProps) {
   // Handlers para los botones del cliente
   async function handleApproveCompletion(hiringId: string) {
     try {
-      // TODO: Actualizar estado a 'completed' en Supabase
       const hiring = hirings.find(h => h.id === hiringId);
-      if (hiring) {
-        // TODO: Enviar notificación al trabajador
-        // const notification = createNotification(
-        //   'aprobacion_completado',
-        //   hiring.professional_id,
-        //   userId,
-        //   'Cliente',
-        //   notificationTemplates.aprobacionCompletado(hiring.professional_name).title,
-        //   notificationTemplates.aprobacionCompletado(hiring.professional_name).message,
-        //   hiringId,
-        //   'hiring'
-        // );
-        showToast('Trabajo marcado como completado', 'success');
+      
+      // Actualizar el hire a completado
+      const { error: updateError } = await supabase
+        .from('hires')
+        .update({ status: 'completed', completed_at: new Date().toISOString() })
+        .eq('id', hiringId);
+
+      if (updateError) throw updateError;
+
+      // Crear notificación para el trabajador
+      if (hiring && hiring.professional_user_id) {
+        const { error: notifError } = await supabase.from('notifications').insert({
+          type: 'aprobacion_completado',
+          user_id: hiring.professional_user_id,
+          sender_id: userId,
+          sender_name: hiring.professional_name,
+          title: notificationTemplates.aprobacionCompletado(hiring.professional_name).title,
+          message: notificationTemplates.aprobacionCompletado(hiring.professional_name).message,
+          related_id: hiringId,
+          related_type: 'hire',
+        });
+        
+        if (notifError) {
+          console.warn('Aviso: Notificación no enviada (pero trabajo se completó)', notifError);
+        }
       }
-      console.log('Trabajo finalizado por cliente:', hiringId);
+      
+      showToast('Trabajo marcado como completado', 'success');
+      fetchHirings();
+      fetchHirings();
     } catch (error) {
       console.error('Error al finalizar trabajo:', error);
       showToast('Error al finalizar el trabajo', 'error');
@@ -122,7 +190,7 @@ export default function ClientHirings({ userId }: ClientHiringsProps) {
             <Text style={styles.professionalName}>{item.professional_name}</Text>
             <Text style={styles.profession}>{item.profession}</Text>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
+          <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(item.status)}20` }]}>
             <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
               {getStatusText(item.status)}
             </Text>
@@ -131,7 +199,7 @@ export default function ClientHirings({ userId }: ClientHiringsProps) {
 
         {/* Acceptance Status Section */}
         {item.accepted_status && (
-          <View style={[styles.acceptanceStatusBar, { backgroundColor: getAcceptanceStatusColor(item.accepted_status) + '15', borderLeftColor: getAcceptanceStatusColor(item.accepted_status) }]}>
+          <View style={[styles.acceptanceStatusBar, { backgroundColor: `${getAcceptanceStatusColor(item.accepted_status)}15`, borderLeftColor: getAcceptanceStatusColor(item.accepted_status) }]}>
             <Text style={[styles.acceptanceStatusText, { color: getAcceptanceStatusColor(item.accepted_status) }]}>
               {getAcceptanceStatusText(item.accepted_status)}
             </Text>
@@ -157,7 +225,15 @@ export default function ClientHirings({ userId }: ClientHiringsProps) {
               {item.professional_phone && (
                 <View style={styles.contactRow}>
                   <Text style={styles.contactIcon}>📱</Text>
-                  <Text style={styles.contactValue}>{item.professional_phone}</Text>
+                  <View style={styles.contactInfo}>
+                    <Text style={styles.contactValue}>{item.professional_phone}</Text>
+                    <TouchableOpacity 
+                      style={styles.whatsappButton}
+                      onPress={() => openWhatsApp(item.professional_phone || '')}
+                    >
+                      <Text style={styles.whatsappButtonText}>💬 Abrir WhatsApp</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
               {item.professional_address && (
@@ -199,7 +275,13 @@ export default function ClientHirings({ userId }: ClientHiringsProps) {
           )}
 
           {item.status === 'completed' && !item.rating && (
-            <TouchableOpacity style={styles.reviewButton}>
+            <TouchableOpacity
+              style={styles.reviewButton}
+              onPress={() => {
+                setReviewHire(item);
+                setShowReviewModal(true);
+              }}
+            >
               <Text style={styles.reviewButtonText}>✍️ Dejar Reseña</Text>
             </TouchableOpacity>
           )}
@@ -222,7 +304,7 @@ export default function ClientHirings({ userId }: ClientHiringsProps) {
             </View>
           )}
 
-          {item.status === 'in_progress' && item.accepted_status === 'waiting_your_approval' && (
+          {item.status === 'waiting_client_approval' && (
             <View style={styles.approvalContainer}>
               <Text style={styles.approvalTitle}>✓ ¿Trabajo terminado?</Text>
               <Text style={styles.approvalText}>
@@ -244,8 +326,10 @@ export default function ClientHirings({ userId }: ClientHiringsProps) {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6366f1" />
-        <Text style={styles.loadingText}>Cargando contrataciones...</Text>
+        <View style={styles.contentLimiter}>
+          <ActivityIndicator size="large" color="#6366f1" />
+          <Text style={styles.loadingText}>Cargando contrataciones...</Text>
+        </View>
       </View>
     );
   }
@@ -253,24 +337,47 @@ export default function ClientHirings({ userId }: ClientHiringsProps) {
   if (hirings.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>📋</Text>
-        <Text style={styles.emptyText}>No tenés contrataciones aún</Text>
-        <Text style={styles.emptySubtext}>
-          Explorá profesionales y contratá servicios para verlos aquí
-        </Text>
+        <View style={styles.contentLimiter}>
+          <Text style={styles.emptyIcon}>📋</Text>
+          <Text style={styles.emptyText}>No tenés contrataciones aún</Text>
+          <Text style={styles.emptySubtext}>
+            Explorá profesionales y contratá servicios para verlos aquí
+          </Text>
+        </View>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={hirings}
-        renderItem={renderHiring}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-      />
+      <View style={styles.contentLimiter}>
+        <FlatList
+          data={hirings}
+          renderItem={renderHiring}
+          keyExtractor={(item) => item.id}
+          style={styles.listContainer}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      </View>
+
+      {reviewHire && (
+        <AddReview
+          professionalId={reviewHire.professional_id}
+          clientId={userId}
+          hireId={reviewHire.id}
+          visible={showReviewModal}
+          onClose={() => {
+            setShowReviewModal(false);
+            setReviewHire(null);
+          }}
+          onSuccess={() => {
+            setShowReviewModal(false);
+            setReviewHire(null);
+            fetchHirings();
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -279,6 +386,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
+  },
+  contentLimiter: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 900,
+    alignSelf: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -312,8 +425,12 @@ const styles = StyleSheet.create({
     color: '#64748b',
     textAlign: 'center',
   },
-  list: {
+  listContainer: {
+    flex: 1,
+  },
+  listContent: {
     padding: 16,
+    paddingBottom: 32,
   },
   card: {
     backgroundColor: '#fff',
@@ -527,17 +644,34 @@ const styles = StyleSheet.create({
   },
   contactRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 8,
   },
   contactIcon: {
     fontSize: 16,
     marginRight: 8,
     color: '#047857',
+    marginTop: 2,
+  },
+  contactInfo: {
+    flex: 1,
   },
   contactValue: {
     fontSize: 14,
     color: '#047857',
     fontWeight: '500',
+    marginBottom: 6,
+  },
+  whatsappButton: {
+    backgroundColor: '#25d366',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  whatsappButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

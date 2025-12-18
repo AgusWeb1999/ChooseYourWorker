@@ -107,3 +107,72 @@ Puedes eliminar la carpeta `_old_scripts/` si ya verificaste que todo funciona.
 ---
 
 **WorkingGo** - Backend limpio y funcional 🚀
+
+---
+
+## 🔔 Configurar Webhooks (Pagos)
+
+Este backend incluye servidores para Mercado Pago (`server-mercadopago.js`) y PayPal (`server-paypal.js`).
+
+### ¿Es obligatorio configurar webhooks para actualizar estados?
+
+- **Mercado Pago:** Recomendado. Ya se utiliza `notification_url` al crear la preferencia y el backend expone `POST /api/mercadopago/webhook` para actualizar estados (aprobado, pendiente, rechazado). Configurar las URLs de notificación en el panel asegura que todas las notificaciones lleguen, incluso si el usuario cierra el navegador.
+- **PayPal:** Para activar suscripciones tras el pago usamos `POST /api/paypal/capture-order` (actualiza al instante). Los **webhooks** son necesarios para reflejar eventos posteriores (reembolsos, denegaciones), vía `POST /api/paypal/webhook`.
+
+### Endpoints clave
+
+- Mercado Pago
+   - `POST /api/mercadopago/create-preference` → crea preferencia con `notification_url`
+   - `POST /api/mercadopago/webhook` → procesa eventos de `payment` y activa la suscripción
+   - `GET /api/mercadopago/payment/:paymentId` → consulta estado de pago
+
+- PayPal
+   - `POST /api/paypal/create-order` → crea orden
+   - `POST /api/paypal/capture-order` → captura y activa suscripción
+   - `POST /api/paypal/webhook` → maneja `PAYMENT.CAPTURE.DENIED/REFUNDED/COMPLETED`
+   - `GET /api/paypal/order/:orderId` → consulta orden
+
+### Configuración rápida
+
+1. Variables `.env`:
+    - `FRONTEND_URL`, `BACKEND_URL`
+    - `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`
+    - `MERCADOPAGO_ACCESS_TOKEN`
+   - `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`, `PAYPAL_WEBHOOK_VERIFY`
+
+2. Ejecutar servidores:
+
+```bash
+npm run dev:both
+```
+
+3. Paneles de proveedor:
+    - Mercado Pago → Notificaciones: produc/prueba → `https://tu-dominio/api/mercadopago/webhook` y `http://localhost:3000/api/mercadopago/webhook` (con `ngrok` si aplica).
+   - PayPal → Webhooks: produc/sandbox → `https://tu-dominio/api/paypal/webhook`. Seleccionar eventos: `PAYMENT.CAPTURE.DENIED`, `PAYMENT.CAPTURE.REFUNDED`, `PAYMENT.CAPTURE.COMPLETED`. Copiar el `Webhook ID` al `.env` como `PAYPAL_WEBHOOK_ID`. Si no podés configurarlo aún, poné `PAYPAL_WEBHOOK_VERIFY=false` para deshabilitar la validación de firma y procesar eventos igualmente.
+
+4. Pruebas rápida (curl):
+
+```bash
+curl -X POST http://localhost:3000/api/mercadopago/webhook \
+   -H "Content-Type: application/json" \
+   -d '{"type":"payment","data":{"id": "123456789"}}'
+
+curl -X POST http://localhost:3001/api/paypal/webhook \
+   -H "Content-Type: application/json" \
+   -d '{"event_type":"PAYMENT.CAPTURE.DENIED","resource":{"supplementary_data":{"related_ids":{"order_id":"ORDER-ID"}}}}'
+```
+
+### Seguridad (producción)
+
+- Mercado Pago: validar origen del webhook consultando el pago por `id` recibido.
+- PayPal: si `PAYPAL_WEBHOOK_VERIFY=true` y `PAYPAL_WEBHOOK_ID` presente, se valida automáticamente la firma (`verify-webhook-signature`). Caso contrario, los webhooks se procesan sin validación para facilitar pruebas/dev.
+
+---
+
+## ✅ Checklist Producción
+
+- [ ] Variables `.env` completas (`SUPABASE_*`, `FRONTEND_URL`, `BACKEND_URL`, `MERCADOPAGO_ACCESS_TOKEN`, `PAYPAL_CLIENT_ID/SECRET`, `PAYPAL_WEBHOOK_ID`).
+- [ ] `notification_url` de Mercado Pago apunta a tu dominio público (HTTPS).
+- [ ] Webhook de PayPal creado y `Webhook ID` configurado en `.env`.
+- [ ] HTTPS habilitado detrás de proxy/ingress.
+- [ ] Logs centralizados para auditar eventos de pago.

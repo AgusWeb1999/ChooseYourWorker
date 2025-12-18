@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, ActivityIndicator, Picker } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/contexts/AuthContext';
@@ -34,15 +34,6 @@ export default function CompleteProfileScreen() {
   const [state, setState] = useState('');
   const [hourlyRate, setHourlyRate] = useState('');
   const [yearsExperience, setYearsExperience] = useState('');
-  const [phone, setPhone] = useState('');
-  
-  // Campos de fecha de nacimiento separados
-  const [birthDay, setBirthDay] = useState('');
-  const [birthMonth, setBirthMonth] = useState('');
-  const [birthYear, setBirthYear] = useState('');
-  
-  const [identificationNumber, setIdentificationNumber] = useState('');
-  const [identificationType, setIdentificationType] = useState<'DNI' | 'CUIL' | 'PASSPORT' | null>(null);
   
   const [loading, setLoading] = useState(false);
 
@@ -75,61 +66,6 @@ export default function CompleteProfileScreen() {
 
     if (profession === 'Otro' && !customProfession.trim()) {
       Alert.alert('Error', 'Please enter your profession');
-      return;
-    }
-
-    if (!identificationType || !identificationNumber) {
-      Alert.alert('Error', 'Please enter your identification type and number');
-      return;
-    }
-
-    // Validate date fields
-    if (!birthDay || !birthMonth || !birthYear) {
-      Alert.alert('Error', 'Please enter your complete date of birth');
-      return;
-    }
-
-    const day = parseInt(birthDay);
-    const month = parseInt(birthMonth);
-    const year = parseInt(birthYear);
-
-    // Validate numeric values
-    if (isNaN(day) || isNaN(month) || isNaN(year)) {
-      Alert.alert('Error', 'Date of birth must contain only numbers');
-      return;
-    }
-
-    // Validate ranges
-    if (day < 1 || day > 31) {
-      Alert.alert('Error', 'Day must be between 1 and 31');
-      return;
-    }
-    if (month < 1 || month > 12) {
-      Alert.alert('Error', 'Month must be between 1 and 12');
-      return;
-    }
-    if (year < 1940 || year > new Date().getFullYear()) {
-      Alert.alert('Error', 'Year must be between 1940 and current year');
-      return;
-    }
-
-    // Create date of birth
-    const dateOfBirth = new Date(year, month - 1, day);
-
-    // Validate date is valid
-    if (dateOfBirth.getDate() !== day || dateOfBirth.getMonth() !== month - 1) {
-      Alert.alert('Error', 'The entered date is not valid');
-      return;
-    }
-
-    // Validate minimum age (18 years)
-    const today = new Date();
-    const age = today.getFullYear() - dateOfBirth.getFullYear();
-    const monthDiff = today.getMonth() - dateOfBirth.getMonth();
-    const dayDiff = today.getDate() - dateOfBirth.getDate();
-    
-    if (age < 18 || (age === 18 && (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)))) {
-      Alert.alert('Error', 'You must be at least 18 years old to register as a worker');
       return;
     }
 
@@ -174,25 +110,11 @@ export default function CompleteProfileScreen() {
         state,
         hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
         years_experience: yearsExperience ? parseInt(yearsExperience) : null,
-        phone,
-        date_of_birth: dateOfBirth.toISOString().split('T')[0],
-        identification_type: identificationType,
-        identification_number: identificationNumber,
       });
 
       if (error) {
         console.error('❌ Error al crear perfil:', error);
-        
-        // Mensaje más amigable para error de duplicado
-        if (error.code === '23505') {
-          Alert.alert(
-            'Error',
-            'Este número de identificación ya está registrado. Si ya tenés una cuenta, iniciá sesión en lugar de registrarte.'
-          );
-        } else {
-          Alert.alert('Error', error.message);
-        }
-        
+        Alert.alert('Error', error.message);
         setLoading(false);
         return;
       }
@@ -244,71 +166,6 @@ export default function CompleteProfileScreen() {
           onChangeText={setDisplayName}
         />
 
-        <Text style={styles.label}>Fecha de Nacimiento *</Text>
-        <Text style={styles.helperText}>Formato: DD / MM / AAAA</Text>
-        <View style={styles.dateRow}>
-          <TextInput
-            style={[styles.input, styles.dateInput]}
-            placeholder="Día"
-            placeholderTextColor="#999"
-            value={birthDay}
-            onChangeText={setBirthDay}
-            keyboardType="number-pad"
-            maxLength={2}
-          />
-          <Text style={styles.dateSeparator}>/</Text>
-          <TextInput
-            style={[styles.input, styles.dateInput]}
-            placeholder="Mes"
-            placeholderTextColor="#999"
-            value={birthMonth}
-            onChangeText={setBirthMonth}
-            keyboardType="number-pad"
-            maxLength={2}
-          />
-          <Text style={styles.dateSeparator}>/</Text>
-          <TextInput
-            style={[styles.input, styles.dateInputYear]}
-            placeholder="Año"
-            placeholderTextColor="#999"
-            value={birthYear}
-            onChangeText={setBirthYear}
-            keyboardType="number-pad"
-            maxLength={4}
-          />
-        </View>
-
-        <Text style={styles.label}>Identification Type *</Text>
-        <View style={styles.idTypeContainer}>
-          {(['DNI', 'CUIL', 'PASSPORT'] as const).map((type) => (
-            <TouchableOpacity
-              key={type}
-              style={[
-                styles.idTypeChip,
-                identificationType === type && styles.idTypeChipActive,
-              ]}
-              onPress={() => setIdentificationType(type)}
-            >
-              <Text style={[
-                styles.idTypeText,
-                identificationType === type && styles.idTypeTextActive,
-              ]}>
-                {type}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <Text style={styles.label}>Identification Number *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder={identificationType === 'DNI' ? '12345678' : identificationType === 'CUIL' ? '20-12345678-9' : 'ABC123456'}
-          placeholderTextColor="#999"
-          value={identificationNumber}
-          onChangeText={setIdentificationNumber}
-          keyboardType={identificationType === 'PASSPORT' ? 'default' : 'numeric'}
-        />
-
         <Text style={styles.label}>Profesión *</Text>
         <View style={styles.professionContainer}>
           {PROFESSIONS.map((p) => (
@@ -342,16 +199,6 @@ export default function CompleteProfileScreen() {
             />
           </>
         )}
-
-        <Text style={styles.label}>Phone</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Your contact number"
-          placeholderTextColor="#999"
-          value={phone}
-          onChangeText={setPhone}
-          keyboardType="phone-pad"
-        />
 
         <Text style={styles.label}>Bio</Text>
         <TextInput
@@ -470,6 +317,17 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 8,
     fontStyle: 'italic',
+  },
+  countryPicker: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    marginBottom: 16,
+    backgroundColor: '#f9fafb',
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 50,
   },
   dateRow: {
     flexDirection: 'row',

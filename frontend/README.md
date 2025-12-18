@@ -48,3 +48,45 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+---
+
+## Suscripciones y Webhooks
+
+Este proyecto integra pagos con Mercado Pago y PayPal para la suscripción Premium. El estado de pago de los clientes se actualiza desde el backend.
+
+### ¿Necesito configurar webhooks para actualizar estados?
+
+- **Mercado Pago:** Sí, es altamente recomendado. Ya usamos `notification_url` en la preferencia para recibir notificaciones en el backend en `/api/mercadopago/webhook`. Además, en el panel de Mercado Pago, podés configurar las URLs de prueba y producción para asegurar que todos los eventos (p.ej. `payment`) lleguen correctamente.
+- **PayPal:** Para activar la suscripción después del pago, usamos la captura directa (`/api/paypal/capture-order`) y actualizamos la BD al instante. Los **webhooks** son necesarios para eventos posteriores como **reembolsos** o **denegaciones** y deben configurarse en el panel de PayPal apuntando a `/api/paypal/webhook`.
+
+### Pasos rápidos
+
+1. Backend corriendo (ver carpeta `backend/`):
+
+```bash
+cd ../backend
+npm run dev:both
+```
+
+2. Variables `.env` en `backend/`:
+
+- `FRONTEND_URL` (ej: `http://localhost:19006`)
+- `BACKEND_URL` (ej: `http://localhost:3000`)
+- `MERCADOPAGO_ACCESS_TOKEN`
+- `PAYPAL_CLIENT_ID` y `PAYPAL_CLIENT_SECRET`
+
+3. Configurar Webhooks en proveedores:
+
+- Mercado Pago → Notificaciones: URL → `https://tu-dominio/api/mercadopago/webhook` (Producción) y `http://localhost:3000/api/mercadopago/webhook` para pruebas (usá `ngrok` si lo necesitás).
+- PayPal → Webhooks: URL → `https://tu-dominio/api/paypal/webhook`. Seleccioná eventos como `PAYMENT.CAPTURE.DENIED`, `PAYMENT.CAPTURE.REFUNDED`, `PAYMENT.CAPTURE.COMPLETED`.
+
+4. Pruebas locales (opcional):
+
+```bash
+# Exponer backend local (puerto 3000) si necesitás pruebas externas
+brew install ngrok
+ngrok http 3000
+```
+
+Para más detalles y endpoints, ver `backend/README.md`.

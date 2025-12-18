@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Image } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
+import { useAuth } from '../../src/contexts/AuthContext';
 
 interface Professional {
   id: string;
+  user_id: string;
   display_name: string;
   profession: string;
   city: string;
@@ -17,11 +19,14 @@ interface Professional {
 }
 
 export default function HomeScreen() {
+  const { user, userProfile } = useAuth();
   const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [premiumUsersMap, setPremiumUsersMap] = useState<Record<string, boolean>>({});
   const [filteredProfessionals, setFilteredProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProfession, setSelectedProfession] = useState<string | null>(null);
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
 
   const professions = [
     'Todos',
@@ -34,23 +39,48 @@ export default function HomeScreen() {
     'Mantenimiento General',
   ];
 
+  const cities = [
+    'Todas',
+    'Montevideo',
+    'Aguada',
+    'maldonado',
+    'Canelones',
+    'Punta del Este',
+    'Salto',
+  ];
+
   useEffect(() => {
     fetchProfessionals();
   }, []);
 
   useEffect(() => {
     filterProfessionals();
-  }, [searchQuery, selectedProfession, professionals]);
+  }, [searchQuery, selectedProfession, selectedCity, professionals, premiumUsersMap]);
 
   async function fetchProfessionals() {
     try {
       const { data, error } = await supabase
         .from('professionals')
-        .select('*')
+        .select('id, user_id, display_name, profession, city, state, hourly_rate, rating, rating_count, bio, avatar_url')
         .order('rating', { ascending: false });
 
       if (!error && data) {
         setProfessionals(data);
+        // Fetch premium flags for user_ids
+        const userIds = data.map(p => p.user_id).filter(Boolean);
+        if (userIds.length > 0) {
+          const { data: usersData } = await supabase
+            .from('users')
+            .select('id, subscription_type, subscription_status, subscription_end_date')
+            .in('id', userIds);
+          const now = new Date();
+          const map: Record<string, boolean> = {};
+          (usersData || []).forEach(u => {
+            const active = u.subscription_type === 'premium' && u.subscription_status === 'active' && u.subscription_end_date && new Date(u.subscription_end_date) > now;
+            map[u.id] = !!active;
+          });
+          setPremiumUsersMap(map);
+        }
       }
     } catch (error) {
       console.error('Error fetching professionals:', error);
@@ -77,6 +107,21 @@ export default function HomeScreen() {
       filtered = filtered.filter((prof) => prof.profession === selectedProfession);
     }
 
+    // Filtrar por ciudad
+    if (selectedCity && selectedCity !== 'Todas') {
+      filtered = filtered.filter((prof) => 
+        prof.city?.toLowerCase() === selectedCity.toLowerCase() ||
+        prof.state?.toLowerCase() === selectedCity.toLowerCase()
+      );
+    }
+
+    // Premium first, then by rating
+    filtered.sort((a, b) => {
+      const ap = premiumUsersMap[a.user_id] ? 1 : 0;
+      const bp = premiumUsersMap[b.user_id] ? 1 : 0;
+      if (ap !== bp) return bp - ap; // premium first
+      return (b.rating || 0) - (a.rating || 0);
+    });
     setFilteredProfessionals(filtered);
   }
 
@@ -94,9 +139,10 @@ export default function HomeScreen() {
   }
 
   function renderProfessionalCard({ item }: { item: Professional }) {
+    const isPremium = premiumUsersMap[item.user_id];
     return (
       <TouchableOpacity
-        style={styles.card}
+        style={[styles.card, isPremium && styles.premiumCard]}
         onPress={() => router.push(`/professional/${item.id}`)}
       >
         <View style={styles.cardHeader}>
@@ -113,7 +159,14 @@ export default function HomeScreen() {
             )}
           </View>
           <View style={styles.cardInfo}>
-            <Text style={styles.name}>{item.display_name}</Text>
+            <View style={styles.nameRow}>
+              <Text style={styles.name}>{item.display_name}</Text>
+              {isPremium && (
+                <View style={styles.premiumPill}>
+                  <Text style={styles.premiumPillText}>Premium</Text>
+                </View>
+              )}
+            </View>
             <Text style={styles.profession}>{item.profession}</Text>
             <Text style={styles.location}>
               📍 {item.city}, {item.state}
@@ -160,43 +213,98 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Buscar Profesionales</Text>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Buscar por nombre, profesión o ciudad..."
-          placeholderTextColor="#999"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+      {/* Nav Bar Superior */}
+      <View style={styles.topNav}>
+        <Text style={styles.logo}>ChooseYourWorker</Text>
+        <TouchableOpacity 
+          style={styles.profileButton}
+          onPress={() => router.push('/(tabs)/profile' as any)}
+        >
+          {userProfile?.avatar_url ? (
+            <Image source={{ uri: userProfile.avatar_url }} style={styles.navAvatar} />
+          ) : (
+            <View style={styles.navAvatarPlaceholder}>
+              <Text style={styles.navAvatarText}>
+                {userProfile?.full_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || '?'}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.filterContainer}>
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={professions}
-          keyExtractor={(item) => item}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.filterChip,
-                selectedProfession === item && styles.filterChipActive,
-              ]}
-              onPress={() => setSelectedProfession(item === 'Todos' ? null : item)}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  selectedProfession === item && styles.filterChipTextActive,
-                ]}
-              >
-                {item}
-              </Text>
-            </TouchableOpacity>
-          )}
-        />
-      </View>
+      <View style={styles.contentLimiter}>
+        <View style={styles.headerCompact}>
+          <Text style={styles.welcomeTextCompact}>👋 Hola, encuentra tu profesional ideal</Text>
+          <Text style={styles.subtitleCompact}>Miles de expertos listos para ayudarte</Text>
+        </View>
+
+        <View style={styles.filtersGrid}>
+          {/* Search Bar */}
+          <View style={styles.searchSection}>
+            <View style={styles.searchContainerCompact}>
+              <Text style={styles.searchIcon}>🔍</Text>
+              <TextInput
+                style={styles.searchInputCompact}
+                placeholder="Buscar por nombre, profesión o ciudad..."
+                placeholderTextColor="#9ca3af"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
+          </View>
+
+          {/* Categories Section */}
+          <View style={styles.filterSection}>
+            <Text style={styles.filterSectionTitle}>Categorías</Text>
+            <View style={styles.chipGrid}>
+              {professions.map((item) => (
+                <TouchableOpacity
+                  key={item}
+                  style={[
+                    styles.chipButton,
+                    selectedProfession === item && styles.chipButtonActive,
+                  ]}
+                  onPress={() => setSelectedProfession(item === 'Todos' ? null : item)}
+                >
+                  <Text
+                    style={[
+                      styles.chipButtonText,
+                      selectedProfession === item && styles.chipButtonTextActive,
+                    ]}
+                  >
+                    {item}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Cities Section */}
+          <View style={styles.filterSection}>
+            <Text style={styles.filterSectionTitle}>Ciudades</Text>
+            <View style={styles.chipGrid}>
+              {cities.map((item) => (
+                <TouchableOpacity
+                  key={item}
+                  style={[
+                    styles.chipButton,
+                    selectedCity === item && styles.chipButtonActive,
+                  ]}
+                  onPress={() => setSelectedCity(item === 'Todas' ? null : item)}
+                >
+                  <Text
+                    style={[
+                      styles.chipButtonText,
+                      selectedCity === item && styles.chipButtonTextActive,
+                    ]}
+                  >
+                    {item}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
 
       {filteredProfessionals.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -215,6 +323,7 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
+      </View>
     </View>
   );
 }
@@ -222,7 +331,55 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fa',
+    backgroundColor: '#f8fafc',
+  },
+  topNav: {
+    width: '100%',
+    height: 60,
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  logo: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#6366f1',
+  },
+  profileButton: {
+    padding: 4,
+  },
+  navAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  navAvatarPlaceholder: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#6366f1',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  navAvatarText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  contentLimiter: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 1200,
+    alignSelf: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -236,66 +393,181 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-  header: {
+  headerCompact: {
     padding: 20,
-    paddingTop: 60,
-    backgroundColor: '#1e3a5f',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
+    paddingTop: 24,
+    paddingBottom: 16,
+    backgroundColor: '#f8fafc',
   },
-  title: {
-    fontSize: 28,
+  welcomeTextCompact: {
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 16,
+    color: '#1f2937',
+    marginBottom: 4,
   },
-  searchInput: {
+  subtitleCompact: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  filtersGrid: {
+    padding: 16,
+    paddingTop: 0,
+    gap: 16,
+  },
+  searchSection: {
+    width: '100%',
+  },
+  searchContainerCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 14,
-    fontSize: 16,
-    shadowColor: '#000',
+    paddingHorizontal: 14,
+    paddingVertical: 2,
+    shadowColor: '#6366f1',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#e0e7ff',
+  },
+  searchIcon: {
+    fontSize: 18,
+    marginRight: 10,
+  },
+  searchInputCompact: {
+    flex: 1,
+    fontSize: 15,
+    paddingVertical: 12,
+    color: '#1f2937',
+  },
+  filterSection: {
+    width: '100%',
+  },
+  filterSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: 10,
+  },
+  chipGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chipButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  chipButtonActive: {
+    backgroundColor: '#6366f1',
+    borderColor: '#6366f1',
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 3,
   },
-  filterContainer: {
-    paddingVertical: 12,
-    paddingLeft: 20,
+  chipButtonText: {
+    fontSize: 14,
+    color: '#4b5563',
+    fontWeight: '500',
+  },
+  chipButtonTextActive: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  header: {
+    padding: 24,
+    paddingTop: 32,
+    paddingBottom: 24,
+    backgroundColor: '#f8fafc',
+  },
+  welcomeText: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#6b7280',
+    marginBottom: 24,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e6ed',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 2,
+    borderColor: '#e0e7ff',
+  },
+  searchIconLarge: {
+    fontSize: 22,
+    marginRight: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: 14,
+    color: '#1f2937',
+  },
+  filterContainer: {
+    paddingVertical: 16,
+    paddingLeft: 20,
+    backgroundColor: '#f8fafc',
+  },
+  filterTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: 12,
+    paddingLeft: 4,
+  },
+  filterChip: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 24,
+    backgroundColor: '#fff',
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
-    elevation: 2,
-  },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#f5f7fa',
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#e0e6ed',
+    elevation: 1,
   },
   filterChipActive: {
-    backgroundColor: '#1e3a5f',
-    borderColor: '#1e3a5f',
-    shadowColor: '#1e3a5f',
-    shadowOffset: { width: 0, height: 2 },
+    backgroundColor: '#6366f1',
+    borderColor: '#6366f1',
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   filterChipText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 15,
+    color: '#4b5563',
+    fontWeight: '500',
   },
   filterChipTextActive: {
     color: '#fff',
@@ -303,19 +575,26 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
+    paddingTop: 8,
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 14,
+    marginHorizontal: 8,
     borderWidth: 1,
-    borderColor: '#e8f0f8',
-    shadowColor: '#000',
+    borderColor: '#e0e7ff',
+    shadowColor: '#6366f1',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  premiumCard: {
+    borderColor: '#fbbf24',
+    backgroundColor: '#fffbeb',
+    shadowColor: '#fbbf24',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -345,11 +624,27 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   name: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 4,
+  },
+  premiumPill: {
+    backgroundColor: '#f59e0b',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  premiumPillText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 12,
   },
   profession: {
     fontSize: 14,
@@ -413,20 +708,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
+    paddingTop: 100,
   },
   emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
+    fontSize: 72,
+    marginBottom: 20,
   },
   emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: 12,
+    textAlign: 'center',
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: 15,
+    color: '#6b7280',
+    textAlign: 'center',
+    lineHeight: 22,
   },
   headerImage: {
     color: '#808080',

@@ -173,7 +173,7 @@ BEGIN
   
   -- Registrar en historial
   INSERT INTO public.subscription_history (user_id, subscription_type, action, payment_provider)
-  SELECT subscription_type, 'cancelled', payment_provider
+  SELECT p_user_id, subscription_type, 'cancelled', payment_provider
   FROM public.users
   WHERE id = p_user_id;
 END;

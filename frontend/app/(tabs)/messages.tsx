@@ -27,7 +27,7 @@ interface Conversation {
 }
 
 export default function MessagesScreen() {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -221,11 +221,28 @@ export default function MessagesScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Mensajes</Text>
+        {/* Nav Bar Superior */}
+        <View style={styles.topNav}>
+          <Text style={styles.logo}>ChooseYourWorker</Text>
+          <TouchableOpacity 
+            style={styles.profileButton}
+            onPress={() => router.push('/(tabs)/profile' as any)}
+          >
+            {userProfile?.avatar_url ? (
+              <Image source={{ uri: userProfile.avatar_url }} style={styles.navAvatar} />
+            ) : (
+              <View style={styles.navAvatarPlaceholder}>
+                <Text style={styles.navAvatarText}>
+                  {userProfile?.full_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || '?'}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+        <View style={styles.contentLimiter}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#6366f1" />
+          </View>
         </View>
       </View>
     );
@@ -233,20 +250,32 @@ export default function MessagesScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Mensajes</Text>
+      {/* Nav Bar Superior */}
+      <View style={styles.topNav}>
+        <Text style={styles.logo}>ChooseYourWorker</Text>
+        <TouchableOpacity 
+          style={styles.profileButton}
+          onPress={() => router.push('/(tabs)/profile' as any)}
+        >
+          {userProfile?.avatar_url ? (
+            <Image source={{ uri: userProfile.avatar_url }} style={styles.navAvatar} />
+          ) : (
+            <View style={styles.navAvatarPlaceholder}>
+              <Text style={styles.navAvatarText}>
+                {userProfile?.full_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || '?'}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
+      <View style={styles.contentLimiter}>
       {conversations.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <IconSymbol
-            name="bubble.left.and.bubble.right"
-            size={64}
-            color="#C7C7CC"
-          />
+          <Text style={styles.emptyEmoji}>💭</Text>
           <Text style={styles.emptyTitle}>No hay conversaciones</Text>
           <Text style={styles.emptySubtitle}>
-            Busca un trabajador en Home y{'\n'}envíale un mensaje para comenzar
+            Busca un trabajador y envíale un mensaje para comenzar
           </Text>
         </View>
       ) : (
@@ -264,6 +293,7 @@ export default function MessagesScreen() {
           }
         />
       )}
+      </View>
     </View>
   );
 }
@@ -271,20 +301,55 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: '#f8fafc',
   },
-  header: {
-    paddingTop: 60,
-    paddingBottom: 16,
+  topNav: {
+    width: '100%',
+    height: 60,
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    backgroundColor: '#FFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  headerTitle: {
-    fontSize: 34,
+  logo: {
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#6366f1',
+  },
+  profileButton: {
+    padding: 4,
+  },
+  navAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  navAvatarPlaceholder: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#6366f1',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  navAvatarText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  contentLimiter: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 1200,
+    alignSelf: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -297,30 +362,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 40,
   },
+  emptyEmoji: {
+    fontSize: 72,
+    marginBottom: 16,
+  },
   emptyTitle: {
     fontSize: 22,
     fontWeight: '600',
-    color: '#000',
-    marginTop: 20,
+    color: '#1f2937',
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: '#6b7280',
     textAlign: 'center',
     lineHeight: 22,
   },
   listContent: {
-    paddingVertical: 8,
+    paddingVertical: 16,
+    paddingTop: 24,
   },
   conversationItem: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF',
-    paddingVertical: 12,
+    marginHorizontal: 16,
+    marginVertical: 6,
+    paddingVertical: 14,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   avatarContainer: {
     position: 'relative',
@@ -330,10 +405,15 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#6366f1',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   avatarImage: {
     width: 56,

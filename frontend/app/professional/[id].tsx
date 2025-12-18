@@ -8,6 +8,7 @@ import ReviewsList from '../../components/ReviewsList';
 import AddReview from '../../components/AddReview';
 import ClientReviewsList from '../../components/ClientReviewsList';
 import AddClientReview from '../../components/AddClientReview';
+import { HireModal } from '../../components/HireModal';
 
 interface Professional {
   id: string;
@@ -32,12 +33,13 @@ interface Hire {
   id: string;
   client_id: string;
   professional_id: string;
-  status: 'in_progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'in_progress' | 'waiting_client_approval' | 'completed' | 'cancelled' | 'rejected';
   started_at: string;
   completed_at: string | null;
   cancelled_at: string | null;
   created_at: string;
   updated_at: string;
+  proposal_message?: string;
 }
 
 export default function ProfessionalProfileScreen() {
@@ -46,16 +48,19 @@ export default function ProfessionalProfileScreen() {
   const [professional, setProfessional] = useState<Professional | null>(null);
   const [loading, setLoading] = useState(true);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showHireModal, setShowHireModal] = useState(false);
   const [clientUserId, setClientUserId] = useState<string | null>(null);
   const [activeHire, setActiveHire] = useState<Hire | null>(null);
+  const [pendingHire, setPendingHire] = useState<Hire | null>(null);
   const [completedHire, setCompletedHire] = useState<Hire | null>(null);
   const [hasReviewed, setHasReviewed] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isPremiumPro, setIsPremiumPro] = useState(false);
 
   useEffect(() => {
     fetchProfessional();
     if (userProfile && !userProfile.is_professional) {
-      fetchActiveHire();
+      fetchClientHireState();
       fetchCompletedHireAndReview();
     }
   }, [id, userProfile]);
@@ -71,6 +76,26 @@ export default function ProfessionalProfileScreen() {
       if (!error && data) {
         setProfessional(data);
         setClientUserId(data.user_id);
+        // Fetch premium status for this professional's user
+        try {
+          const { data: userData, error: userErr } = await supabase
+            .from('users')
+            .select('subscription_type, subscription_status, subscription_end_date')
+            .eq('id', data.user_id)
+            .maybeSingle();
+          if (!userErr && userData) {
+            const active =
+              userData.subscription_type === 'premium' &&
+              userData.subscription_status === 'active' &&
+              userData.subscription_end_date &&
+              new Date(userData.subscription_end_date) > new Date();
+            setIsPremiumPro(!!active);
+          } else {
+            setIsPremiumPro(false);
+          }
+        } catch (e) {
+          setIsPremiumPro(false);
+        }
       } else {
         Alert.alert('Error', 'No se pudo cargar el perfil del profesional');
         router.back();
@@ -84,7 +109,7 @@ export default function ProfessionalProfileScreen() {
     }
   }
 
-  async function fetchActiveHire() {
+  async function fetchClientHireState() {
     if (!userProfile?.id) return;
 
     try {
@@ -93,14 +118,26 @@ export default function ProfessionalProfileScreen() {
         .select('*')
         .eq('client_id', userProfile.id)
         .eq('professional_id', id)
-        .eq('status', 'in_progress')
+        .in('status', ['pending', 'in_progress', 'waiting_client_approval'])
+        .order('created_at', { ascending: false })
         .maybeSingle();
 
       if (!error && data) {
-        setActiveHire(data);
+        if (data.status === 'pending') {
+          setPendingHire(data);
+          setActiveHire(null);
+        } else {
+          setActiveHire(data);
+          setPendingHire(null);
+        }
+      } else {
+        setPendingHire(null);
+        setActiveHire(null);
       }
     } catch (error) {
-      console.error('Error fetching active hire:', error);
+      console.error('Error fetching hire state:', error);
+      setPendingHire(null);
+      setActiveHire(null);
     }
   }
 
@@ -136,7 +173,7 @@ export default function ProfessionalProfileScreen() {
     }
   }
 
-  async function handleHire() {
+  async function handleSendProposal(message: string) {
     if (!userProfile?.id || !professional?.id) return;
 
     setActionLoading(true);
@@ -146,23 +183,42 @@ export default function ProfessionalProfileScreen() {
         .insert({
           client_id: userProfile.id,
           professional_id: professional.id,
-          status: 'in_progress',
+          status: 'pending',
+          proposal_message: message,
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      setActiveHire(data);
+      setPendingHire(data as Hire);
       Alert.alert(
-        '¡Contratado!',
-        `Has contratado a ${professional.display_name}. Ahora puedes ver su teléfono y contactarlo.`
+        'Propuesta enviada',
+        `Enviamos tu propuesta a ${professional.display_name}. El profesional debe aceptarla para comenzar.`
       );
+
+      // Notificar al profesional si existe su user_id
+      if ((professional as any).user_id) {
+        try {
+          await supabase.from('notifications').insert({
+            type: 'solicitud_enviada',
+            user_id: (professional as any).user_id,
+            sender_id: userProfile.id,
+            sender_name: userProfile.full_name || 'Cliente',
+            title: 'Nueva solicitud de contratación',
+            message: message?.slice(0, 500) || 'Tienes una nueva solicitud',
+            related_id: data?.id,
+            related_type: 'hire',
+          });
+        } catch (notifyError) {
+          console.warn('No se pudo enviar la notificación de solicitud:', notifyError);
+        }
+      }
     } catch (error: any) {
       console.error('Error creating hire:', error);
       Alert.alert(
         'Error',
-        error.message || 'No se pudo crear la contratación. Intenta de nuevo.'
+        error.message || 'No se pudo enviar la propuesta. Intenta de nuevo.'
       );
     } finally {
       setActionLoading(false);
@@ -222,6 +278,7 @@ export default function ProfessionalProfileScreen() {
   function handleReviewSuccess() {
     fetchProfessional();
     fetchCompletedHireAndReview();
+    fetchClientHireState();
     setShowReviewModal(false);
   }
 
@@ -247,13 +304,6 @@ export default function ProfessionalProfileScreen() {
   const isClient = !userProfile?.is_professional;
   const isProfessional = userProfile?.is_professional;
 
-  // Debug logs
-  console.log('🔍 Professional ID:', professional?.id);
-  console.log('🔍 User Profile:', userProfile);
-  console.log('🔍 Is Client:', isClient);
-  console.log('🔍 Show Modal:', showReviewModal);
-  console.log('🔍 Will Render AddReview:', isClient && userProfile);
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -263,193 +313,217 @@ export default function ProfessionalProfileScreen() {
         <Text style={styles.headerTitle}>Perfil Profesional</Text>
       </View>
 
-      <ScrollView style={styles.content}>
-        {/* Info Principal */}
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            {professional.avatar_url ? (
-              <Image 
-                source={{ uri: professional.avatar_url }} 
-                style={styles.avatarImage}
-              />
-            ) : (
-              <Text style={styles.avatarText}>
-                {professional.display_name?.charAt(0)?.toUpperCase() || '?'}
-              </Text>
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+        <View style={styles.contentLimiter}>
+          {/* Info Principal */}
+          <View style={styles.profileCard}>
+            <View style={styles.avatar}>
+              {professional.avatar_url ? (
+                <Image 
+                  source={{ uri: professional.avatar_url }} 
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <Text style={styles.avatarText}>
+                  {professional.display_name?.charAt(0)?.toUpperCase() || '?'}
+                </Text>
+              )}
+            </View>
+            <Text style={styles.name}>{professional.display_name}</Text>
+            {isPremiumPro && (
+              <View style={styles.premiumBadge}>
+                <Text style={styles.premiumBadgeText}>Premium</Text>
+              </View>
+            )}
+            <Text style={styles.profession}>{professional.profession}</Text>
+            
+            {professional.rating > 0 && (
+              <View style={styles.ratingBadge}>
+                <Text style={styles.ratingText}>
+                  ⭐ {professional.rating.toFixed(1)}
+                </Text>
+                <Text style={styles.reviewCountText}>
+                  ({professional.rating_count} {professional.rating_count === 1 ? 'reseña' : 'reseñas'})
+                </Text>
+              </View>
             )}
           </View>
-          <Text style={styles.name}>{professional.display_name}</Text>
-          <Text style={styles.profession}>{professional.profession}</Text>
-          
-          {professional.rating > 0 && (
-            <View style={styles.ratingBadge}>
-              <Text style={styles.ratingText}>
-                ⭐ {professional.rating.toFixed(1)}
-              </Text>
-              <Text style={styles.reviewCountText}>
-                ({professional.rating_count} {professional.rating_count === 1 ? 'reseña' : 'reseñas'})
-              </Text>
-            </View>
-          )}
-        </View>
 
-        {/* Detalles */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Información</Text>
-          
-          {professional.bio && (
+          {/* Detalles */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Información</Text>
+            
+            {professional.bio && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Sobre mí:</Text>
+                <Text style={styles.infoValue}>{professional.bio}</Text>
+              </View>
+            )}
+
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Sobre mí:</Text>
-              <Text style={styles.infoValue}>{professional.bio}</Text>
-            </View>
-          )}
-
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>📍 Ubicación:</Text>
-            <Text style={styles.infoValue}>
-              {professional.city}, {professional.state} ({professional.zip_code})
-            </Text>
-          </View>
-
-          {professional.hourly_rate && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>💰 Tarifa:</Text>
-              <Text style={styles.infoValue}>${professional.hourly_rate}/hora</Text>
-            </View>
-          )}
-
-          {professional.years_experience && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>📅 Experiencia:</Text>
+              <Text style={styles.infoLabel}>📍 Ubicación:</Text>
               <Text style={styles.infoValue}>
-                {professional.years_experience} {professional.years_experience === 1 ? 'año' : 'años'}
+                {professional.city}, {professional.state} ({professional.zip_code})
+              </Text>
+            </View>
+
+            {professional.hourly_rate && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>💰 Tarifa:</Text>
+                <Text style={styles.infoValue}>${professional.hourly_rate}/hora</Text>
+              </View>
+            )}
+
+            {professional.years_experience && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>📅 Experiencia:</Text>
+                <Text style={styles.infoValue}>
+                  {professional.years_experience} {professional.years_experience === 1 ? 'año' : 'años'}
+                </Text>
+              </View>
+            )}
+
+            {professional.completed_hires_count > 0 && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>✅ Trabajos completados:</Text>
+                <Text style={styles.infoValue}>{professional.completed_hires_count}</Text>
+              </View>
+            )}
+
+            {/* Mostrar teléfono solo si hay hire activo */}
+            {activeHire && professional.phone && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>📞 Teléfono:</Text>
+                <Text style={styles.infoValue}>{professional.phone}</Text>
+                <Text style={styles.phoneNote}>
+                  * Disponible porque lo has contratado
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Botones de Acción para Clientes */}
+          {isClient && (
+            <View style={styles.actionContainer}>
+              {/* Botón de Mensaje (siempre visible) */}
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.messageButton]} 
+                onPress={() => router.push(`/chat/${professional.user_id}`)}
+              >
+                <IconSymbol name="bubble.left.and.bubble.right.fill" size={20} color="#FFF" />
+                <Text style={styles.actionButtonText}>Mensaje</Text>
+              </TouchableOpacity>
+
+              {/* Botón de Enviar Propuesta */}
+              {/* Solo mostrar si no hay propuesta pendiente ni trabajo activo */}
+              {!pendingHire && !activeHire && (
+                <TouchableOpacity 
+                  style={[styles.actionButton, styles.hireButton]}
+                  onPress={() => setShowHireModal(true)}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? (
+                    <ActivityIndicator color="#FFF" />
+                  ) : (
+                    <>
+                      <Text style={styles.actionButtonIcon}>💼</Text>
+                      <Text style={styles.actionButtonText}>Enviar Propuesta</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+
+            </View>
+          )}
+
+          {/* Estado del Trabajo */}
+          {isClient && pendingHire && (
+            <View style={styles.jobStatusCard}>
+              <Text style={styles.jobStatusTitle}>⏳ Propuesta enviada</Text>
+              <Text style={styles.jobStatusText}>
+                Tu propuesta está pendiente de que {professional.display_name} la acepte o rechace.
+              </Text>
+              {pendingHire.proposal_message && (
+                <Text style={styles.jobStatusHint}>
+                  Mensaje enviado: "{pendingHire.proposal_message}"
+                </Text>
+              )}
+            </View>
+          )}
+
+          {isClient && activeHire && (
+            <View style={styles.jobStatusCard}>
+              <Text style={styles.jobStatusTitle}>📋 Trabajo en Progreso</Text>
+              <Text style={styles.jobStatusText}>
+                Contrataste a {professional.display_name} el {new Date(activeHire.started_at).toLocaleDateString('es-ES')}
+              </Text>
+              <Text style={styles.jobStatusHint}>
+                Cuando el trabajador finalice y tú apruebes el trabajo, podrás dejar una reseña.
               </Text>
             </View>
           )}
 
-          {professional.completed_hires_count > 0 && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>✅ Trabajos completados:</Text>
-              <Text style={styles.infoValue}>{professional.completed_hires_count}</Text>
-            </View>
-          )}
-
-          {/* Mostrar teléfono solo si hay hire activo */}
-          {activeHire && professional.phone && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>📞 Teléfono:</Text>
-              <Text style={styles.infoValue}>{professional.phone}</Text>
-              <Text style={styles.phoneNote}>
-                * Disponible porque lo has contratado
+          {isClient && completedHire && !hasReviewed && (
+            <View style={styles.jobStatusCard}>
+              <Text style={styles.jobStatusTitle}>⭐ Trabajo Completado</Text>
+              <Text style={styles.jobStatusText}>
+                Completaste un trabajo con {professional.display_name}.
               </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Botones de Acción para Clientes */}
-        {isClient && (
-          <View style={styles.actionContainer}>
-            {/* Botón de Mensaje (siempre visible) */}
-            <TouchableOpacity 
-              style={[styles.actionButton, styles.messageButton]} 
-              onPress={() => router.push(`/chat/${professional.user_id}`)}
-            >
-              <IconSymbol name="bubble.left.and.bubble.right.fill" size={20} color="#FFF" />
-              <Text style={styles.actionButtonText}>Mensaje</Text>
-            </TouchableOpacity>
-
-            {/* Botón de Contratar o Estado del Trabajo */}
-            {!activeHire && !completedHire && (
-              <TouchableOpacity 
-                style={[styles.actionButton, styles.hireButton]}
-                onPress={handleHire}
-                disabled={actionLoading}
-              >
-                {actionLoading ? (
-                  <ActivityIndicator color="#FFF" />
-                ) : (
-                  <>
-                    <Text style={styles.actionButtonIcon}>💼</Text>
-                    <Text style={styles.actionButtonText}>Contratar</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            )}
-
-            {activeHire && (
-              <TouchableOpacity 
-                style={[styles.actionButton, styles.completeButton]}
-                onPress={handleCompleteJob}
-                disabled={actionLoading}
-              >
-                {actionLoading ? (
-                  <ActivityIndicator color="#FFF" />
-                ) : (
-                  <>
-                    <Text style={styles.actionButtonIcon}>✅</Text>
-                    <Text style={styles.actionButtonText}>Finalizar Trabajo</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-
-        {/* Estado del Trabajo */}
-        {isClient && activeHire && (
-          <View style={styles.jobStatusCard}>
-            <Text style={styles.jobStatusTitle}>📋 Trabajo en Progreso</Text>
-            <Text style={styles.jobStatusText}>
-              Contrataste a {professional.display_name} el {new Date(activeHire.started_at).toLocaleDateString('es-ES')}
-            </Text>
-            <Text style={styles.jobStatusHint}>
-              Cuando finalices el trabajo, podrás dejar una reseña.
-            </Text>
-          </View>
-        )}
-
-        {isClient && completedHire && !hasReviewed && (
-          <View style={styles.jobStatusCard}>
-            <Text style={styles.jobStatusTitle}>⭐ Trabajo Completado</Text>
-            <Text style={styles.jobStatusText}>
-              Completaste un trabajo con {professional.display_name}.
-            </Text>
-            <TouchableOpacity
-              style={styles.reviewPromptButton}
-              onPress={() => setShowReviewModal(true)}
-            >
-              <Text style={styles.reviewPromptButtonText}>Dejar Reseña Ahora</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Reseñas del Profesional (visibles para todos) */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Reseñas de Clientes</Text>
-            {isClient && completedHire && !hasReviewed && (
               <TouchableOpacity
-                style={styles.addReviewButton}
+                style={styles.reviewPromptButton}
                 onPress={() => setShowReviewModal(true)}
               >
-                <Text style={styles.addReviewButtonText}>+ Dejar reseña</Text>
+                <Text style={styles.reviewPromptButtonText}>Dejar Reseña Ahora</Text>
               </TouchableOpacity>
-            )}
-          </View>
-          
-          <ReviewsList professionalId={professional.id} />
-        </View>
+            </View>
+          )}
 
-        {/* Calificaciones del Cliente (solo visible para profesionales) */}
-        {isProfessional && clientUserId && (
+          {/* Reseñas del Profesional (visibles para todos) */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Calificaciones como Cliente</Text>
+              <Text style={styles.sectionTitle}>Reseñas de Clientes</Text>
+              {isClient && completedHire && !hasReviewed && (
+                <TouchableOpacity
+                  style={styles.addReviewButton}
+                  onPress={() => setShowReviewModal(true)}
+                >
+                  <Text style={styles.addReviewButtonText}>+ Dejar reseña</Text>
+                </TouchableOpacity>
+              )}
             </View>
-            <ClientReviewsList clientId={clientUserId} />
+            
+            <ReviewsList professionalId={professional.id} />
           </View>
-        )}
+
+          {/* Calificaciones del Cliente (solo visible para profesionales) */}
+          {isProfessional && clientUserId && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Calificaciones como Cliente</Text>
+              </View>
+              <ClientReviewsList clientId={clientUserId} />
+            </View>
+          )}
+        </View>
       </ScrollView>
+
+      {/* Modal para propuesta de contratación */}
+      {isClient && !userProfile?.is_professional && !completedHire && (
+        <HireModal
+          visible={showHireModal}
+          professional={{
+            id: professional.id,
+            name: professional.display_name,
+            specialty: professional.profession,
+            rate: professional.hourly_rate,
+          }}
+          onConfirm={async (msg) => {
+            await handleSendProposal(msg);
+            setShowHireModal(false);
+          }}
+          onCancel={() => setShowHireModal(false)}
+        />
+      )}
 
       {/* Modal para agregar reseña (Cliente califica a Trabajador) */}
       {isClient && userProfile && completedHire && (
@@ -520,6 +594,16 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  contentContainer: {
+    paddingBottom: 24,
+  },
+  contentLimiter: {
+    width: '100%',
+    maxWidth: 900,
+    alignSelf: 'center',
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+  },
   profileCard: {
     alignItems: 'center',
     padding: 24,
@@ -550,6 +634,19 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 4,
+  },
+  premiumBadge: {
+    marginTop: 6,
+    backgroundColor: '#f59e0b',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  premiumBadgeText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 12,
+    textAlign: 'center',
   },
   profession: {
     fontSize: 18,

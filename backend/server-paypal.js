@@ -1,10 +1,22 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const paypal = require('@paypal/checkout-server-sdk');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 app.use(express.json());
+
+// Configuración de CORS
+app.use(cors({
+  origin: [
+    'http://localhost:8081',
+    'http://localhost:3000',
+    'http://127.0.0.1:8081',
+    process.env.FRONTEND_URL
+  ],
+  credentials: true
+}));
 
 // Configuración de Supabase
 const supabase = createClient(
@@ -25,6 +37,14 @@ function environment() {
 }
 
 const client = new paypal.core.PayPalHttpClient(environment());
+
+// Webhook ID (desde el panel de PayPal)
+const PAYPAL_WEBHOOK_ID = process.env.PAYPAL_WEBHOOK_ID;
+if (!PAYPAL_WEBHOOK_ID) {
+  console.warn('[PayPal] Falta PAYPAL_WEBHOOK_ID en .env — la verificación de firma se omitirá si no está presente.');
+}
+// Toggle para habilitar/deshabilitar verificación de firma
+const PAYPAL_WEBHOOK_VERIFY = String(process.env.PAYPAL_WEBHOOK_VERIFY || 'false').toLowerCase() === 'true';
 
 // Precio de suscripción
 const SUBSCRIPTION_PRICE_USD = 9.99;
@@ -185,6 +205,41 @@ app.post('/api/paypal/capture-order', async (req, res) => {
 app.post('/api/paypal/webhook', async (req, res) => {
   try {
     const webhookEvent = req.body;
+
+    // Verificar firma del webhook (solo si está habilitado y configurado)
+    if (PAYPAL_WEBHOOK_VERIFY && PAYPAL_WEBHOOK_ID) {
+      const transmissionId = req.headers['paypal-transmission-id'];
+      const transmissionTime = req.headers['paypal-transmission-time'];
+      const transmissionSig = req.headers['paypal-transmission-sig'];
+      const certUrl = req.headers['paypal-cert-url'];
+      const authAlgo = req.headers['paypal-auth-algo'];
+
+      try {
+        const VerifyWebhookSignatureRequest = paypal.notifications.VerifyWebhookSignatureRequest;
+        const verifyReq = new VerifyWebhookSignatureRequest();
+        verifyReq.requestBody({
+          auth_algo: authAlgo,
+          cert_url: certUrl,
+          transmission_id: transmissionId,
+          transmission_sig: transmissionSig,
+          transmission_time: transmissionTime,
+          webhook_id: PAYPAL_WEBHOOK_ID,
+          webhook_event: webhookEvent,
+        });
+
+        const verifyRes = await client.execute(verifyReq);
+        const status = verifyRes.result && verifyRes.result.verification_status;
+        if (status !== 'SUCCESS') {
+          console.error('[PayPal] Verificación de firma fallida:', status, verifyRes.result);
+          return res.status(400).send('Invalid webhook signature');
+        }
+      } catch (e) {
+        console.error('[PayPal] Error verificando firma de webhook:', e);
+        return res.status(400).send('Webhook signature verification failed');
+      }
+    } else {
+      console.warn('[PayPal] Verificación de firma deshabilitada (PAYPAL_WEBHOOK_VERIFY=false) o sin WEBHOOK_ID — procesando webhook sin verificación.');
+    }
 
     console.log('Webhook de PayPal recibido:', webhookEvent);
 

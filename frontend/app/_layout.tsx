@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { View } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { Stack, router, useSegments } from 'expo-router';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { ToastProvider, useToast } from '../contexts/ToastContext';
@@ -19,8 +19,9 @@ function RootLayoutNav() {
     }
 
     const inAuthGroup = (segments[0] as string) === 'auth';
-    const inCompleteProfile = segments[1] === 'complete-profile';
+    const inCompleteProfile = segments[1] === 'complete-profile' || segments[1] === 'complete-client-profile';
     const isWorker = userProfile?.is_professional === true;
+    const isClient = userProfile?.is_professional === false;
 
     console.log('🔄 Navigation check:', {
       hasSession: !!session,
@@ -29,8 +30,9 @@ function RootLayoutNav() {
       inAuthGroup,
       inCompleteProfile,
       isWorker,
+      isClient,
       needsProfileCompletion,
-      userProfile: userProfile ? { id: userProfile.id, is_professional: userProfile.is_professional } : null,
+      userProfile: userProfile ? { id: userProfile.id, is_professional: userProfile.is_professional, phone: userProfile.phone } : null,
     });
 
     if (!session && !inAuthGroup) {
@@ -38,9 +40,14 @@ function RootLayoutNav() {
       console.log('➡️ Redirecting to login (no session)');
       router.replace('/auth/login' as any);
     } else if (session && needsProfileCompletion && !inCompleteProfile) {
-      // Worker needs to complete profile -> go to complete-profile
-      console.log('➡️ Redirecting to complete worker profile');
-      router.replace('/auth/complete-profile' as any);
+      // Someone needs to complete profile
+      if (isWorker) {
+        console.log('➡️ Redirecting to complete worker profile');
+        router.replace('/auth/complete-profile' as any);
+      } else if (isClient) {
+        console.log('➡️ Redirecting to complete client profile');
+        router.replace('/auth/complete-client-profile' as any);
+      }
     } else if (session && !needsProfileCompletion && inCompleteProfile) {
       // Profile is complete but still in complete-profile page -> go to tabs
       console.log('➡️ Redirecting to tabs (profile already complete, leaving form)');
@@ -59,12 +66,13 @@ function RootLayoutNav() {
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.appContainer}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="auth/login" />
         <Stack.Screen name="auth/register" />
         <Stack.Screen name="auth/complete-profile" />
+        <Stack.Screen name="auth/complete-client-profile" />
       </Stack>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </View>
@@ -80,3 +88,10 @@ export default function RootLayout() {
     </AuthProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  appContainer: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+});

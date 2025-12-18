@@ -17,7 +17,12 @@ export default function PremiumBanner({
   style 
 }: PremiumBannerProps) {
   const router = useRouter();
-  const { isPremium, isSubscriptionActive } = useAuth();
+  const { isPremium, isSubscriptionActive, userProfile } = useAuth();
+
+  // Solo profesionales pueden ver CTA de suscripción
+  if (!userProfile?.is_professional) {
+    return null;
+  }
 
   // No mostrar si el usuario ya es premium
   if (isPremium && isSubscriptionActive) {

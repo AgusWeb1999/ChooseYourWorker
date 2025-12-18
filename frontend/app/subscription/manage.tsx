@@ -10,6 +10,28 @@ const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:300
 export default function ManageSubscription() {
   const router = useRouter();
   const { userProfile, refreshProfiles, isSubscriptionActive } = useAuth();
+  // Solo profesionales pueden gestionar suscripción
+  if (userProfile?.is_professional !== true) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={{ position: 'absolute', left: 16 }}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.title}>Gestionar Suscripción</Text>
+          <TouchableOpacity onPress={() => router.push('/' as any)} style={{ position: 'absolute', right: 16 }}>
+            <Ionicons name="home" size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Acceso restringido</Text>
+          <Text style={{ color: theme.colors.textLight }}>
+            La suscripción premium es exclusiva para profesionales.
+          </Text>
+        </View>
+      </View>
+    );
+  }
   const [loading, setLoading] = useState(false);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(true);
@@ -25,9 +47,10 @@ export default function ManageSubscription() {
         `${BACKEND_URL}/api/subscription/transactions/${userProfile?.id}`
       );
       const data = await response.json();
-      setTransactions(data);
+      setTransactions(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error al cargar transacciones:', error);
+      setTransactions([]);
     } finally {
       setLoadingTransactions(false);
     }
@@ -119,11 +142,23 @@ export default function ManageSubscription() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Ionicons name="settings" size={60} color={theme.colors.primary} />
-        <Text style={styles.title}>Gestionar Suscripción</Text>
-      </View>
+    <ScrollView style={styles.container} contentContainerStyle={styles.pageContent}>
+      <View style={styles.contentLimiter}>
+        <View style={styles.topBar}>
+          <TouchableOpacity style={styles.navButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
+            <Text style={styles.navButtonText}>Atrás</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navButton} onPress={() => router.push('/' as any)}>
+            <Ionicons name="home" size={22} color={theme.colors.text} />
+            <Text style={styles.navButtonText}>Inicio</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.header}>
+          <Ionicons name="settings" size={60} color={theme.colors.primary} />
+          <Text style={styles.title}>Gestionar Suscripción</Text>
+        </View>
 
       {/* Información de la suscripción */}
       <View style={styles.card}>
@@ -235,86 +270,30 @@ export default function ManageSubscription() {
         </View>
       )}
 
-      {/* Historial de Pagos */}
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Historial de Pagos</Text>
-        
-        {loadingTransactions ? (
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-        ) : transactions.length === 0 ? (
-          <Text style={styles.emptyText}>No hay transacciones registradas</Text>
-        ) : (
-          transactions.map((transaction) => (
-            <View key={transaction.id} style={styles.transactionItem}>
-              <View style={styles.transactionHeader}>
-                <View style={styles.transactionIcon}>
-                  <Ionicons 
-                    name={transaction.payment_provider === 'mercadopago' ? 'card' : 'logo-paypal'} 
-                    size={24} 
-                    color={theme.colors.primary} 
-                  />
-                </View>
-                <View style={styles.transactionInfo}>
-                  <Text style={styles.transactionAmount}>
-                    {transaction.currency} ${transaction.amount}
-                  </Text>
-                  <Text style={styles.transactionDate}>
-                    {new Date(transaction.created_at).toLocaleDateString('es-AR', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </Text>
-                </View>
-                <View style={[
-                  styles.transactionStatus,
-                  { backgroundColor: getStatusColor(transaction.status) }
-                ]}>
-                  <Text style={styles.transactionStatusText}>
-                    {getStatusText(transaction.status)}
-                  </Text>
-                </View>
+        {/* Beneficios Premium (alineados con pantalla de suscripción) */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Tus Beneficios Premium</Text>
+          <View style={styles.benefitsList}>
+            {[
+              'Mensajes ilimitados',
+              'Perfil destacado en búsquedas',
+              'Insignia de cuenta Premium',
+            ].map((benefit, index) => (
+              <View key={index} style={styles.benefitItem}>
+                <Ionicons name="checkmark-circle" size={20} color={theme.colors.success} />
+                <Text style={styles.benefitText}>{benefit}</Text>
               </View>
-              <Text style={styles.transactionId}>
-                ID: {transaction.transaction_id}
-              </Text>
-            </View>
-          ))
-        )}
-      </View>
-
-      {/* Beneficios Premium */}
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Tus Beneficios Premium</Text>
-        <View style={styles.benefitsList}>
-          {[
-            'Mensajes ilimitados con profesionales',
-            'Filtros avanzados de búsqueda',
-            'Perfil destacado en resultados',
-            'Soporte prioritario 24/7',
-            'Estadísticas detalladas',
-            'Verificación premium',
-            'Notificaciones en tiempo real',
-            'Sin publicidad',
-          ].map((benefit, index) => (
-            <View key={index} style={styles.benefitItem}>
-              <Ionicons name="checkmark-circle" size={20} color={theme.colors.success} />
-              <Text style={styles.benefitText}>{benefit}</Text>
-            </View>
-          ))}
+            ))}
+          </View>
         </View>
-      </View>
 
-      <View style={styles.supportCard}>
-        <Ionicons name="help-circle" size={40} color={theme.colors.primary} />
-        <Text style={styles.supportText}>
-          ¿Necesitas ayuda con tu suscripción?
-        </Text>
-        <TouchableOpacity style={styles.supportButton}>
-          <Text style={styles.supportButtonText}>Contactar Soporte</Text>
-        </TouchableOpacity>
+        {/* Navegación */}
+        <View style={{ padding: 16, flexDirection: 'row', justifyContent: 'center', gap: 12 }}>
+          <TouchableOpacity style={[styles.cancelButton, { backgroundColor: theme.colors.card }]} onPress={() => router.push('/' as any)}>
+            <Ionicons name="home" size={20} color={theme.colors.text} />
+            <Text style={[styles.cancelButtonText, { color: theme.colors.text }]}>Ir al Inicio</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </ScrollView>
   );
@@ -325,11 +304,39 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  pageContent: {
+    paddingBottom: 32,
+  },
+  contentLimiter: {
+    width: '100%',
+    maxWidth: 900,
+    alignSelf: 'center',
+  },
   header: {
     alignItems: 'center',
     padding: 24,
     backgroundColor: theme.colors.card,
     marginBottom: 16,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  navButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    padding: 8,
+    borderRadius: 8,
+  },
+  navButtonText: {
+    fontSize: 14,
+    color: theme.colors.text,
+    fontWeight: '600',
   },
   title: {
     fontSize: 24,

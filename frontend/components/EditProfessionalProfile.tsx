@@ -102,7 +102,7 @@ export default function EditProfessionalProfile({
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentWrapper}>
       <View style={styles.content}>
         <Text style={styles.title}>Editar Perfil Profesional</Text>
 
@@ -250,7 +250,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  contentWrapper: {
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+  },
   content: {
+    width: '100%',
+    maxWidth: 900,
     padding: 20,
   },
   title: {

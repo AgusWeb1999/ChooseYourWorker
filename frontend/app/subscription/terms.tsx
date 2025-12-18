@@ -17,6 +17,9 @@ export default function TermsAndConditions() {
           <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.title}>Términos y Condiciones</Text>
+        <TouchableOpacity onPress={() => router.push('/' as any)} style={[styles.backButton, { left: 'auto', right: 16 }] }>
+          <Ionicons name="home" size={24} color={theme.colors.text} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content}>
@@ -42,7 +45,7 @@ export default function TermsAndConditions() {
 
             <Text style={styles.subtitle}>1. Descripción del Servicio</Text>
             <Text style={styles.paragraph}>
-              • La suscripción premium tiene un costo de $4,999 ARS (pesos argentinos) por mes.{'\n'}
+              • La suscripción premium tiene un costo de USD $7.99 (dólares estadounidenses) por mes.{'\n'}
               • El cargo se realizará de forma mensual desde la fecha de contratación.{'\n'}
               • La suscripción se renovará automáticamente cada mes.
             </Text>
@@ -109,7 +112,7 @@ export default function TermsAndConditions() {
 
             <Text style={styles.subtitle}>1. Descripción del Servicio</Text>
             <Text style={styles.paragraph}>
-              • La suscripción premium tiene un costo de USD $9.99 (dólares estadounidenses) por mes.{'\n'}
+              • La suscripción premium tiene un costo de USD $7.99 (dólares estadounidenses) por mes.{'\n'}
               • El cargo se realizará de forma mensual desde la fecha de contratación.{'\n'}
               • La suscripción se renovará automáticamente cada mes.
             </Text>

@@ -1,16 +1,48 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const { MercadoPagoConfig, Preference, Payment } = require('mercadopago');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
+
+// CORS: permitir llamadas desde el frontend local
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:8081', // Expo web
+  'http://localhost:19006', // Expo dev client
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('Origen no permitido por CORS'));
+    },
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
+
 app.use(express.json());
 
 // Configuración de Supabase
+const { SUPABASE_URL, SUPABASE_SERVICE_KEY } = process.env;
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+  throw new Error('Faltan SUPABASE_URL o SUPABASE_SERVICE_KEY en backend/.env');
+}
+
 const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY // Usar SERVICE_KEY para operaciones del backend
+  SUPABASE_URL,
+  SUPABASE_SERVICE_KEY // Usar SERVICE_KEY para operaciones del backend
 );
+
+// Log en inicio (enmascarado) para verificar carga de .env sin exponer secretos
+const mask = (v) => (v ? `${String(v).slice(0, 4)}… (len:${String(v).length})` : 'undefined');
+console.log('[Init] Supabase URL:', SUPABASE_URL, '| Service key:', mask(SUPABASE_SERVICE_KEY));
 
 // Configuración de Mercado Pago
 const mercadopago = new MercadoPagoConfig({
@@ -21,32 +53,53 @@ const preferenceClient = new Preference(mercadopago);
 const paymentClient = new Payment(mercadopago);
 
 // Precio de suscripción mensual
-const SUBSCRIPTION_PRICE_ARS = 4999;
-const SUBSCRIPTION_PRICE_USD = 9.99;
+const SUBSCRIPTION_PRICE_USD = 7.99;
 
 // ============================================
 // ENDPOINT: Crear preferencia de pago
 // ============================================
 app.post('/api/mercadopago/create-preference', async (req, res) => {
   try {
-    const { userId, currency = 'ARS' } = req.body;
+    const { userId, currency = 'USD' } = req.body;
 
     if (!userId) {
       return res.status(400).json({ error: 'userId es requerido' });
     }
 
-    // Verificar que el usuario existe
-    const { data: user, error: userError } = await supabase
+    // Verificar que el usuario existe (por id o por auth_uid)
+    let { data: user, error: userError } = await supabase
       .from('users')
       .select('id, email, full_name')
       .eq('id', userId)
       .single();
 
     if (userError || !user) {
-      return res.status(404).json({ error: 'Usuario no encontrado' });
+      if (userError) {
+        console.warn('No encontrado por id, intentando por auth_uid. Error:', userError);
+      } else {
+        console.warn('Usuario no encontrado por id:', userId);
+      }
+
+      const byAuthUid = await supabase
+        .from('users')
+        .select('id, email, full_name')
+        .eq('auth_uid', userId)
+        .single();
+
+      user = byAuthUid.data;
+      userError = byAuthUid.error;
+
+      if (userError || !user) {
+        if (userError) {
+          console.error('Error consultando users por auth_uid en Supabase:', userError);
+        } else {
+          console.warn('Usuario no encontrado en tabla users por auth_uid:', userId);
+        }
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
     }
 
-    const price = currency === 'USD' ? SUBSCRIPTION_PRICE_USD : SUBSCRIPTION_PRICE_ARS;
+    const price = SUBSCRIPTION_PRICE_USD;
 
     // Crear preferencia de pago
     const preference = await preferenceClient.create({
@@ -62,14 +115,13 @@ app.post('/api/mercadopago/create-preference', async (req, res) => {
         ],
         payer: {
           email: user.email,
-          name: user.full_name,
+          name: user.full_name || undefined,
         },
         back_urls: {
           success: `${process.env.FRONTEND_URL}/subscription/success`,
           failure: `${process.env.FRONTEND_URL}/subscription/failure`,
           pending: `${process.env.FRONTEND_URL}/subscription/pending`,
         },
-        auto_return: 'approved',
         external_reference: userId, // Para identificar el usuario en el webhook
         notification_url: `${process.env.BACKEND_URL}/api/mercadopago/webhook`,
         statement_descriptor: 'ChooseYourWorker',
@@ -283,8 +335,43 @@ app.post('/api/subscription/expire', async (req, res) => {
       affectedCount: data 
     });
   } catch (error) {
-    console.error('Error al expirar suscripciones:', error);
+    console.error('Error al expirar suscripcione    curl -s http://localhost:3000/api/debug/user/4dda91f1-b277-4fbf-b810-a99fb8102771 | jqs:', error);
     res.status(500).json({ error: 'Error al expirar suscripciones' });
+  }
+});
+
+// ============================================
+// HEALTHCHECK
+// ============================================
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok' });
+});
+
+// ============================================
+// DEBUG: Consultar usuario
+// ============================================
+app.get('/api/debug/user/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const byId = await supabase
+      .from('users')
+      .select('id, email, full_name')
+      .eq('id', id)
+      .maybeSingle();
+
+    const byAuthUid = await supabase
+      .from('users')
+      .select('id, email, full_name')
+      .eq('auth_uid', id)
+      .maybeSingle();
+
+    res.json({
+      byId: { data: byId.data, error: byId.error },
+      byAuthUid: { data: byAuthUid.data, error: byAuthUid.error },
+    });
+  } catch (e) {
+    console.error('Error en debug user:', e);
+    res.status(500).json({ error: 'debug_failed', details: e.message });
   }
 });
 

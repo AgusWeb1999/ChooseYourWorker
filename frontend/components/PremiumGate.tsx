@@ -17,11 +17,16 @@ interface PremiumGateProps {
  */
 export default function PremiumGate({ children, feature, showBanner = true }: PremiumGateProps) {
   const router = useRouter();
-  const { isPremium, isSubscriptionActive } = useAuth();
+  const { isPremium, isSubscriptionActive, userProfile } = useAuth();
   const [showModal, setShowModal] = React.useState(false);
 
   // Si el usuario es premium, mostrar el contenido sin restricciones
   if (isPremium && isSubscriptionActive) {
+    return <>{children}</>;
+  }
+
+  // No mostrar CTA a clientes; permitir el contenido sin bloqueo
+  if (!userProfile?.is_professional) {
     return <>{children}</>;
   }
 
@@ -73,22 +78,17 @@ export default function PremiumGate({ children, feature, showBanner = true }: Pr
               </View>
               <View style={styles.benefitItem}>
                 <Ionicons name="checkmark-circle" size={24} color={theme.colors.success} />
-                <Text style={styles.benefitText}>Filtros avanzados</Text>
+                <Text style={styles.benefitText}>Perfil destacado en búsquedas</Text>
               </View>
               <View style={styles.benefitItem}>
                 <Ionicons name="checkmark-circle" size={24} color={theme.colors.success} />
-                <Text style={styles.benefitText}>Perfil destacado</Text>
-              </View>
-              <View style={styles.benefitItem}>
-                <Ionicons name="checkmark-circle" size={24} color={theme.colors.success} />
-                <Text style={styles.benefitText}>Soporte prioritario</Text>
+                <Text style={styles.benefitText}>Insignia de cuenta Premium</Text>
               </View>
             </View>
 
             <View style={styles.priceContainer}>
-              <Text style={styles.priceLabel}>Desde</Text>
-              <Text style={styles.price}>$4,999/mes</Text>
-              <Text style={styles.priceUSD}>≈ USD 9.99</Text>
+              <Text style={styles.priceLabel}>Precio</Text>
+              <Text style={styles.price}>USD $7.99/mes</Text>
             </View>
 
             <TouchableOpacity

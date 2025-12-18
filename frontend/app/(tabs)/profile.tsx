@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert, Modal, ScrollView, Switch, Linking } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, Modal, ScrollView, Switch, Linking, Platform } from 'react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import EditProfessionalProfile from '../../components/EditProfessionalProfile';
@@ -105,32 +105,40 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView 
-        style={styles.scrollView} 
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.header}>
-        <AvatarUpload
-          userId={userProfile?.id || ''}
-          currentUrl={userProfile?.avatar_url}
-          onUpload={async () => {
-            await refreshProfiles();
-          }}
-          size={100}
-          editable={true}
-        />
-        <Text style={styles.name}>{userProfile?.full_name || 'Usuario'}</Text>
-        <Text style={styles.email}>{user?.email}</Text>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>
-            {userProfile?.is_professional ? '🛠️ Trabajador' : '🔍 Cliente'}
-          </Text>
-        </View>
-      </View>
+      <View style={styles.contentLimiter}>
+        <View style={styles.layoutWrapper}>
+          {/* Sidebar Fijo - Solo en Web */}
+          {Platform.OS === 'web' && (
+            <View style={styles.sidebar}>
+              <View style={styles.sidebarCard}>
+                <AvatarUpload
+                  userId={userProfile?.id || ''}
+                  currentUrl={userProfile?.avatar_url}
+                  onUpload={async () => {
+                    await refreshProfiles();
+                  }}
+                  size={100}
+                  editable={true}
+                />
+                <Text style={styles.sidebarName}>{userProfile?.full_name || 'Usuario'}</Text>
+                <Text style={styles.sidebarEmail}>{user?.email}</Text>
+                <View style={styles.sidebarBadge}>
+                  <Text style={styles.sidebarBadgeText}>
+                    {userProfile?.is_professional ? '🛠️ Trabajador' : '🔍 Cliente'}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
 
-      {/* Premium Banner */}
-      <PremiumBanner variant="banner" />
+          {/* Contenido Scrolleable */}
+          <ScrollView 
+            style={styles.mainContent} 
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+      {/* Premium Banner solo para profesionales */}
+      {userProfile?.is_professional && <PremiumBanner variant="banner" />}
 
       <View style={styles.section}>
         {userProfile?.is_professional && professionalProfile ? (
@@ -211,14 +219,16 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity 
-          style={styles.menuItem} 
-          onPress={() => router.push(isSubscriptionActive ? '/subscription/manage' as any : '/subscription/plan' as any)}
-        >
-          <Text style={styles.menuText}>
-            {isSubscriptionActive ? '💳 Gestionar Suscripción' : '⭐ Ver Planes Premium'}
-          </Text>
-        </TouchableOpacity>
+        {userProfile?.is_professional && (
+          <TouchableOpacity 
+            style={styles.menuItem} 
+            onPress={() => router.push(isSubscriptionActive ? '/subscription/manage' as any : '/subscription/plan' as any)}
+          >
+            <Text style={styles.menuText}>
+              {isSubscriptionActive ? '💳 Gestionar Suscripción' : '⭐ Ver Planes Premium'}
+            </Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity style={styles.menuItem} onPress={handleSettings}>
           <Text style={styles.menuText}>⚙️ Configuración</Text>
         </TouchableOpacity>
@@ -568,6 +578,8 @@ export default function ProfileScreen() {
         </ScrollView>
       </Modal>
     </ScrollView>
+        </View>
+      </View>
     </View>
   );
 }
@@ -575,7 +587,84 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fa',
+    backgroundColor: '#f8fafc',
+  },
+  contentLimiter: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 1200,
+    alignSelf: 'center',
+  },
+  layoutWrapper: {
+    flex: 1,
+    ...Platform.select({
+      web: {
+        flexDirection: 'row',
+        gap: 20,
+        padding: 20,
+        paddingTop: 60,
+      },
+      default: {
+        flexDirection: 'column',
+        padding: 0,
+        paddingTop: 0,
+      },
+    }),
+  },
+  sidebar: {
+    ...Platform.select({
+      web: {
+        width: 280,
+        minWidth: 280,
+      },
+      default: {
+        display: 'none',
+      },
+    }),
+  },
+  sidebarCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  sidebarName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginTop: 16,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  sidebarEmail: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  sidebarBadge: {
+    backgroundColor: '#6366f1',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  sidebarBadgeText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  mainContent: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
   },
   scrollView: {
     flex: 1,
@@ -659,16 +748,18 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   menuItemHighlight: {
-    backgroundColor: '#6366f1',
+    backgroundColor: '#e0e7ff',
     shadowColor: '#6366f1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#c7d2fe',
   },
   menuTextHighlight: {
     fontSize: 16,
-    color: '#fff',
+    color: '#4f46e5',
     fontWeight: '600',
   },
   logoutButton: {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, Picker } from 'react-native';
 import { supabase } from '../src/lib/supabase';
+import { validatePhone, validateId, normalizePhone, normalizeId, getCountriesList, CountryCode, COUNTRIES } from '../utils/countryValidation';
 
 interface EditClientProfileProps {
   userProfile: any;
@@ -17,6 +18,7 @@ export default function EditClientProfile({
 }: EditClientProfileProps) {
   const [fullName, setFullName] = useState(userProfile?.full_name || '');
   const [phone, setPhone] = useState(userProfile?.phone || '');
+  const [country, setCountry] = useState<CountryCode>(userProfile?.country || 'AR');
   const [dateOfBirth, setDateOfBirth] = useState(userProfile?.date_of_birth || '');
   const [idNumber, setIdNumber] = useState(userProfile?.id_number || '');
   const [address, setAddress] = useState(userProfile?.address || '');
@@ -31,6 +33,20 @@ export default function EditClientProfile({
       return;
     }
 
+    // Validar teléfono según país
+    const phoneValidation = validatePhone(phone, country);
+    if (!phoneValidation.valid) {
+      Alert.alert('Error', phoneValidation.error || 'Teléfono inválido');
+      return;
+    }
+
+    // Validar DNI/Cédula según país
+    const idValidation = validateId(idNumber, country);
+    if (!idValidation.valid) {
+      Alert.alert('Error', idValidation.error || 'DNI/Cédula inválido');
+      return;
+    }
+
     // Validación de fecha de nacimiento (formato DD/MM/YYYY)
     if (dateOfBirth) {
       const dateRegex = /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/\d{4}$/;
@@ -40,25 +56,47 @@ export default function EditClientProfile({
       }
     }
 
-    // Validación de cédula (solo números, mínimo 6 dígitos)
-    if (idNumber) {
-      const idRegex = /^\d{6,}$/;
-      if (!idRegex.test(idNumber)) {
-        Alert.alert('Error', 'La cédula debe contener al menos 6 dígitos numéricos');
-        return;
-      }
-    }
-
     setLoading(true);
     
     try {
+      // Validar que el teléfono no exista (excepto el del usuario actual)
+      const normalizedPhone = normalizePhone(phone);
+      const { data: phoneData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('phone', normalizedPhone)
+        .neq('id', userProfile.id)
+        .single();
+
+      if (phoneData) {
+        Alert.alert('Error', 'Este teléfono ya está registrado en otra cuenta');
+        setLoading(false);
+        return;
+      }
+
+      // Validar que el DNI/Cédula no exista (excepto el del usuario actual)
+      const normalizedId = normalizeId(idNumber);
+      const { data: idData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id_number', normalizedId)
+        .neq('id', userProfile.id)
+        .single();
+
+      if (idData) {
+        Alert.alert('Error', 'Este DNI/Cédula ya está registrado en otra cuenta');
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase
         .from('users')
         .update({
           full_name: fullName,
-          phone,
+          phone: normalizedPhone,
+          country: country,
           date_of_birth: dateOfBirth || null,
-          id_number: idNumber,
+          id_number: normalizedId,
           address: address || null,
           city: city || null,
           state: state || null,
@@ -81,12 +119,25 @@ export default function EditClientProfile({
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentWrapper}>
       <View style={styles.content}>
         <Text style={styles.title}>Editar Perfil</Text>
         <Text style={styles.subtitle}>Mantén tu información actualizada y segura</Text>
 
         <Text style={styles.sectionTitle}>Información Personal</Text>
+
+        <Text style={styles.label}>País *</Text>
+        <View style={styles.countryPicker}>
+          <Picker
+            selectedValue={country}
+            onValueChange={(value) => setCountry(value as CountryCode)}
+            style={styles.picker}
+          >
+            {getCountriesList().map((c) => (
+              <Picker.Item key={c.code} label={`${c.flag} ${c.name}`} value={c.code} />
+            ))}
+          </Picker>
+        </View>
 
         <Text style={styles.label}>Nombre Completo *</Text>
         <TextInput
@@ -108,7 +159,7 @@ export default function EditClientProfile({
         <Text style={styles.label}>Teléfono *</Text>
         <TextInput
           style={styles.input}
-          placeholder="Ej: 11 1234 5678"
+          placeholder={`Ej: ${COUNTRIES[country].phoneExample}`}
           placeholderTextColor="#999"
           value={phone}
           onChangeText={setPhone}
@@ -217,7 +268,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  contentWrapper: {
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+  },
   content: {
+    width: '100%',
+    maxWidth: 900,
     padding: 20,
   },
   title: {
@@ -247,6 +305,17 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 8,
     marginTop: 16,
+  },
+  countryPicker: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    marginBottom: 16,
+    backgroundColor: '#f9fafb',
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 50,
   },
   input: {
     borderWidth: 1,

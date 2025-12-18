@@ -149,11 +149,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Determine if user needs to complete their profile
+  // Workers need professional profile, Clients need phone/address
   const needsProfileCompletion = 
     session !== null && 
     userProfile !== null &&
-    userProfile?.is_professional === true && 
-    professionalProfile === null;
+    ((userProfile?.is_professional === true && professionalProfile === null) ||
+     (userProfile?.is_professional === false && (!userProfile?.phone || !userProfile?.address)));
 
   // Check if user has premium subscription
   const isPremium = userProfile?.subscription_type === 'premium';

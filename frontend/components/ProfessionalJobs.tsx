@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { supabase } from '../src/lib/supabase';
-import { HireModal } from './HireModal';
 import { useToast } from '../contexts/ToastContext';
-import { notificationTemplates, createNotification } from '../services/notificationService';
+import { notificationTemplates } from '../services/notificationService';
+import { useAuth } from '../src/contexts/AuthContext';
 
 interface Job {
   id: string;
@@ -14,12 +14,12 @@ interface Job {
   status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'waiting_client_approval' | 'cancelled';
   service_date: string;
   notes: string;
-  hire_message?: string;
+  proposal_message?: string;
   client_contact_visible: boolean;
   client_phone?: string;
   client_address?: string;
   rating?: number;
-  review?: string;
+  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'waiting_client_approval' | 'cancelled' | 'rejected';
   payment_amount?: number;
 }
 
@@ -31,9 +31,8 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'in_progress' | 'completed'>('all');
-  const [hireModalVisible, setHireModalVisible] = useState(false);
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const { showToast } = useToast();
+  const { userProfile } = useAuth();
 
   useEffect(() => {
     fetchJobs();
@@ -41,11 +40,41 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
 
   async function fetchJobs() {
     try {
-      // Por ahora simulamos datos ya que la tabla no existe aún
-      // TODO: Crear tabla 'jobs' en Supabase
-      // TODO: Crear tabla 'jobs' en Supabase
-      // Reemplazar con llamada a API cuando esté lista
-      setJobs([]);
+      const { data, error } = await supabase
+        .from('hires')
+        .select(`
+          id, created_at, status, proposal_message, client_id, professional_id,
+          started_at, completed_at,
+          client:client_id ( id, full_name, email, phone, address )
+        `)
+        .eq('professional_id', professionalId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const mapped: Job[] = (data || []).map((item: any) => ({
+        id: item.id,
+        created_at: item.created_at,
+        client_id: item.client_id,
+        client_name: item.client?.full_name || 'Cliente',
+        client_email: item.client?.email,
+        status: item.status,
+        service_date: item.created_at,
+        notes: '',
+        proposal_message: item.proposal_message || '',
+        client_contact_visible: ['accepted', 'in_progress', 'waiting_client_approval', 'completed'].includes(item.status),
+        client_phone: item.client?.phone,
+        client_address: item.client?.address,
+      }));
+
+      console.log('📋 JOBS FETCHED:', mapped.map(j => ({
+        status: j.status,
+        phone: j.client_phone,
+        address: j.client_address,
+        email: j.client_email
+      })));
+
+      setJobs(mapped);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching jobs:', error);
@@ -57,9 +86,10 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
     switch (status) {
       case 'completed': return '#10b981';
       case 'in_progress': return '#3b82f6';
-      case 'accepted': return '#8b5cf6';
       case 'pending': return '#f59e0b';
+      case 'accepted': return '#8b5cf6';
       case 'waiting_client_approval': return '#06b6d4';
+      case 'rejected': return '#ef4444';
       case 'cancelled': return '#ef4444';
       default: return '#64748b';
     }
@@ -69,9 +99,9 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
     switch (status) {
       case 'completed': return 'Completado';
       case 'in_progress': return 'En Proceso';
-      case 'accepted': return 'Aceptado';
       case 'pending': return 'Pendiente';
       case 'waiting_client_approval': return 'Esperando confirmación del cliente';
+      case 'rejected': return 'Rechazado';
       case 'cancelled': return 'Cancelado';
       default: return status;
     }
@@ -80,23 +110,38 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
   // Handlers para los botones
   async function handleAcceptJob(jobId: string) {
     try {
-      // TODO: Actualizar estado a 'accepted' en Supabase
       const job = jobs.find(j => j.id === jobId);
+      
+      // Actualizar el hire
+      const { error: updateError } = await supabase
+        .from('hires')
+        .update({ status: 'in_progress', started_at: new Date().toISOString(), accepted_at: new Date().toISOString() })
+        .eq('id', jobId);
+
+      if (updateError) throw updateError;
+
+      // Crear notificación
       if (job) {
-        // TODO: Integrar notificación al cliente
-        // const notification = createNotification(
-        //   'solicitud_aceptada',
-        //   job.client_id,
-        //   professionalId,
-        //   'Trabajador',
-        //   notificationTemplates.solicitudAceptada(job.client_name).title,
-        //   notificationTemplates.solicitudAceptada(job.client_name).message,
-        //   jobId,
-        //   'job'
-        // );
-        showToast('Solicitud aceptada exitosamente', 'success');
+        const { error: notifError } = await supabase.from('notifications').insert({
+          type: 'solicitud_aceptada',
+          user_id: job.client_id,
+          sender_id: userProfile?.id,
+          sender_name: userProfile?.full_name || 'Trabajador',
+          title: notificationTemplates.solicitudAceptada(userProfile?.full_name || 'Trabajador').title,
+          message: notificationTemplates.solicitudAceptada(userProfile?.full_name || 'Trabajador').message,
+          related_id: jobId,
+          related_type: 'hire',
+        });
+        
+        if (notifError) {
+          console.warn('Aviso: Notificación no enviada (pero trabajo se aceptó)', notifError);
+        }
       }
-      console.log('Trabajo aceptado:', jobId);
+      
+      showToast('Solicitud aceptada exitosamente', 'success');
+      // Re-fetch jobs después de un pequeño delay para asegurar que los datos estén actualizados
+      await new Promise(resolve => setTimeout(resolve, 500));
+      fetchJobs();
     } catch (error) {
       console.error('Error al aceptar trabajo:', error);
       showToast('Error al aceptar la solicitud', 'error');
@@ -105,13 +150,38 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
 
   async function handleRejectJob(jobId: string) {
     try {
-      // TODO: Actualizar estado a 'cancelled' en Supabase
       const job = jobs.find(j => j.id === jobId);
+      
+      // Actualizar el hire
+      const { error: updateError } = await supabase
+        .from('hires')
+        .update({ status: 'rejected', rejected_at: new Date().toISOString() })
+        .eq('id', jobId);
+
+      if (updateError) throw updateError;
+
+      // Crear notificación
       if (job) {
-        // TODO: Integrar notificación al cliente
-        showToast('Solicitud rechazada', 'info');
+        const { error: notifError } = await supabase.from('notifications').insert({
+          type: 'solicitud_rechazada',
+          user_id: job.client_id,
+          sender_id: userProfile?.id,
+          sender_name: userProfile?.full_name || 'Trabajador',
+          title: notificationTemplates.solicitudRechazada(userProfile?.full_name || 'Trabajador').title,
+          message: notificationTemplates.solicitudRechazada(userProfile?.full_name || 'Trabajador').message,
+          related_id: jobId,
+          related_type: 'hire',
+        });
+        
+        if (notifError) {
+          console.warn('Aviso: Notificación no enviada (pero trabajo se rechazó)', notifError);
+        }
       }
-      console.log('Trabajo rechazado:', jobId);
+      
+      showToast('Solicitud rechazada', 'info');
+      // Re-fetch jobs después de un pequeño delay para asegurar que los datos estén actualizados
+      await new Promise(resolve => setTimeout(resolve, 500));
+      fetchJobs();
     } catch (error) {
       console.error('Error al rechazar trabajo:', error);
       showToast('Error al rechazar la solicitud', 'error');
@@ -120,48 +190,48 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
 
   async function handleRequestCompletion(jobId: string) {
     try {
-      // TODO: Actualizar estado a 'waiting_client_approval' en Supabase
       const job = jobs.find(j => j.id === jobId);
+      
+      // Actualizar el hire
+      const { error: updateError } = await supabase
+        .from('hires')
+        .update({ status: 'waiting_client_approval', completion_requested_at: new Date().toISOString() })
+        .eq('id', jobId);
+
+      if (updateError) throw updateError;
+
+      // Crear notificación
       if (job) {
-        // TODO: Integrar notificación al cliente
-        showToast('Solicitud de finalización enviada', 'success');
+        const { error: notifError } = await supabase.from('notifications').insert({
+          type: 'trabajo_completado',
+          user_id: job.client_id,
+          sender_id: userProfile?.id,
+          sender_name: userProfile?.full_name || 'Trabajador',
+          title: notificationTemplates.trabajoCompletado(userProfile?.full_name || 'Trabajador').title,
+          message: notificationTemplates.trabajoCompletado(userProfile?.full_name || 'Trabajador').message,
+          related_id: jobId,
+          related_type: 'hire',
+        });
+        
+        if (notifError) {
+          console.warn('Aviso: Notificación no enviada (pero trabajo se marcó como completado)', notifError);
+        }
       }
-      console.log('Solicitud de finalización enviada:', jobId);
+      
+      showToast('Solicitud de finalización enviada', 'success');
+      // Re-fetch jobs después de un pequeño delay para asegurar que los datos estén actualizados
+      await new Promise(resolve => setTimeout(resolve, 500));
+      fetchJobs();
     } catch (error) {
       console.error('Error al solicitar finalización:', error);
       showToast('Error al solicitar finalización', 'error');
     }
   }
 
-  async function handleHireConfirm(message: string) {
-    if (!selectedJob) return;
-    
-    try {
-      // TODO: Crear record en tabla de hirings/jobs
-      // TODO: Enviar notificación al trabajador con el mensaje
-      const notification = createNotification(
-        'solicitud_enviada',
-        selectedJob.client_id,
-        professionalId,
-        'Cliente',
-        notificationTemplates.solicitudEnviada(selectedJob.client_name).title,
-        notificationTemplates.solicitudEnviada(selectedJob.client_name).message,
-        selectedJob.id,
-        'job'
-      );
-      
-      console.log('Solicitud de contratación enviada:', {
-        jobId: selectedJob.id,
-        message,
-        notification,
-      });
-
-      setHireModalVisible(false);
-      setSelectedJob(null);
-    } catch (error) {
-      console.error('Error en handleHireConfirm:', error);
-      throw error;
-    }
+  function openWhatsApp(phoneNumber: string) {
+    const cleanPhone = phoneNumber.replace(/\D/g, '');
+    const url = `https://wa.me/${cleanPhone}`;
+    window.open(url, '_blank');
   }
 
   const filteredJobs = filter === 'all' ? jobs : jobs.filter(job => job.status === filter);
@@ -177,6 +247,14 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
   };
 
   function renderJob({ item }: { item: Job }) {
+    // Debug logging
+    console.log(`🔍 Rendering job ${item.id}:`, {
+      status: item.status,
+      phone: item.client_phone,
+      address: item.client_address,
+      showContact: (item.status === 'in_progress' || item.status === 'accepted' || item.status === 'waiting_client_approval'),
+    });
+    
     return (
       <View style={styles.card}>
         <View style={styles.cardHeader}>
@@ -199,23 +277,33 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
             </View>
           )}
 
-          {item.hire_message && (
+          {item.proposal_message && (
             <View style={styles.messageSection}>
               <Text style={styles.messageLabel}>📬 Mensaje del cliente:</Text>
               <View style={styles.messageBubble}>
-                <Text style={styles.messageText}>{item.hire_message}</Text>
+                <Text style={styles.messageText}>{item.proposal_message}</Text>
               </View>
             </View>
           )}
 
-          {item.client_contact_visible && (item.client_phone || item.client_address) && (
-            <View style={styles.contactSection}>
-              <Text style={styles.contactLabel}>📍 Datos de contacto compartidos:</Text>
-              {item.client_phone && (
+          {(item.status === 'in_progress' || item.status === 'accepted' || item.status === 'waiting_client_approval') && (
+            <View style={styles.activeContactSection}>
+              <Text style={styles.contactLabel}>👥 Contacto del cliente:</Text>
+              {item.client_phone ? (
                 <View style={styles.contactRow}>
                   <Text style={styles.contactIcon}>📱</Text>
-                  <Text style={styles.contactValue}>{item.client_phone}</Text>
+                  <View style={styles.contactInfo}>
+                    <Text style={styles.contactValue}>{item.client_phone}</Text>
+                    <TouchableOpacity 
+                      style={styles.whatsappButton}
+                      onPress={() => openWhatsApp(item.client_phone || '')}
+                    >
+                      <Text style={styles.whatsappButtonText}>💬 Abrir WhatsApp</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
+              ) : (
+                <Text style={styles.contactValue}>Número no disponible</Text>
               )}
               {item.client_address && (
                 <View style={styles.contactRow}>
@@ -374,24 +462,6 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
         />
       )}
 
-      <HireModal
-        visible={hireModalVisible}
-        professional={selectedJob ? {
-          id: selectedJob.id,
-          name: selectedJob.client_name,
-          specialty: selectedJob.notes.substring(0, 50),
-          rate: selectedJob.payment_amount,
-        } : {
-          id: '',
-          name: '',
-          specialty: '',
-        }}
-        onConfirm={handleHireConfirm}
-        onCancel={() => {
-          setHireModalVisible(false);
-          setSelectedJob(null);
-        }}
-      />
     </View>
   );
 }
@@ -682,10 +752,34 @@ const styles = StyleSheet.create({
     marginRight: 8,
     color: '#047857',
   },
+  contactInfo: {
+    flex: 1,
+  },
   contactValue: {
     fontSize: 14,
     color: '#047857',
     fontWeight: '500',
+    marginBottom: 6,
+  },
+  whatsappButton: {
+    backgroundColor: '#25d366',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  whatsappButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  activeContactSection: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#d1fae5',
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#10b981',
   },
   emptyContainer: {
     flex: 1,

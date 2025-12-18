@@ -9,7 +9,6 @@ import {
   Modal, 
   KeyboardAvoidingView, 
   ScrollView, 
-  TouchableWithoutFeedback, 
   Keyboard,
   Platform 
 } from 'react-native';
@@ -65,24 +64,35 @@ export default function AddReview({
         });
 
       if (error) {
-        if (error.code === '23505') {
-          Alert.alert('Error', 'Ya has dejado una reseña para este trabajo');
-        } else {
-          Alert.alert('Error', error.message);
-        }
-      } else {
-        Alert.alert('¡Éxito!', 'Tu reseña ha sido publicada', [
-          { 
-            text: 'OK', 
-            onPress: () => {
-              setRating(0);
-              setComment('');
-              onSuccess();
-              onClose();
+        console.error('Error al publicar reseña:', error);
+        if (error.code === '23505' || error.code === '409') {
+          Alert.alert('Ya existe una reseña', 'Ya has dejado una reseña para este trabajo', [
+            { 
+              text: 'OK', 
+              onPress: () => {
+                setRating(0);
+                setComment('');
+                onClose();
+              }
             }
-          }
-        ]);
+          ]);
+        } else {
+          Alert.alert('Error', error.message || 'No se pudo publicar la reseña');
+        }
+        return;
       }
+      
+      Alert.alert('¡Éxito!', 'Tu reseña ha sido publicada', [
+        { 
+          text: 'OK', 
+          onPress: () => {
+            setRating(0);
+            setComment('');
+            onSuccess();
+            onClose();
+          }
+        }
+      ]);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Ocurrió un error al publicar la reseña');
     } finally {
@@ -133,52 +143,50 @@ export default function AddReview({
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View style={styles.content}>
-              <Text style={styles.label}>¿Cómo fue tu experiencia?</Text>
-              {renderStarSelector()}
-              
-              {rating > 0 && (
-                <Text style={styles.ratingText}>
-                  {rating === 1 && '😞 Muy malo'}
-                  {rating === 2 && '😕 Malo'}
-                  {rating === 3 && '😐 Regular'}
-                  {rating === 4 && '😊 Bueno'}
-                  {rating === 5 && '🤩 Excelente'}
-                </Text>
-              )}
+          <View style={styles.content}>
+            <Text style={styles.label}>¿Cómo fue tu experiencia?</Text>
+            {renderStarSelector()}
+            
+            {rating > 0 && (
+              <Text style={styles.ratingText}>
+                {rating === 1 && '😞 Muy malo'}
+                {rating === 2 && '😕 Malo'}
+                {rating === 3 && '😐 Regular'}
+                {rating === 4 && '😊 Bueno'}
+                {rating === 5 && '🤩 Excelente'}
+              </Text>
+            )}
 
-              <Text style={styles.label}>Comentario (opcional)</Text>
-              <TextInput
-                style={styles.textArea}
-                placeholder="Cuéntanos sobre tu experiencia con este profesional..."
-                placeholderTextColor="#999"
-                value={comment}
-                onChangeText={setComment}
-                multiline
-                numberOfLines={6}
-                maxLength={500}
-              />
-              <Text style={styles.charCount}>{comment.length}/500</Text>
+            <Text style={styles.label}>Comentario (opcional)</Text>
+            <TextInput
+              style={styles.textArea}
+              placeholder="Cuéntanos sobre tu experiencia con este profesional..."
+              placeholderTextColor="#999"
+              value={comment}
+              onChangeText={setComment}
+              multiline
+              numberOfLines={6}
+              maxLength={500}
+            />
+            <Text style={styles.charCount}>{comment.length}/500</Text>
 
-              <TouchableOpacity
-                style={[styles.submitButton, (loading || rating === 0) && styles.buttonDisabled]}
-                onPress={handleSubmit}
-                disabled={loading || rating === 0}
-              >
-                <Text style={styles.submitButtonText}>
-                  {loading ? 'Publicando...' : 'Publicar Reseña'}
-                </Text>
-              </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.submitButton, (loading || rating === 0) && styles.buttonDisabled]}
+              onPress={handleSubmit}
+              disabled={loading || rating === 0}
+            >
+              <Text style={styles.submitButtonText}>
+                {loading ? 'Publicando...' : 'Publicar Reseña'}
+              </Text>
+            </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={onClose}
-              >
-                <Text style={styles.cancelButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-            </View>
-          </TouchableWithoutFeedback>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={onClose}
+            >
+              <Text style={styles.cancelButtonText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </Modal>
