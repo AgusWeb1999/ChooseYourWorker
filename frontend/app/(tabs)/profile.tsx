@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert, Modal, ScrollView, Switch } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, Modal, ScrollView, Switch, Linking } from 'react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import EditProfessionalProfile from '../../components/EditProfessionalProfile';
@@ -85,6 +85,22 @@ export default function ProfileScreen() {
         },
       ]
     );
+  }
+
+  async function handleSendEmail() {
+    const email = 'workinggoam@gmail.com';
+    const subject = 'Consulta desde WorkingGo';
+    const body = 'Hola equipo de WorkingGo,\n\n';
+    
+    const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    
+    const supported = await Linking.canOpenURL(url);
+    
+    if (supported) {
+      await Linking.openURL(url);
+    } else {
+      Alert.alert('Error', 'No se pudo abrir el cliente de correo. Por favor envianos un email a workinggoam@gmail.com');
+    }
   }
 
   return (
@@ -369,8 +385,7 @@ export default function ProfileScreen() {
             <View style={styles.helpItem}>
               <Text style={styles.helpQuestion}>¿Cómo me comunico con soporte?</Text>
               <Text style={styles.helpAnswer}>
-                Puedes contactarnos enviando un email a support@workinggo.com 
-                o llamando al 1-800-WORKER-1.
+                Puedes contactarnos enviando un email a workinggoam@gmail.com.
               </Text>
             </View>
 
@@ -384,7 +399,10 @@ export default function ProfileScreen() {
 
             <Text style={[styles.sectionTitle, styles.sectionTitleMargin]}>Contacto</Text>
             
-            <TouchableOpacity style={styles.contactButton}>
+            <TouchableOpacity 
+              style={styles.contactButton}
+              onPress={handleSendEmail}
+            >
               <Text style={styles.contactButtonText}>📧 Enviar Email</Text>
             </TouchableOpacity>
 
@@ -501,7 +519,7 @@ export default function ProfileScreen() {
                 <Text style={styles.featureIcon}>✓</Text>
                 <Text style={styles.featureText}>
                   <Text style={styles.featureBold}>Amplia Variedad de Servicios:</Text> Desde 
-                  plomería hasta desarrollo web, encuentra lo que necesitas.
+                  plomería, fletes, carpintería, limpieza y más. Encuentra lo que necesitas.
                 </Text>
               </View>
             </View>
@@ -526,9 +544,9 @@ export default function ProfileScreen() {
             <View style={styles.aboutSection}>
               <Text style={styles.sectionTitle}>📞 Contáctanos</Text>
               <View style={styles.contactInfo}>
-                <Text style={styles.contactItem}>📧 Email: info@workinggo.com</Text>
+                <Text style={styles.contactItem}>📧 Email: workinggoam@gmail.com</Text>
                 <Text style={styles.contactItem}>📱 Teléfono: 1-800-WORKER-1</Text>
-                <Text style={styles.contactItem}>🌐 Web: www.workinggo.com</Text>
+                <Text style={styles.contactItem}>🌐 Web: https://working-go.com/</Text>
               </View>
             </View>
 
