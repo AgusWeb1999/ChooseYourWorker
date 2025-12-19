@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Image, Platform, SafeAreaView, ScrollView, Modal } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Image, Platform, SafeAreaView, ScrollView, Modal, ViewStyle, TextStyle, ImageStyle } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/contexts/AuthContext';
@@ -512,7 +512,118 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+interface Styles {
+  safeArea: ViewStyle;
+  container: ViewStyle;
+  topNav: ViewStyle;
+  logo: TextStyle;
+  profileButton: ViewStyle;
+  navAvatar: ImageStyle;
+  navAvatarPlaceholder: ViewStyle;
+  navAvatarText: TextStyle;
+  contentLimiter: ViewStyle;
+  loadingContainer: ViewStyle;
+  loadingText: TextStyle;
+  headerCompact: ViewStyle;
+  webLayoutContainer: ViewStyle;
+  sidebarFilters: ViewStyle;
+  sidebarHeader: ViewStyle;
+  sidebarTitle: TextStyle;
+  sidebarSearchContainer: ViewStyle;
+  sidebarSearchInput: TextStyle;
+  filterGroup: ViewStyle;
+  filterGroupTitle: TextStyle;
+  verticalChipList: ViewStyle;
+  sidebarChip: ViewStyle;
+  sidebarChipActive: ViewStyle;
+  sidebarChipText: TextStyle;
+  sidebarChipTextActive: TextStyle;
+  sidebarDivider: ViewStyle;
+  mainContent: ViewStyle;
+  webHeaderCompact: ViewStyle;
+  webWelcomeText: TextStyle;
+  webSubtitle: TextStyle;
+  welcomeTextCompact: TextStyle;
+  subtitleCompact: TextStyle;
+  searchSection: ViewStyle;
+  searchContainerCompact: ViewStyle;
+  searchIcon: TextStyle;
+  searchInputCompact: TextStyle;
+  webFiltersShell: ViewStyle;
+  webFiltersCard: ViewStyle;
+  webFiltersHeader: ViewStyle;
+  webFiltersTitle: TextStyle;
+  clearText: TextStyle;
+  webFiltersColumns: ViewStyle;
+  webColumn: ViewStyle;
+  filterSectionTitle: TextStyle;
+  webDivider: ViewStyle;
+  chipGridCompact: ViewStyle;
+  chipButtonCompact: ViewStyle;
+  chipButtonCompactActive: ViewStyle;
+  chipButtonTextCompact: TextStyle;
+  chipButtonTextCompactActive: TextStyle;
+  chipGrid: ViewStyle;
+  chipButton: ViewStyle;
+  chipButtonActive: ViewStyle;
+  chipButtonText: TextStyle;
+  chipButtonTextActive: TextStyle;
+  header: ViewStyle;
+  welcomeText: TextStyle;
+  subtitle: TextStyle;
+  searchContainer: ViewStyle;
+  searchIconLarge: TextStyle;
+  searchInput: TextStyle;
+  filterContainer: ViewStyle;
+  filterTitle: TextStyle;
+  filterChip: ViewStyle;
+  filterChipActive: ViewStyle;
+  filterChipText: TextStyle;
+  filterChipTextActive: TextStyle;
+  list: ViewStyle;
+  card: ViewStyle;
+  premiumCard: ViewStyle;
+  cardHeader: ViewStyle;
+  avatar: ViewStyle;
+  avatarImage: ImageStyle;
+  avatarText: TextStyle;
+  cardInfo: ViewStyle;
+  nameRow: ViewStyle;
+  name: TextStyle;
+  premiumPill: ViewStyle;
+  premiumPillText: TextStyle;
+  profession: TextStyle;
+  location: TextStyle;
+  bio: TextStyle;
+  cardFooter: ViewStyle;
+  rating: ViewStyle;
+  starsRow: ViewStyle;
+  star: TextStyle;
+  ratingText: TextStyle;
+  reviewCount: TextStyle;
+  rateContainer: ViewStyle;
+  rate: TextStyle;
+  emptyContainer: ViewStyle;
+  emptyIcon: TextStyle;
+  emptyText: TextStyle;
+  emptySubtext: TextStyle;
+  mobileFiltersCompact: ViewStyle;
+  filterButton: ViewStyle;
+  filterButtonText: TextStyle;
+  filterArrow: TextStyle;
+  modalOverlay: ViewStyle;
+  modalContent: ViewStyle;
+  modalTitle: TextStyle;
+  modalScroll: ViewStyle;
+  modalOption: ViewStyle;
+  modalOptionSelected: ViewStyle;
+  modalOptionText: TextStyle;
+  modalOptionTextSelected: TextStyle;
+  checkmark: TextStyle;
+  titleContainer: ViewStyle;
+}
+
+const styles = StyleSheet.create<Styles>({
   safeArea: {
     flex: 1,
     backgroundColor: '#fff',
@@ -607,8 +718,7 @@ const styles = StyleSheet.create({
     elevation: 4,
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    maxHeight: 'calc(100vh - 120px)',
-    overflowY: 'auto' as any,
+    // maxHeight removed - not compatible with React Native types
   },
   sidebarHeader: {
     flexDirection: 'row',
