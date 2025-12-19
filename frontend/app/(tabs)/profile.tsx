@@ -10,10 +10,12 @@ import AvatarUpload from '../../components/AvatarUpload';
 import PremiumBanner from '../../components/PremiumBanner';
 import ClientHirings from '../../components/ClientHirings';
 import ProfessionalJobs from '../../components/ProfessionalJobs';
+import { useWindowDimensions } from '../../hooks/useWindowDimensions';
 
 export default function ProfileScreen() {
   const { user, userProfile, professionalProfile, signOut, refreshProfiles, isPremium, isSubscriptionActive } = useAuth();
   const router = useRouter();
+  const { width } = useWindowDimensions();
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editClientModalVisible, setEditClientModalVisible] = useState(false);
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
@@ -108,14 +110,14 @@ export default function ProfileScreen() {
       <View style={styles.container}>
         <View style={styles.contentLimiter}>
           {/* Navbar mobile - Mobile nativo y Web Mobile */}
-          {(Platform.OS !== 'web' || typeof window !== 'undefined' && window.innerWidth < 768) && (
+          {(Platform.OS !== 'web' || width < 768) && (
             <View style={styles.mobileNav}>
               <Text style={styles.mobileNavTitle}>Mi perfil</Text>
             </View>
           )}
           <View style={styles.layoutWrapper}>
             {/* Sidebar Fijo - Solo en Web Desktop (>768px) */}
-            {Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth >= 768 && (
+            {Platform.OS === 'web' && width >= 768 && (
               <View style={styles.sidebar}>
                 <View style={styles.sidebarCard}>
                   <AvatarUpload
@@ -145,7 +147,7 @@ export default function ProfileScreen() {
               showsVerticalScrollIndicator={false}
             >
       {/* Header de perfil para mobile y web mobile (solo ocultar en web desktop con sidebar) */}
-      {(Platform.OS !== 'web' || typeof window !== 'undefined' && window.innerWidth < 768) && (
+      {(Platform.OS !== 'web' || width < 768) && (
         <View style={styles.mobileProfileHeader}>
           <AvatarUpload
             userId={userProfile?.id || ''}

@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView,
 import { router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { useWindowDimensions } from '../../hooks/useWindowDimensions';
 
 const PROFESSIONS = [
   'Carpintero',
@@ -25,6 +26,7 @@ const PROFESSIONS = [
 
 export default function CompleteProfileScreen() {
   const { user, userProfile, professionalProfile, needsProfileCompletion, refreshProfiles } = useAuth();
+  const { width } = useWindowDimensions();
   const [displayName, setDisplayName] = useState('');
   const [profession, setProfession] = useState('');
   const [customProfession, setCustomProfession] = useState('');
@@ -222,9 +224,12 @@ export default function CompleteProfileScreen() {
         />
 
         <Text style={styles.label}>Ubicación *</Text>
-        <View style={styles.locationContainer}>
+        <View style={[
+          styles.locationContainer,
+          width < 768 && { flexDirection: 'column' }
+        ]}>
           <TextInput
-            style={[styles.input, styles.inputZip]}
+            style={[styles.input, styles.inputZip, width >= 768 && { flex: 1 }]}
             placeholder="Código Postal"
             placeholderTextColor="#999"
             value={zipCode}
@@ -232,14 +237,14 @@ export default function CompleteProfileScreen() {
             keyboardType="number-pad"
           />
           <TextInput
-            style={[styles.input, styles.inputCity]}
+            style={[styles.input, styles.inputCity, width >= 768 && { flex: 2 }]}
             placeholder="Ciudad"
             placeholderTextColor="#999"
             value={city}
             onChangeText={(text) => setCity(text.charAt(0).toUpperCase() + text.slice(1).toLowerCase())}
           />
           <TextInput
-            style={[styles.input, styles.inputState]}
+            style={[styles.input, styles.inputState, width >= 768 && { flex: 1 }]}
             placeholder="Departamento"
             placeholderTextColor="#999"
             value={state}
@@ -390,17 +395,17 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   locationContainer: {
-    flexDirection: Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth < 768 ? 'column' : 'row',
+    flexDirection: 'row',
     gap: 12,
   },
   inputZip: {
-    flex: Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth < 768 ? undefined : 1,
+    // flex se aplica dinámicamente en el componente
   },
   inputCity: {
-    flex: Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth < 768 ? undefined : 2,
+    // flex se aplica dinámicamente en el componente
   },
   inputState: {
-    flex: Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth < 768 ? undefined : 1,
+    // flex se aplica dinámicamente en el componente
   },
   inputSmall: {
     flex: 1,

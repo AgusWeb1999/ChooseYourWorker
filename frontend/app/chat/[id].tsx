@@ -160,20 +160,35 @@ export default function ChatScreen() {
         display_name: professional.display_name,
         profession: professional.profession,
       });
-      return;
+    } else {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id, full_name')
+        .eq('id', otherUserId)
+        .maybeSingle();
+
+      if (userData) {
+        setOtherUser({
+          id: userData.id,
+          display_name: userData.full_name,
+        });
+      }
     }
 
-    const { data: userData } = await supabase
+    // Verificar si el otro usuario es premium
+    const { data: otherUserData } = await supabase
       .from('users')
-      .select('id, full_name')
+      .select('subscription_type, subscription_status, subscription_end_date')
       .eq('id', otherUserId)
       .maybeSingle();
 
-    if (userData) {
-      setOtherUser({
-        id: userData.id,
-        display_name: userData.full_name,
-      });
+    if (otherUserData) {
+      const isPremium = 
+        otherUserData.subscription_type === 'premium' &&
+        otherUserData.subscription_status === 'active' &&
+        otherUserData.subscription_end_date &&
+        new Date(otherUserData.subscription_end_date) > new Date();
+      setOtherUserIsPremium(!!isPremium);
     }
   }
 
@@ -379,29 +394,57 @@ export default function ChatScreen() {
           )}
         </ScrollView>
 
-        {/* Advertencia de límite para usuarios gratuitos */}
-        {!isPremium && (
-          <View style={[styles.limitWarning, hasReachedLimit && styles.limitWarningDanger]}>
-            <Ionicons 
-              name={hasReachedLimit ? "alert-circle" : "information-circle"} 
-              size={16} 
-              color={hasReachedLimit ? "#ef4444" : "#f59e0b"} 
-            />
-            <Text style={[styles.limitWarningText, hasReachedLimit && styles.limitWarningTextDanger]}>
-              {hasReachedLimit 
-                ? `Límite alcanzado (${messageCount}/${MESSAGE_LIMIT_FREE}). Actualiza a Premium para continuar.`
-                : `${messageCount}/${MESSAGE_LIMIT_FREE} mensajes usados. Actualiza a Premium para mensajes ilimitados.`
-              }
-            </Text>
-            {hasReachedLimit && (
-              <TouchableOpacity 
-                style={styles.upgradeButton}
-                onPress={() => router.push('/subscription/plan')}
-              >
-                <Text style={styles.upgradeButtonText}>Actualizar</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+        {/* Advertencia de límite o estado premium del trabajador */}
+        {userProfile?.is_professional === false ? (
+          // Mensaje para clientes sobre el estado del trabajador
+          otherUserIsPremium ? (
+            <View style={[styles.limitWarning, { backgroundColor: '#f0fdf4' }]}>
+              <Ionicons 
+                name="checkmark-circle" 
+                size={16} 
+                color="#16a34a" 
+              />
+              <Text style={[styles.limitWarningText, { color: '#15803d' }]}>
+                ✨ Trabajador Premium - Chats ilimitados disponibles
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.limitWarning}>
+              <Ionicons 
+                name="information-circle" 
+                size={16} 
+                color="#f59e0b" 
+              />
+              <Text style={styles.limitWarningText}>
+                Este trabajador no es premium, por lo que los chats ilimitados no están disponibles
+              </Text>
+            </View>
+          )
+        ) : (
+          // Mensaje para trabajadores sobre su propio límite
+          !isPremium && (
+            <View style={[styles.limitWarning, hasReachedLimit && styles.limitWarningDanger]}>
+              <Ionicons 
+                name={hasReachedLimit ? "alert-circle" : "information-circle"} 
+                size={16} 
+                color={hasReachedLimit ? "#ef4444" : "#f59e0b"} 
+              />
+              <Text style={[styles.limitWarningText, hasReachedLimit && styles.limitWarningTextDanger]}>
+                {hasReachedLimit 
+                  ? `Límite alcanzado (${messageCount}/${MESSAGE_LIMIT_FREE}). Actualiza a Premium para continuar.`
+                  : `${messageCount}/${MESSAGE_LIMIT_FREE} mensajes usados. Actualiza a Premium para mensajes ilimitados.`
+                }
+              </Text>
+              {hasReachedLimit && (
+                <TouchableOpacity 
+                  style={styles.upgradeButton}
+                  onPress={() => router.push('/subscription/plan')}
+                >
+                  <Text style={styles.upgradeButtonText}>Actualizar</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )
         )}
 
         <View style={styles.inputContainer}>

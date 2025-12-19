@@ -6,9 +6,14 @@ import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useWindowDimensions } from '@/hooks/useWindowDimensions';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { width } = useWindowDimensions();
+
+  // En web móvil (<768px) ocultar los labels del tab bar
+  const showLabels = Platform.OS !== 'web' || width >= 768;
 
   return (
     <Tabs
@@ -37,12 +42,12 @@ export default function TabLayout() {
           marginBottom: 0,
         },
         tabBarIconStyle: {
-          display: 'none',
+          marginBottom: showLabels ? 0 : 4,
         },
         tabBarItemStyle: {
           paddingVertical: 0,
         },
-        tabBarShowLabel: true,
+        tabBarShowLabel: showLabels,
       }}>
       <Tabs.Screen
         name="index"
