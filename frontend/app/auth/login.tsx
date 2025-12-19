@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, Image } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, Image, ScrollView, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
 import { Link, router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 
@@ -12,10 +12,16 @@ export default function LoginScreen() {
   const [termsAccepted, setTermsAccepted] = useState(false);
 
   async function handleLogin() {
+    // Limpiar errores previos
+    setErrorMsg(null);
+    setErrors({});
+
     if (!email || !password) {
       const msg = 'Por favor completá tu email y contraseña';
       setErrorMsg(msg);
-      Alert.alert('Campos incompletos', msg);
+      if (Platform.OS !== 'web') {
+        Alert.alert('Campos incompletos', msg);
+      }
       return;
     }
 
@@ -23,21 +29,29 @@ export default function LoginScreen() {
     if (!emailRegex.test(email)) {
       const msg = 'Ingresá un email válido (ej: usuario@correo.com)';
       setErrorMsg(msg);
-      Alert.alert('Email inválido', msg);
+      setErrors({ email: msg });
+      if (Platform.OS !== 'web') {
+        Alert.alert('Email inválido', msg);
+      }
       return;
     }
 
     if (password.length < 6) {
       const msg = 'La contraseña debe tener al menos 6 caracteres';
       setErrorMsg(msg);
-      Alert.alert('Contraseña corta', msg);
+      setErrors({ password: msg });
+      if (Platform.OS !== 'web') {
+        Alert.alert('Contraseña corta', msg);
+      }
       return;
     }
 
     if (!termsAccepted) {
       const msg = 'Debes aceptar los Términos de Servicio para continuar';
       setErrorMsg(msg);
-      Alert.alert('Términos requeridos', msg);
+      if (Platform.OS !== 'web') {
+        Alert.alert('Términos requeridos', msg);
+      }
       return;
     }
 
@@ -68,7 +82,9 @@ export default function LoginScreen() {
       // Mostrar inline (web) y también con Alert (nativo)
       setErrorMsg(errorMessage);
       setErrors(fieldErrors);
-      Alert.alert('Error de inicio de sesión', errorMessage);
+      if (Platform.OS !== 'web') {
+        Alert.alert('Error de inicio de sesión', errorMessage);
+      }
       setLoading(false);
     } else if (data.user) {
       // El AuthContext ya maneja la navegación automáticamente
@@ -98,17 +114,27 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.logoContainer}>
-        <Image 
-          source={require('../../assets/images/icon.png')} 
-          style={styles.logo}
-          resizeMode="contain"
-        />
-      </View>
-      
-      <Text style={styles.title}>WorkingGo</Text>
-      <Text style={styles.subtitle}>Iniciá sesión en tu cuenta</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.container}>
+            <View style={styles.logoContainer}>
+              <Image 
+                source={require('../../assets/images/icon.png')} 
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
+            
+            <Text style={styles.title}>WorkingGo</Text>
+            <Text style={styles.subtitle}>Iniciá sesión en tu cuenta</Text>
 
       {errorMsg ? (
         <View style={styles.errorBox}>
@@ -187,16 +213,28 @@ export default function LoginScreen() {
           <TouchableOpacity>
             <Text style={styles.link}>Registrate</Text>
           </TouchableOpacity>
-        </Link>
+          </Link>
+        </View>
       </View>
-    </View>
+    </ScrollView>
+  </KeyboardAvoidingView>
+</SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
+    backgroundColor: '#f5f7fa',
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
+  },
+  container: {
     padding: 20,
     backgroundColor: '#f5f7fa',
   },

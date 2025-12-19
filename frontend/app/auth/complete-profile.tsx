@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, ActivityIndicator, Picker } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, ActivityIndicator, Picker, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/contexts/AuthContext';
@@ -50,7 +50,7 @@ export default function CompleteProfileScreen() {
     return (
       <View style={[styles.container, styles.centerContent]}>
         <ActivityIndicator size="large" color="#1e3a5f" />
-        <Text style={styles.loadingText}>Redirecting...</Text>
+        <Text style={styles.loadingText}>Redirigiendo...</Text>
       </View>
     );
   }
@@ -60,12 +60,12 @@ export default function CompleteProfileScreen() {
     const finalProfession = profession === 'Otro' ? customProfession : profession;
 
     if (!displayName || !finalProfession || !zipCode || !city || !state) {
-      Alert.alert('Error', 'Please complete all required fields');
+      Alert.alert('Error', 'Por favor completa todos los campos requeridos');
       return;
     }
 
     if (profession === 'Otro' && !customProfession.trim()) {
-      Alert.alert('Error', 'Please enter your profession');
+      Alert.alert('Error', 'Por favor ingresa tu profesión');
       return;
     }
 
@@ -103,10 +103,10 @@ export default function CompleteProfileScreen() {
       const { error } = await supabase.from('professionals').insert({
         user_id: userProfile?.id,
         display_name: displayName,
-        profession: finalProfession,
+        profession: finalProfession.charAt(0).toUpperCase() + finalProfession.slice(1).toLowerCase(),
         bio,
         zip_code: zipCode,
-        city,
+        city: city.charAt(0).toUpperCase() + city.slice(1).toLowerCase(),
         state,
         hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
         years_experience: yearsExperience ? parseInt(yearsExperience) : null,
@@ -152,15 +152,25 @@ export default function CompleteProfileScreen() {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Complete Your Profile</Text>
-        <Text style={styles.subtitle}>Tell clients about yourself</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.content}>
+            <Text style={styles.title}>Completa tu Perfil</Text>
+            <Text style={styles.subtitle}>Cuéntanos sobre tus servicios</Text>
 
-        <Text style={styles.label}>Display Name *</Text>
+        <Text style={styles.label}>Nombre para Mostrar *</Text>
         <TextInput
           style={styles.input}
-          placeholder="How clients will see you"
+          placeholder="Cómo te verán los clientes"
           placeholderTextColor="#999"
           value={displayName}
           onChangeText={setDisplayName}
@@ -203,7 +213,7 @@ export default function CompleteProfileScreen() {
         <Text style={styles.label}>Bio</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
-          placeholder="Describe your experience and services..."
+          placeholder="Describe tu experiencia y servicios..."
           placeholderTextColor="#999"
           value={bio}
           onChangeText={setBio}
@@ -211,11 +221,11 @@ export default function CompleteProfileScreen() {
           numberOfLines={4}
         />
 
-        <Text style={styles.label}>Location *</Text>
+        <Text style={styles.label}>Ubicación *</Text>
         <View style={styles.row}>
           <TextInput
             style={[styles.input, styles.inputSmall]}
-            placeholder="Zip Code"
+            placeholder="Código Postal"
             placeholderTextColor="#999"
             value={zipCode}
             onChangeText={setZipCode}
@@ -223,14 +233,14 @@ export default function CompleteProfileScreen() {
           />
           <TextInput
             style={[styles.input, styles.inputMedium]}
-            placeholder="City"
+            placeholder="Ciudad"
             placeholderTextColor="#999"
             value={city}
-            onChangeText={setCity}
+            onChangeText={(text) => setCity(text.charAt(0).toUpperCase() + text.slice(1).toLowerCase())}
           />
           <TextInput
             style={[styles.input, styles.inputSmall]}
-            placeholder="State"
+            placeholder="Departamento"
             placeholderTextColor="#999"
             value={state}
             onChangeText={setState}
@@ -239,7 +249,7 @@ export default function CompleteProfileScreen() {
 
         <View style={styles.row}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Hourly Rate ($)</Text>
+            <Text style={styles.label}>Tarifa por Hora ($)</Text>
             <TextInput
               style={styles.input}
               placeholder="1500"
@@ -250,7 +260,7 @@ export default function CompleteProfileScreen() {
             />
           </View>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Years of Experience</Text>
+            <Text style={styles.label}>Años de Experiencia</Text>
             <TextInput
               style={styles.input}
               placeholder="5"
@@ -271,17 +281,30 @@ export default function CompleteProfileScreen() {
             {loading ? 'Saving...' : 'Complete Profile'}
           </Text>
         </TouchableOpacity>
-      </View>
-    </ScrollView>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
   centerContent: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -292,7 +315,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 20,
   },
   title: {
     fontSize: 28,

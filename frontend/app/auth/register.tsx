@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, Picker } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, SafeAreaView, KeyboardAvoidingView, Platform, Modal } from 'react-native';
 import { Link, router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { validatePhone, validateId, normalizePhone, normalizeId, getCountriesList, CountryCode } from '../../utils/countryValidation';
@@ -10,12 +10,13 @@ export default function RegisterScreen() {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [idNumber, setIdNumber] = useState('');
-  const [country, setCountry] = useState<CountryCode>('AR');
+  const [country, setCountry] = useState<CountryCode>('UY');
   const [userType, setUserType] = useState<'client' | 'worker' | null>(null);
   const [loading, setLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [countryModalVisible, setCountryModalVisible] = useState(false);
 
   async function handleRegister() {
     const newErrors: Record<string, string> = {};
@@ -55,21 +56,29 @@ export default function RegisterScreen() {
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       const errorList = Object.values(newErrors).join('\n');
-      Alert.alert('Completá los campos correctamente', errorList);
+      if (Platform.OS !== 'web') {
+        Alert.alert('Completá los campos correctamente', errorList);
+      } else {
+        setErrorMsg('Por favor corregí los errores en el formulario');
+      }
       return;
     }
 
     if (!userType) {
       const msg = 'Elegí el tipo de cuenta';
       setErrorMsg(msg);
-      Alert.alert('Tipo de cuenta requerido', msg);
+      if (Platform.OS !== 'web') {
+        Alert.alert('Tipo de cuenta requerido', msg);
+      }
       return;
     }
 
     if (!termsAccepted) {
       const msg = 'Debes aceptar los Términos de Servicio para continuar';
       setErrorMsg(msg);
-      Alert.alert('Términos requeridos', msg);
+      if (Platform.OS !== 'web') {
+        Alert.alert('Términos requeridos', msg);
+      }
       return;
     }
 
@@ -103,7 +112,7 @@ export default function RegisterScreen() {
 
     // Validar que el teléfono no exista
     console.log('🔍 Checking if phone is available...');
-    const normalizedPhone = normalizePhone(phone);
+    const normalizedPhone = normalizePhone(phone, country);
     const { data: phoneData } = await supabase
       .from('users')
       .select('id')
@@ -167,8 +176,7 @@ export default function RegisterScreen() {
         .from('users')
         .update({ 
           is_professional: userType === 'worker',
-          country: country,
-          phone: normalizePhone(phone),
+          phone: normalizePhone(phone, country),
           id_number: normalizeId(idNumber),
         })
         .eq('id', data.user.id);
@@ -190,9 +198,19 @@ export default function RegisterScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      <Text style={styles.title}>Crear Cuenta</Text>
-      <Text style={styles.subtitle}>Únete a WorkingGo</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        <ScrollView 
+          style={styles.container} 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.title}>Crear Cuenta</Text>
+          <Text style={styles.subtitle}>Únete a WorkingGo</Text>
 
       {errorMsg ? (
         <View style={styles.errorBox}>
@@ -201,17 +219,66 @@ export default function RegisterScreen() {
       ) : null}
 
       <Text style={styles.label}>Soy de: *</Text>
-      <View style={styles.countryPicker}>
-        <Picker
-          selectedValue={country}
-          onValueChange={(value) => setCountry(value as CountryCode)}
-          style={styles.picker}
+      <TouchableOpacity
+        style={styles.countrySelector}
+        onPress={() => setCountryModalVisible(true)}
+        disabled={loading}
+      >
+        <Text style={styles.countrySelectorText}>
+          {getCountriesList().find((c) => c.code === country)?.flag} {' '}
+          {getCountriesList().find((c) => c.code === country)?.name}
+        </Text>
+        <Text style={styles.countrySelectorArrow}>▼</Text>
+      </TouchableOpacity>
+
+      {/* Modal País */}
+      <Modal
+        visible={countryModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setCountryModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setCountryModalVisible(false)}
         >
-          {getCountriesList().map((c) => (
-            <Picker.Item key={c.code} label={`${c.flag} ${c.name}`} value={c.code} />
-          ))}
-        </Picker>
-      </View>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Selecciona tu país</Text>
+              <TouchableOpacity 
+                onPress={() => setCountryModalVisible(false)}
+                style={styles.modalCloseButton}
+              >
+                <Text style={styles.modalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalScroll}>
+              {getCountriesList().map((c) => {
+                const selected = c.code === country;
+                return (
+                  <TouchableOpacity
+                    key={c.code}
+                    style={[styles.modalOption, selected && styles.modalOptionSelected]}
+                    onPress={() => {
+                      setCountry(c.code as CountryCode);
+                      setCountryModalVisible(false);
+                    }}
+                  >
+                    <View style={styles.modalOptionContent}>
+                      <Text style={styles.modalOptionFlag}>{c.flag}</Text>
+                      <Text style={[styles.modalOptionText, selected && styles.modalOptionTextSelected]}>
+                        {c.name}
+                      </Text>
+                    </View>
+                    {selected && <Text style={styles.modalCheckmark}>✓</Text>}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <TextInput
         style={[styles.input, errors.fullName && styles.inputError]}
@@ -351,16 +418,26 @@ export default function RegisterScreen() {
         </Link>
       </View>
     </ScrollView>
+  </KeyboardAvoidingView>
+</SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  keyboardView: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
   },
   scrollContent: {
     padding: 20,
+    paddingTop: 20,
     paddingBottom: 40,
   },
   title: {
@@ -376,16 +453,26 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     color: '#666',
   },
-  countryPicker: {
+  countryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 8,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     marginBottom: 16,
-    backgroundColor: '#f9fafb',
-    overflow: 'hidden',
+    backgroundColor: '#fff',
   },
-  picker: {
-    height: 50,
+  countryButtonText: {
+    fontSize: 15,
+    color: '#1f2937',
+    fontWeight: '600',
+  },
+  countryArrow: {
+    fontSize: 12,
+    color: '#9ca3af',
   },
   input: {
     borderWidth: 1,
@@ -491,6 +578,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
+  modalCheckmark: {
+    fontSize: 18,
+    color: '#6366f1',
+    fontWeight: 'bold',
+  },
   termsText: {
     flex: 1,
     flexDirection: 'row',
@@ -518,5 +610,99 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#991B1B',
     fontSize: 14,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '85%',
+    maxHeight: '70%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1f2937',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalCloseText: {
+    fontSize: 24,
+    color: '#9ca3af',
+    fontWeight: '300',
+  },
+  modalScroll: {
+    maxHeight: 400,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginBottom: 8,
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  modalOptionSelected: {
+    backgroundColor: '#e0e7ff',
+    borderColor: '#6366f1',
+  },
+  modalOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  modalOptionFlag: {
+    fontSize: 24,
+  },
+  modalOptionText: {
+    fontSize: 15,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  modalOptionTextSelected: {
+    color: '#6366f1',
+    fontWeight: '600',
+  },
+  countrySelector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#fff',
+    marginBottom: 12,
+  },
+  countrySelectorText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  countrySelectorArrow: {
+    fontSize: 12,
+    color: '#999',
   },
 });

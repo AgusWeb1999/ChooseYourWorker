@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert, Modal, ScrollView, Switch, Linking, Platform } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, Modal, ScrollView, Switch, Linking, Platform, SafeAreaView, Image } from 'react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import EditProfessionalProfile from '../../components/EditProfessionalProfile';
@@ -104,39 +104,54 @@ export default function ProfileScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.contentLimiter}>
-        <View style={styles.layoutWrapper}>
-          {/* Sidebar Fijo - Solo en Web */}
-          {Platform.OS === 'web' && (
-            <View style={styles.sidebar}>
-              <View style={styles.sidebarCard}>
-                <AvatarUpload
-                  userId={userProfile?.id || ''}
-                  currentUrl={userProfile?.avatar_url}
-                  onUpload={async () => {
-                    await refreshProfiles();
-                  }}
-                  size={100}
-                  editable={true}
-                />
-                <Text style={styles.sidebarName}>{userProfile?.full_name || 'Usuario'}</Text>
-                <Text style={styles.sidebarEmail}>{user?.email}</Text>
-                <View style={styles.sidebarBadge}>
-                  <Text style={styles.sidebarBadgeText}>
-                    {userProfile?.is_professional ? '🛠️ Trabajador' : '🔍 Cliente'}
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <View style={styles.contentLimiter}>
+          {Platform.OS !== 'web' && (
+            <View style={styles.mobileNav}>
+              <Text style={styles.mobileNavTitle}>Mi perfil</Text>
+              <View style={styles.mobileNavAvatar}>
+                {userProfile?.avatar_url ? (
+                  <Image source={{ uri: userProfile.avatar_url }} style={styles.mobileNavAvatarImg} />
+                ) : (
+                  <Text style={styles.mobileNavAvatarText}>
+                    {userProfile?.full_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || '?'}
                   </Text>
-                </View>
+                )}
               </View>
             </View>
           )}
+          <View style={styles.layoutWrapper}>
+            {/* Sidebar Fijo - Solo en Web */}
+            {Platform.OS === 'web' && (
+              <View style={styles.sidebar}>
+                <View style={styles.sidebarCard}>
+                  <AvatarUpload
+                    userId={userProfile?.id || ''}
+                    currentUrl={userProfile?.avatar_url}
+                    onUpload={async () => {
+                      await refreshProfiles();
+                    }}
+                    size={100}
+                    editable={true}
+                  />
+                  <Text style={styles.sidebarName}>{userProfile?.full_name || 'Usuario'}</Text>
+                  <Text style={styles.sidebarEmail}>{user?.email}</Text>
+                  <View style={styles.sidebarBadge}>
+                    <Text style={styles.sidebarBadgeText}>
+                      {userProfile?.is_professional ? '🛠️ Trabajador' : '🔍 Cliente'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
 
-          {/* Contenido Scrolleable */}
-          <ScrollView 
-            style={styles.mainContent} 
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
+            {/* Contenido Scrolleable */}
+            <ScrollView 
+              style={styles.mainContent} 
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+            >
       {/* Premium Banner solo para profesionales */}
       {userProfile?.is_professional && <PremiumBanner variant="banner" />}
 
@@ -147,7 +162,7 @@ export default function ProfileScreen() {
               style={styles.menuItem}
               onPress={() => setEditModalVisible(true)}
             >
-              <Text style={styles.menuText}>✏️ Editar Perfil Profesional</Text>
+              <Text style={styles.menuText}>Editar Perfil Profesional</Text>
             </TouchableOpacity>
             
             {/* Mostrar Rating del Profesional */}
@@ -183,7 +198,7 @@ export default function ProfileScreen() {
               style={styles.menuItem}
               onPress={() => setEditClientModalVisible(true)}
             >
-              <Text style={styles.menuText}>✏️ Editar Mi Perfil</Text>
+              <Text style={styles.menuText}>Editar Mi Perfil</Text>
             </TouchableOpacity>
             
             {/* Mostrar Rating del Cliente - Temporalmente deshabilitado
@@ -208,14 +223,14 @@ export default function ProfileScreen() {
             style={[styles.menuItem, styles.menuItemHighlight]}
             onPress={() => setJobsModalVisible(true)}
           >
-            <Text style={styles.menuTextHighlight}>💼 Mis Trabajos</Text>
+            <Text style={styles.menuTextHighlight}>Mis Trabajos</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity 
             style={[styles.menuItem, styles.menuItemHighlight]}
             onPress={() => setHiringsModalVisible(true)}
           >
-            <Text style={styles.menuTextHighlight}>📋 Mis Contrataciones</Text>
+            <Text style={styles.menuTextHighlight}>Mis Contrataciones</Text>
           </TouchableOpacity>
         )}
 
@@ -225,24 +240,25 @@ export default function ProfileScreen() {
             onPress={() => router.push(isSubscriptionActive ? '/subscription/manage' as any : '/subscription/plan' as any)}
           >
             <Text style={styles.menuText}>
-              {isSubscriptionActive ? '💳 Gestionar Suscripción' : '⭐ Ver Planes Premium'}
+              {isSubscriptionActive ? 'Gestionar Suscripción' : 'Ver Planes Premium'}
             </Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity style={styles.menuItem} onPress={handleSettings}>
-          <Text style={styles.menuText}>⚙️ Configuración</Text>
+          <Text style={styles.menuText}>Configuración</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.menuItem} onPress={handleHelp}>
-          <Text style={styles.menuText}>❓ Ayuda</Text>
+          <Text style={styles.menuText}>Ayuda</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.menuItem} onPress={handleAbout}>
-          <Text style={styles.menuText}>ℹ️ Acerca de Nosotros</Text>
+          <Text style={styles.menuText}>Acerca de Nosotros</Text>
         </TouchableOpacity>
       </View>
 
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutText}>Cerrar Sesión</Text>
       </TouchableOpacity>
+      </ScrollView>
 
       {/* Edit Professional Profile Modal */}
       <Modal
@@ -577,14 +593,57 @@ export default function ProfileScreen() {
           </View>
         </ScrollView>
       </Modal>
-    </ScrollView>
+          </View>
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  mobileNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  mobileNavTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1f2937',
+  },
+  mobileNavAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#6366f1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  mobileNavAvatarImg: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  mobileNavAvatarText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+  },
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
@@ -664,7 +723,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingTop: Platform.OS === 'web' ? 0 : 16,
+    paddingBottom: Platform.OS === 'web' ? 100 : 120,
+    paddingHorizontal: Platform.OS === 'web' ? 0 : 12,
   },
   scrollView: {
     flex: 1,
@@ -728,7 +789,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   section: {
-    padding: 20,
+    padding: Platform.OS === 'web' ? 20 : 0,
   },
   menuItem: {
     paddingVertical: 16,

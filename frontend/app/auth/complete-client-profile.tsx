@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/contexts/AuthContext';
@@ -10,11 +10,9 @@ export default function CompleteClientProfileScreen() {
   const { userProfile, refreshProfiles } = useAuth();
   const { showToast } = useToast();
   
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
-    full_name: '',
-    email: '',
+    phone: '',
     address: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -22,8 +20,7 @@ export default function CompleteClientProfileScreen() {
   useEffect(() => {
     if (userProfile) {
       setFormData({
-        full_name: userProfile.full_name || '',
-        email: userProfile.email || '',
+        phone: userProfile.phone || '',
         address: userProfile.address || '',
       });
     }
@@ -32,18 +29,14 @@ export default function CompleteClientProfileScreen() {
   function validateForm() {
     const newErrors: Record<string, string> = {};
     
-    if (!formData.full_name.trim()) {
-      newErrors.full_name = 'El nombre es requerido';
-    }
-    
-    if (!formData.email.trim()) {
-      newErrors.email = 'El email es requerido';
-    } else if (!formData.email.includes('@')) {
-      newErrors.email = 'Email inválido';
+    if (!formData.phone.trim()) {
+      newErrors.phone = 'El telefono es requerido';
+    } else if (formData.phone.length < 8) {
+      newErrors.phone = 'Telefono invalido (minimo 8 digitos)';
     }
     
     if (!formData.address.trim()) {
-      newErrors.address = 'La dirección es requerida';
+      newErrors.address = 'La direccion es requerida';
     }
     
     setErrors(newErrors);
@@ -58,139 +51,126 @@ export default function CompleteClientProfileScreen() {
       const { error } = await supabase
         .from('users')
         .update({
-          full_name: formData.full_name,
-          email: formData.email,
-          address: formData.address,
-          completed_profile: true,
+          phone: formData.phone.trim(),
+          address: formData.address.trim(),
         })
         .eq('id', userProfile.id);
 
       if (error) throw error;
 
-      // Refresh profile
       await refreshProfiles();
       
-      showToast('✅ Perfil completado exitosamente', 'success');
+      showToast('Perfil completado exitosamente', 'success');
       
-      // Navigate back or to home
-      setTimeout(() => {
-        router.replace('/(tabs)/');
-      }, 1000);
+      router.replace('/(tabs)');
     } catch (error) {
       console.error('Error saving profile:', error);
-      showToast('❌ Error al guardar perfil', 'error');
+      showToast('Error al guardar perfil', 'error');
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Completar tu perfil</Text>
-          <Text style={styles.subtitle}>
-            Necesitamos estos datos para que los trabajadores puedan contactarte
-          </Text>
-        </View>
-
-        <View style={styles.form}>
-          {/* Full Name */}
-          <View style={styles.field}>
-            <Text style={styles.label}>👤 Nombre completo</Text>
-            <TextInput
-              style={[styles.input, errors.full_name && styles.inputError]}
-              placeholder="Tu nombre completo"
-              value={formData.full_name}
-              onChangeText={(text) => {
-                setFormData({ ...formData, full_name: text });
-                if (errors.full_name) setErrors({ ...errors, full_name: '' });
-              }}
-              editable={!saving}
-              placeholderTextColor="#9ca3af"
-            />
-            {errors.full_name && (
-              <Text style={styles.errorText}>{errors.full_name}</Text>
-            )}
-          </View>
-
-          {/* Email */}
-          <View style={styles.field}>
-            <Text style={styles.label}>📧 Email</Text>
-            <TextInput
-              style={[styles.input, errors.email && styles.inputError]}
-              placeholder="tu@email.com"
-              value={formData.email}
-              onChangeText={(text) => {
-                setFormData({ ...formData, email: text });
-                if (errors.email) setErrors({ ...errors, email: '' });
-              }}
-              keyboardType="email-address"
-              editable={!saving}
-              placeholderTextColor="#9ca3af"
-            />
-            {errors.email && (
-              <Text style={styles.errorText}>{errors.email}</Text>
-            )}
-          </View>
-
-          {/* Address */}
-          <View style={styles.field}>
-            <Text style={styles.label}>📍 Dirección</Text>
-            <TextInput
-              style={[styles.input, styles.addressInput, errors.address && styles.inputError]}
-              placeholder="Tu dirección completa"
-              value={formData.address}
-              onChangeText={(text) => {
-                setFormData({ ...formData, address: text });
-                if (errors.address) setErrors({ ...errors, address: '' });
-              }}
-              editable={!saving}
-              placeholderTextColor="#9ca3af"
-              multiline
-              numberOfLines={3}
-            />
-            {errors.address && (
-              <Text style={styles.errorText}>{errors.address}</Text>
-            )}
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-          onPress={handleSave}
-          disabled={saving}
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          {saving ? (
-            <ActivityIndicator color="#ffffff" />
-          ) : (
-            <Text style={styles.saveButtonText}>✓ Guardar cambios</Text>
-          )}
-        </TouchableOpacity>
+          <View style={styles.header}>
+            <Text style={styles.title}>Completar tu perfil</Text>
+            <Text style={styles.subtitle}>
+              Agrega tu telefono y direccion para que los trabajadores puedan contactarte cuando acepten tu solicitud
+            </Text>
+          </View>
 
-        <View style={styles.infoBox}>
-          <Text style={styles.infoTitle}>ℹ️ ¿Por qué estos datos?</Text>
-          <Text style={styles.infoText}>
-            • Tu <Text style={styles.infoBold}>teléfono</Text> se compartirá cuando un trabajador acepte tu solicitud{'\n'}
-            • Tu <Text style={styles.infoBold}>dirección</Text> ayuda a trabajadores a ubicarse{'\n'}
-            • Tu <Text style={styles.infoBold}>email</Text> usamos para notificaciones importantes
-          </Text>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <View style={styles.form}>
+            <View style={styles.field}>
+              <Text style={styles.label}>📱 Telefono *</Text>
+              <TextInput
+                style={[styles.input, errors.phone && styles.inputError]}
+                placeholder="Ej: 1155551234"
+                value={formData.phone}
+                onChangeText={(text) => {
+                  setFormData({ ...formData, phone: text });
+                  if (errors.phone) setErrors({ ...errors, phone: '' });
+                }}
+                keyboardType="phone-pad"
+                editable={!saving}
+                placeholderTextColor="#9ca3af"
+              />
+              {errors.phone && (
+                <Text style={styles.errorText}>{errors.phone}</Text>
+              )}
+              <Text style={styles.helperText}>
+                Este numero sera compartido con trabajadores que acepten tu solicitud
+              </Text>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>📍 Direccion *</Text>
+              <TextInput
+                style={[styles.input, styles.addressInput, errors.address && styles.inputError]}
+                placeholder="Tu direccion completa"
+                value={formData.address}
+                onChangeText={(text) => {
+                  setFormData({ ...formData, address: text });
+                  if (errors.address) setErrors({ ...errors, address: '' });
+                }}
+                editable={!saving}
+                placeholderTextColor="#9ca3af"
+                multiline
+                numberOfLines={3}
+              />
+              {errors.address && (
+                <Text style={styles.errorText}>{errors.address}</Text>
+              )}
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <Text style={styles.saveButtonText}>Guardar cambios</Text>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.infoBox}>
+            <Text style={styles.infoTitle}>¿Por que estos datos?</Text>
+            <Text style={styles.infoText}>
+              Tu telefono sera compartido cuando un trabajador acepte tu solicitud.{'\n'}
+              Tu direccion ayuda a los trabajadores a ubicar el lugar de trabajo.{'\n'}
+              Estos datos son necesarios para que puedan contactarte y llegar al sitio.
+            </Text>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
   },
   scrollContent: {
     padding: 20,
+    paddingTop: 20,
     paddingBottom: 40,
   },
   header: {
@@ -218,17 +198,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
     marginBottom: 8,
-  },
-  countryPicker: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8,
-    backgroundColor: '#ffffff',
-    overflow: 'hidden',
-  },
-  picker: {
-    height: 50,
-    color: '#111827',
   },
   input: {
     borderWidth: 1,
@@ -292,8 +261,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#065f46',
     lineHeight: 22,
-  },
-  infoBold: {
-    fontWeight: '700',
   },
 });

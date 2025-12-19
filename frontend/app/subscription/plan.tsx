@@ -6,14 +6,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 import WebView from 'react-native-webview';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:3000';
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://192.168.1.3:3000';
 // PayPal server may run on a different port (3001 in dev)
 const PAYPAL_BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_PAYPAL_URL
   || (BACKEND_URL.includes(':3000') ? BACKEND_URL.replace(':3000', ':3001') : BACKEND_URL);
 
 export default function SubscriptionPlan() {
   const router = useRouter();
-  const { userProfile, isPremium, isSubscriptionActive } = useAuth();
+  const { userProfile, isPremium, isSubscriptionActive, refreshProfiles } = useAuth();
   const [loading, setLoading] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<'mercadopago' | 'paypal' | null>(null);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
@@ -53,12 +53,9 @@ export default function SubscriptionPlan() {
       const data = await response.json();
 
       if (data.initPoint) {
-        if (isLocalUrl(data.initPoint)) {
-          await Linking.openURL(data.initPoint);
-        } else {
-          setPaymentUrl(data.initPoint);
-          setShowPaymentModal(true);
-        }
+        // Usar modal con WebView en todas las plataformas
+        setPaymentUrl(data.initPoint);
+        setShowPaymentModal(true);
       } else {
         Alert.alert('Error', 'No se pudo crear la preferencia de pago');
       }
@@ -93,12 +90,9 @@ export default function SubscriptionPlan() {
           ? `https://www.paypal.com/checkoutnow?token=${data.orderId}`
           : `https://www.sandbox.paypal.com/checkoutnow?token=${data.orderId}`;
 
-        if (isLocalUrl(paypalUrl)) {
-          await Linking.openURL(paypalUrl);
-        } else {
-          setPaymentUrl(paypalUrl);
-          setShowPaymentModal(true);
-        }
+        // Usar modal con WebView en todas las plataformas
+        setPaymentUrl(paypalUrl);
+        setShowPaymentModal(true);
       } else {
         Alert.alert('Error', 'No se pudo crear la orden de PayPal');
       }
@@ -359,14 +353,51 @@ export default function SubscriptionPlan() {
                 border: 'none',
               }}
               title="Payment"
+              onLoad={(e: any) => {
+                const iframe = e.target;
+                try {
+                  const iframeUrl = iframe.contentWindow?.location.href;
+                  if (iframeUrl && (iframeUrl.includes('/subscription/success') || iframeUrl.includes('/subscription/failure'))) {
+                    closePaymentModal();
+                    if (iframeUrl.includes('/subscription/success')) {
+                      // Refrescar perfil para obtener estado premium actualizado
+                      refreshProfiles();
+                      Alert.alert(
+                        'Pago exitoso',
+                        'Tu suscripción Premium ha sido activada',
+                        [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
+                      );
+                    }
+                  }
+                } catch (err) {
+                  // Cross-origin restriction
+                }
+              }}
             />
           ) : paymentUrl ? (
             <WebView
               source={{ uri: paymentUrl }}
               style={styles.webview}
               onNavigationStateChange={(state: any) => {
-                if (state.url.includes('success') || state.url.includes('failure')) {
+                console.log('WebView URL:', state.url);
+                
+                // Detectar páginas de confirmación
+                if (state.url.includes('/subscription/success') || state.url.includes('success')) {
                   closePaymentModal();
+                  // Refrescar perfil para obtener estado premium actualizado
+                  refreshProfiles();
+                  Alert.alert(
+                    'Pago exitoso',
+                    'Tu suscripción Premium ha sido activada',
+                    [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
+                  );
+                } else if (state.url.includes('/subscription/failure') || state.url.includes('failure')) {
+                  closePaymentModal();
+                  Alert.alert(
+                    'Pago cancelado',
+                    'El pago no se completó. Intenta nuevamente.',
+                    [{ text: 'OK' }]
+                  );
                 }
               }}
             />
@@ -394,6 +425,7 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     padding: 24,
+    paddingTop: Platform.OS !== 'web' ? 60 : 24,
     backgroundColor: theme.colors.card,
     marginBottom: 16,
     position: 'relative',

@@ -6,21 +6,11 @@ const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 
-// CORS: permitir llamadas desde el frontend local
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  'http://localhost:8081', // Expo web
-  'http://localhost:19006', // Expo dev client
-];
-
+// CORS: permitir llamadas desde cualquier origen en desarrollo
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error('Origen no permitido por CORS'));
-    },
+    origin: true, // Permitir todos los orígenes (desarrollo)
+    credentials: true,
     methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
@@ -376,8 +366,10 @@ app.get('/api/debug/user/:id', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en puerto ${PORT}`);
+const HOST = '0.0.0.0'; // Escuchar en todas las interfaces para permitir conexiones desde móvil
+app.listen(PORT, HOST, () => {
+  console.log(`🚀 Servidor MercadoPago corriendo en http://${HOST}:${PORT}`);
+  console.log(`📱 Acceso desde red local: http://192.168.1.3:${PORT}`);
 });
 
 module.exports = app;

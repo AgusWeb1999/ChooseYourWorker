@@ -4,11 +4,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node server-mercadopago.js",
-    "start:paypal": "node server-paypal.js",
-    "start:both": "concurrently \"npm start\" \"npm run start:paypal\"",
+    "start:both": "npm start",
     "dev": "nodemon server-mercadopago.js",
-    "dev:paypal": "nodemon server-paypal.js",
-    "dev:both": "concurrently \"npm run dev\" \"npm run dev:paypal\"",
+    "dev:both": "npm run dev",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

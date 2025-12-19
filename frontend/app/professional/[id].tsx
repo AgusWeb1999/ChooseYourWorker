@@ -174,7 +174,16 @@ export default function ProfessionalProfileScreen() {
   }
 
   async function handleSendProposal(message: string) {
-    if (!userProfile?.id || !professional?.id) return;
+    if (!userProfile?.id || !professional?.id) {
+      Alert.alert('Error', 'No se pudo identificar el usuario o profesional');
+      return;
+    }
+
+    console.log('📤 Enviando propuesta:', {
+      client_id: userProfile.id,
+      professional_id: professional.id,
+      message: message?.substring(0, 50)
+    });
 
     setActionLoading(true);
     try {
@@ -189,7 +198,12 @@ export default function ProfessionalProfileScreen() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error insertando hire:', error);
+        throw error;
+      }
+
+      console.log('✅ Hire creado exitosamente:', data?.id);
 
       setPendingHire(data as Hire);
       Alert.alert(

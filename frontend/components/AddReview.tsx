@@ -55,30 +55,17 @@ export default function AddReview({
     try {
       const { error } = await supabase
         .from('reviews')
-        .insert({
+        .upsert({
           professional_id: professionalId,
           client_id: clientId,
           hire_id: hireId,
           rating,
           comment: comment.trim() || null,
-        });
+        }, { onConflict: 'hire_id' });
 
       if (error) {
         console.error('Error al publicar reseña:', error);
-        if (error.code === '23505' || error.code === '409') {
-          Alert.alert('Ya existe una reseña', 'Ya has dejado una reseña para este trabajo', [
-            { 
-              text: 'OK', 
-              onPress: () => {
-                setRating(0);
-                setComment('');
-                onClose();
-              }
-            }
-          ]);
-        } else {
-          Alert.alert('Error', error.message || 'No se pudo publicar la reseña');
-        }
+        Alert.alert('Error', error.message || 'No se pudo publicar la reseña');
         return;
       }
       

@@ -7,15 +7,12 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 app.use(express.json());
 
-// Configuración de CORS
+// Configuración de CORS - permitir todos los orígenes en desarrollo
 app.use(cors({
-  origin: [
-    'http://localhost:8081',
-    'http://localhost:3000',
-    'http://127.0.0.1:8081',
-    process.env.FRONTEND_URL
-  ],
-  credentials: true
+  origin: true, // Permitir todos los orígenes
+  credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Configuración de Supabase
@@ -38,13 +35,9 @@ function environment() {
 
 const client = new paypal.core.PayPalHttpClient(environment());
 
-// Webhook ID (desde el panel de PayPal)
-const PAYPAL_WEBHOOK_ID = process.env.PAYPAL_WEBHOOK_ID;
-if (!PAYPAL_WEBHOOK_ID) {
-  console.warn('[PayPal] Falta PAYPAL_WEBHOOK_ID en .env — la verificación de firma se omitirá si no está presente.');
-}
-// Toggle para habilitar/deshabilitar verificación de firma
-const PAYPAL_WEBHOOK_VERIFY = String(process.env.PAYPAL_WEBHOOK_VERIFY || 'false').toLowerCase() === 'true';
+// PayPal sin webhook - solo captura directa
+console.log('💳 PayPal configurado en modo:', process.env.NODE_ENV === 'production' ? 'PRODUCCIÓN' : 'SANDBOX');
+console.log('✓ PayPal listo sin webhook (captura directa)');
 
 // Precio de suscripción
 const SUBSCRIPTION_PRICE_USD = 9.99;
@@ -200,7 +193,20 @@ app.post('/api/paypal/capture-order', async (req, res) => {
 });
 
 // ============================================
-// WEBHOOK: Notificaciones de PayPal
+// Servidor escuchando
+// ============================================
+const PORT = process.env.PORT || 3001;
+const HOST = '0.0.0.0'; // Escuchar en todas las interfaces para permitir conexiones desde móvil
+app.listen(PORT, HOST, () => {
+  console.log(`✅ Servidor PayPal corriendo en http://${HOST}:${PORT}`);
+  console.log(`📱 Acceso desde red local: http://192.168.1.3:${PORT}`);
+  console.log(`📍 Endpoints disponibles:`);
+  console.log(`   POST /api/paypal/create-order`);
+  console.log(`   POST /api/paypal/capture-order`);
+});
+
+// ============================================
+// ENDPOINT: Webhook de PayPal
 // ============================================
 app.post('/api/paypal/webhook', async (req, res) => {
   try {
@@ -317,9 +323,5 @@ app.get('/api/paypal/order/:orderId', async (req, res) => {
   }
 });
 
-const PORT = process.env.PAYPAL_PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Servidor PayPal corriendo en puerto ${PORT}`);
-});
-
+module.exports = app;
 module.exports = app;

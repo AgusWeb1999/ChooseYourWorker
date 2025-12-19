@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, Picker } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, Modal } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { supabase } from '../src/lib/supabase';
 import { validatePhone, validateId, normalizePhone, normalizeId, getCountriesList, CountryCode, COUNTRIES } from '../utils/countryValidation';
 
@@ -18,7 +19,7 @@ export default function EditClientProfile({
 }: EditClientProfileProps) {
   const [fullName, setFullName] = useState(userProfile?.full_name || '');
   const [phone, setPhone] = useState(userProfile?.phone || '');
-  const [country, setCountry] = useState<CountryCode>(userProfile?.country || 'AR');
+  const [country, setCountry] = useState<CountryCode>(userProfile?.country || 'UY');
   const [dateOfBirth, setDateOfBirth] = useState(userProfile?.date_of_birth || '');
   const [idNumber, setIdNumber] = useState(userProfile?.id_number || '');
   const [address, setAddress] = useState(userProfile?.address || '');
@@ -26,6 +27,7 @@ export default function EditClientProfile({
   const [state, setState] = useState(userProfile?.state || '');
   const [zipCode, setZipCode] = useState(userProfile?.zip_code || '');
   const [loading, setLoading] = useState(false);
+  const [countryModalVisible, setCountryModalVisible] = useState(false);
 
   async function handleSave() {
     if (!fullName || !phone || !idNumber) {
@@ -60,7 +62,7 @@ export default function EditClientProfile({
     
     try {
       // Validar que el teléfono no exista (excepto el del usuario actual)
-      const normalizedPhone = normalizePhone(phone);
+      const normalizedPhone = normalizePhone(phone, country);
       const { data: phoneData } = await supabase
         .from('users')
         .select('id')
@@ -94,7 +96,6 @@ export default function EditClientProfile({
         .update({
           full_name: fullName,
           phone: normalizedPhone,
-          country: country,
           date_of_birth: dateOfBirth || null,
           id_number: normalizedId,
           address: address || null,
@@ -127,17 +128,15 @@ export default function EditClientProfile({
         <Text style={styles.sectionTitle}>Información Personal</Text>
 
         <Text style={styles.label}>País *</Text>
-        <View style={styles.countryPicker}>
-          <Picker
-            selectedValue={country}
-            onValueChange={(value) => setCountry(value as CountryCode)}
-            style={styles.picker}
-          >
-            {getCountriesList().map((c) => (
-              <Picker.Item key={c.code} label={`${c.flag} ${c.name}`} value={c.code} />
-            ))}
-          </Picker>
-        </View>
+        <TouchableOpacity
+          style={styles.countryButton}
+          onPress={() => setCountryModalVisible(true)}
+        >
+          <Text style={styles.countryButtonText}>
+            {getCountriesList().find((c) => c.code === country)?.flag} {COUNTRIES[country]?.name || 'Selecciona un país'}
+          </Text>
+          <Text style={styles.countryArrow}>▼</Text>
+        </TouchableOpacity>
 
         <Text style={styles.label}>Nombre Completo *</Text>
         <TextInput
@@ -259,6 +258,44 @@ export default function EditClientProfile({
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Modal País */}
+      <Modal
+        visible={countryModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCountryModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setCountryModalVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Selecciona tu país</Text>
+            <ScrollView style={styles.modalScroll}>
+              {getCountriesList().map((c) => {
+                const selected = c.code === country;
+                return (
+                  <TouchableOpacity
+                    key={c.code}
+                    style={[styles.modalOption, selected && styles.modalOptionSelected]}
+                    onPress={() => {
+                      setCountry(c.code as CountryCode);
+                      setCountryModalVisible(false);
+                    }}
+                  >
+                    <Text style={[styles.modalOptionText, selected && styles.modalOptionTextSelected]}>
+                      {c.flag} {c.name}
+                    </Text>
+                    {selected && <Text style={styles.checkmark}>✓</Text>}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </ScrollView>
   );
 }
@@ -277,6 +314,85 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 900,
     padding: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '85%',
+    maxHeight: '70%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalScroll: {
+    maxHeight: 400,
+  },
+  countryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 16,
+    backgroundColor: '#fff',
+  },
+  countryButtonText: {
+    fontSize: 15,
+    color: '#1f2937',
+    fontWeight: '600',
+  },
+  countryArrow: {
+    fontSize: 12,
+    color: '#9ca3af',
+  },
+  modalOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginBottom: 8,
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  modalOptionSelected: {
+    backgroundColor: '#e0e7ff',
+    borderColor: '#6366f1',
+  },
+  modalOptionText: {
+    fontSize: 15,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  modalOptionTextSelected: {
+    color: '#6366f1',
+    fontWeight: '600',
+  },
+  checkmark: {
+    fontSize: 18,
+    color: '#6366f1',
+    fontWeight: 'bold',
   },
   title: {
     fontSize: 24,

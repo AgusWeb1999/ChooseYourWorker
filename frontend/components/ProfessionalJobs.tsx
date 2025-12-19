@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
 import { supabase } from '../src/lib/supabase';
 import { useToast } from '../contexts/ToastContext';
 import { notificationTemplates } from '../services/notificationService';
 import { useAuth } from '../src/contexts/AuthContext';
+import { normalizePhone } from '../utils/countryValidation';
 
 interface Job {
   id: string;
@@ -11,7 +12,7 @@ interface Job {
   client_id: string;
   client_name: string;
   client_email?: string;
-  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'waiting_client_approval' | 'cancelled';
+  status: 'pending' | 'accepted' | 'rejected' | 'in_progress' | 'completed' | 'waiting_client_approval' | 'cancelled';
   service_date: string;
   notes: string;
   proposal_message?: string;
@@ -19,7 +20,7 @@ interface Job {
   client_phone?: string;
   client_address?: string;
   rating?: number;
-  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'waiting_client_approval' | 'cancelled' | 'rejected';
+  review?: string;
   payment_amount?: number;
 }
 
@@ -40,32 +41,55 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
 
   async function fetchJobs() {
     try {
+      console.log('🔍 Fetching jobs for professional:', professionalId);
+      
       const { data, error } = await supabase
         .from('hires')
         .select(`
           id, created_at, status, proposal_message, client_id, professional_id,
-          started_at, completed_at,
+          started_at, completed_at, accepted_at,
           client:client_id ( id, full_name, email, phone, address )
         `)
         .eq('professional_id', professionalId)
         .order('created_at', { ascending: false });
+      
+      console.log('📊 Query result:', { dataCount: data?.length, error });
 
       if (error) throw error;
 
-      const mapped: Job[] = (data || []).map((item: any) => ({
-        id: item.id,
-        created_at: item.created_at,
-        client_id: item.client_id,
-        client_name: item.client?.full_name || 'Cliente',
-        client_email: item.client?.email,
-        status: item.status,
-        service_date: item.created_at,
-        notes: '',
-        proposal_message: item.proposal_message || '',
-        client_contact_visible: ['accepted', 'in_progress', 'waiting_client_approval', 'completed'].includes(item.status),
-        client_phone: item.client?.phone,
-        client_address: item.client?.address,
-      }));
+      // Fetch reviews for these jobs
+      const hireIds = (data || []).map(h => h.id);
+      const { data: reviewsData } = await supabase
+        .from('reviews')
+        .select('hire_id, rating, comment')
+        .in('hire_id', hireIds);
+
+      // Create a map of hire_id -> review
+      const reviewsMap = new Map();
+      (reviewsData || []).forEach(review => {
+        reviewsMap.set(review.hire_id, review);
+      });
+
+      const mapped: Job[] = (data || []).map((item: any) => {
+        const isContactVisible = ['accepted', 'in_progress', 'waiting_client_approval', 'completed'].includes(item.status);
+        const review = reviewsMap.get(item.id);
+        return {
+          id: item.id,
+          created_at: item.created_at,
+          client_id: item.client_id,
+          client_name: item.client?.full_name || 'Cliente',
+          client_email: isContactVisible ? item.client?.email : undefined,
+          status: item.status,
+          service_date: item.started_at || item.accepted_at || item.created_at,
+          notes: '',
+          proposal_message: item.proposal_message || '',
+          client_contact_visible: isContactVisible,
+          client_phone: isContactVisible ? item.client?.phone : undefined,
+          client_address: isContactVisible ? item.client?.address : undefined,
+          rating: review?.rating,
+          review: review?.comment,
+        };
+      });
 
       console.log('📋 JOBS FETCHED:', mapped.map(j => ({
         status: j.status,
@@ -229,9 +253,28 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
   }
 
   function openWhatsApp(phoneNumber: string) {
-    const cleanPhone = phoneNumber.replace(/\D/g, '');
-    const url = `https://wa.me/${cleanPhone}`;
-    window.open(url, '_blank');
+    // Normalizar el número (si es 099... lo convierte a 59899...)
+    const normalized = normalizePhone(phoneNumber, 'UY');
+
+    // Validar que tenga código de país (WhatsApp exige E.164, ej: 59899123456)
+    if (!normalized || normalized.length < 11) {
+      showToast('El teléfono no tiene formato válido. Debe ser formato nacional (099...) o internacional (+598...)', 'error');
+      return;
+    }
+
+    const url = `https://wa.me/${normalized}`;
+    Linking.canOpenURL(url)
+      .then((supported) => {
+        if (supported) {
+          Linking.openURL(url);
+        } else {
+          showToast('No se pudo abrir WhatsApp', 'error');
+        }
+      })
+      .catch((err) => {
+        console.error('Error opening WhatsApp:', err);
+        showToast('Error al abrir WhatsApp', 'error');
+      });
   }
 
   const filteredJobs = filter === 'all' ? jobs : jobs.filter(job => job.status === filter);
@@ -260,7 +303,7 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
         <View style={styles.cardHeader}>
           <View style={styles.headerLeft}>
             <Text style={styles.clientName}>{item.client_name}</Text>
-            <Text style={styles.date}>📅 {new Date(item.service_date).toLocaleDateString('es-AR')}</Text>
+            <Text style={styles.date}>{new Date(item.service_date).toLocaleDateString('es-AR')}</Text>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
             <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
@@ -272,14 +315,14 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
         <View style={styles.cardBody}>
           {item.notes && (
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>📝 Descripción:</Text>
+              <Text style={styles.infoLabel}>Descripción:</Text>
               <Text style={styles.infoValue}>{item.notes}</Text>
             </View>
           )}
 
           {item.proposal_message && (
             <View style={styles.messageSection}>
-              <Text style={styles.messageLabel}>📬 Mensaje del cliente:</Text>
+              <Text style={styles.messageLabel}>Mensaje del cliente:</Text>
               <View style={styles.messageBubble}>
                 <Text style={styles.messageText}>{item.proposal_message}</Text>
               </View>
@@ -288,7 +331,7 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
 
           {(item.status === 'in_progress' || item.status === 'accepted' || item.status === 'waiting_client_approval') && (
             <View style={styles.activeContactSection}>
-              <Text style={styles.contactLabel}>👥 Contacto del cliente:</Text>
+              <Text style={styles.contactLabel}>Contacto del cliente:</Text>
               {item.client_phone ? (
                 <View style={styles.contactRow}>
                   <Text style={styles.contactIcon}>📱</Text>
@@ -322,25 +365,34 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
 
           {item.payment_amount && (
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>💰 Pago:</Text>
+              <Text style={styles.infoLabel}>Pago:</Text>
               <Text style={styles.paymentAmount}>
                 ${item.payment_amount.toLocaleString('es-AR')}
               </Text>
             </View>
           )}
 
-          {item.status === 'completed' && item.rating && (
+          {item.status === 'completed' && (
             <View style={styles.ratingSection}>
-              <Text style={styles.ratingLabel}>Calificación del cliente:</Text>
-              <View style={styles.starsRow}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Text key={star} style={styles.star}>
-                    {star <= item.rating! ? '⭐' : '☆'}
-                  </Text>
-                ))}
-              </View>
-              {item.review && (
-                <Text style={styles.reviewText}>"{item.review}"</Text>
+              {item.rating ? (
+                <>
+                  <Text style={styles.ratingLabel}>Calificación del cliente:</Text>
+                  <View style={styles.starsRow}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Text key={star} style={styles.star}>
+                        {star <= item.rating! ? '⭐' : '☆'}
+                      </Text>
+                    ))}
+                  </View>
+                  {item.review && (
+                    <Text style={styles.reviewText}>"{item.review}"</Text>
+                  )}
+                </>
+              ) : (
+                <View style={styles.noReviewContainer}>
+                  <Text style={styles.noReviewIcon}>⭐</Text>
+                  <Text style={styles.noReviewText}>No se ha recibido calificación del cliente</Text>
+                </View>
               )}
             </View>
           )}
@@ -367,13 +419,13 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
               style={styles.completeButton}
               onPress={() => handleRequestCompletion(item.id)}
             >
-              <Text style={styles.completeButtonText}>⏳ Solicitar Finalización</Text>
+              <Text style={styles.completeButtonText}>Solicitar Finalización</Text>
             </TouchableOpacity>
           )}
 
           {item.status === 'waiting_client_approval' && (
             <View style={styles.waitingApprovalContainer}>
-              <Text style={styles.waitingApprovalTitle}>⏳ Esperando confirmación del cliente</Text>
+              <Text style={styles.waitingApprovalTitle}>Esperando confirmación del cliente</Text>
               <Text style={styles.waitingApprovalText}>
                 Solicitaste finalizar el trabajo. El cliente debe confirmar que está completo.
               </Text>
@@ -630,14 +682,29 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   star: {
-    fontSize: 20,
+    fontSize: 24,
     marginRight: 4,
   },
   reviewText: {
     fontSize: 14,
-    color: '#1e293b',
+    color: '#475569',
+    lineHeight: 20,
     fontStyle: 'italic',
-    marginTop: 8,
+  },
+  noReviewContainer: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  noReviewIcon: {
+    fontSize: 32,
+    opacity: 0.3,
+    marginBottom: 8,
+  },
+  noReviewText: {
+    fontSize: 14,
+    color: '#94a3b8',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   actionsRow: {
     flexDirection: 'row',

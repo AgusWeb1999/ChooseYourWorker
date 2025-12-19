@@ -28,7 +28,7 @@ export const COUNTRIES: Record<CountryCode, CountryInfo> = {
     flag: '🇺🇾',
     dialCode: '+598',
     idName: 'Cédula',
-    phoneExample: '+598 9 1234-5678',
+    phoneExample: '+598 99 123 456 o 099 123 456',
     idExample: '12345678',
   },
   CL: {
@@ -80,51 +80,131 @@ export const COUNTRIES: Record<CountryCode, CountryInfo> = {
 
 // Funciones de validación de teléfono
 function validatePhoneAR(phone: string): boolean {
-  // Argentina: +54 9 [area code][number]
-  // Formato flexible: solo dígitos, debe tener 10 dígitos (sin +54)
+  // Argentina: +54 9 [area code][number] o 011[number]
+  // Formato internacional: +5491112345678 (13 dígitos)
+  // Formato nacional: 01112345678 (10-11 dígitos)
   const digitsOnly = phone.replace(/\D/g, '');
-  return digitsOnly.length >= 10 && digitsOnly.length <= 15;
+  
+  // Formato internacional con +54
+  if (digitsOnly.startsWith('54')) {
+    return digitsOnly.length >= 12 && digitsOnly.length <= 13;
+  }
+  
+  // Formato nacional argentino
+  if (digitsOnly.startsWith('0') || digitsOnly.startsWith('15')) {
+    return digitsOnly.length >= 10 && digitsOnly.length <= 11;
+  }
+  
+  return false;
 }
 
 function validatePhoneUY(phone: string): boolean {
-  // Uruguay: +598 9 [number]
-  // Debe tener 7-8 dígitos después de +598 9
+  // Uruguay: +598 9 [number] o 09[number]
+  // Formato internacional: +59899123456 (11 dígitos totales)
+  // Formato nacional: 099123456 (9 dígitos empezando con 09)
   const digitsOnly = phone.replace(/\D/g, '');
-  return digitsOnly.length >= 8 && digitsOnly.length <= 10;
+  
+  // Formato internacional con +598
+  if (digitsOnly.startsWith('598')) {
+    return digitsOnly.length === 11; // +598 9 9123456 = 11 dígitos
+  }
+  
+  // Formato nacional uruguayo (09x xxx xxx)
+  if (digitsOnly.startsWith('09')) {
+    return digitsOnly.length === 9; // 099123456 = 9 dígitos
+  }
+  
+  return false;
 }
 
 function validatePhoneCL(phone: string): boolean {
-  // Chile: +56 9 [number]
-  // Debe tener 8-9 dígitos
+  // Chile: +56 9 [number] o 9[number]
+  // Formato internacional: +56912345678 (11 dígitos)
+  // Formato nacional: 912345678 (9 dígitos empezando con 9)
   const digitsOnly = phone.replace(/\D/g, '');
-  return digitsOnly.length >= 8 && digitsOnly.length <= 10;
+  
+  // Formato internacional con +56
+  if (digitsOnly.startsWith('56')) {
+    return digitsOnly.length === 11;
+  }
+  
+  // Formato nacional chileno
+  if (digitsOnly.startsWith('9')) {
+    return digitsOnly.length === 9;
+  }
+  
+  return false;
 }
 
 function validatePhoneCO(phone: string): boolean {
-  // Colombia: +57 [area][number]
-  // Debe tener 10 dígitos
+  // Colombia: +57 [area][number] o 3[number]
+  // Formato internacional: +573001234567 (12 dígitos)
+  // Formato nacional: 3001234567 (10 dígitos empezando con 3)
   const digitsOnly = phone.replace(/\D/g, '');
-  return digitsOnly.length === 10;
+  
+  // Formato internacional con +57
+  if (digitsOnly.startsWith('57')) {
+    return digitsOnly.length === 12;
+  }
+  
+  // Formato nacional colombiano
+  if (digitsOnly.startsWith('3')) {
+    return digitsOnly.length === 10;
+  }
+  
+  return false;
 }
 
 function validatePhonePE(phone: string): boolean {
-  // Perú: +51 9 [number]
-  // Debe tener 9 dígitos
+  // Perú: +51 9 [number] o 9[number]
+  // Formato internacional: +51912345678 (11 dígitos)
+  // Formato nacional: 912345678 (9 dígitos empezando con 9)
   const digitsOnly = phone.replace(/\D/g, '');
-  return digitsOnly.length === 9;
+  
+  // Formato internacional con +51
+  if (digitsOnly.startsWith('51')) {
+    return digitsOnly.length === 11;
+  }
+  
+  // Formato nacional peruano
+  if (digitsOnly.startsWith('9')) {
+    return digitsOnly.length === 9;
+  }
+  
+  return false;
 }
 
 function validatePhoneES(phone: string): boolean {
-  // España: +34 6 o +34 7 [number]
-  // Debe tener 9 dígitos
+  // España: +34 [number] o 6/7[number]
+  // Formato internacional: +34612345678 (11 dígitos)
+  // Formato nacional: 612345678 (9 dígitos empezando con 6 o 7)
   const digitsOnly = phone.replace(/\D/g, '');
-  return digitsOnly.length === 9;
+  
+  // Formato internacional con +34
+  if (digitsOnly.startsWith('34')) {
+    return digitsOnly.length === 11;
+  }
+  
+  // Formato nacional español
+  if (digitsOnly.startsWith('6') || digitsOnly.startsWith('7')) {
+    return digitsOnly.length === 9;
+  }
+  
+  return false;
 }
 
 function validatePhoneMX(phone: string): boolean {
-  // México: +52 [area][number]
-  // Debe tener 10 dígitos
+  // México: +52 [area][number] o [area][number]
+  // Formato internacional: +525512345678 (12 dígitos)
+  // Formato nacional: 5512345678 (10 dígitos)
   const digitsOnly = phone.replace(/\D/g, '');
+  
+  // Formato internacional con +52
+  if (digitsOnly.startsWith('52')) {
+    return digitsOnly.length === 12;
+  }
+  
+  // Formato nacional mexicano
   return digitsOnly.length === 10;
 }
 
@@ -237,9 +317,73 @@ export function validateId(id: string, country: CountryCode): { valid: boolean; 
   return { valid: true };
 }
 
-// Normalizar teléfono (guardar en BD sin símbolos)
-export function normalizePhone(phone: string): string {
-  return phone.replace(/\D/g, '');
+// Normalizar teléfono (guardar en BD en formato internacional)
+export function normalizePhone(phone: string, country?: CountryCode): string {
+  const digitsOnly = phone.replace(/\D/g, '');
+  
+  // Si no se especifica país o ya tiene código de país, devolver solo dígitos
+  if (!country) {
+    return digitsOnly;
+  }
+  
+  // Si ya tiene código de país internacional, devolver como está
+  if (digitsOnly.startsWith(COUNTRIES[country].dialCode.replace('+', ''))) {
+    return digitsOnly;
+  }
+  
+  // Convertir formato nacional a internacional según el país
+  const dialCode = COUNTRIES[country].dialCode.replace('+', '');
+  
+  switch (country) {
+    case 'UY':
+      // 099123456 -> 59899123456
+      if (digitsOnly.startsWith('09')) {
+        return dialCode + '9' + digitsOnly.substring(2);
+      }
+      break;
+    case 'AR':
+      // 01112345678 -> 5491112345678
+      if (digitsOnly.startsWith('0')) {
+        return dialCode + '9' + digitsOnly.substring(1);
+      }
+      // 1512345678 -> 541512345678
+      if (digitsOnly.startsWith('15')) {
+        return dialCode + digitsOnly;
+      }
+      break;
+    case 'CL':
+      // 912345678 -> 56912345678
+      if (digitsOnly.startsWith('9')) {
+        return dialCode + digitsOnly;
+      }
+      break;
+    case 'CO':
+      // 3001234567 -> 573001234567
+      if (digitsOnly.startsWith('3')) {
+        return dialCode + digitsOnly;
+      }
+      break;
+    case 'PE':
+      // 912345678 -> 51912345678
+      if (digitsOnly.startsWith('9')) {
+        return dialCode + digitsOnly;
+      }
+      break;
+    case 'ES':
+      // 612345678 -> 34612345678
+      if (digitsOnly.startsWith('6') || digitsOnly.startsWith('7')) {
+        return dialCode + digitsOnly;
+      }
+      break;
+    case 'MX':
+      // 5512345678 -> 525512345678
+      if (digitsOnly.length === 10) {
+        return dialCode + digitsOnly;
+      }
+      break;
+  }
+  
+  return digitsOnly;
 }
 
 // Normalizar ID (guardar en BD sin símbolos)

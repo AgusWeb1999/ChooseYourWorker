@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator, Linking, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../src/lib/supabase';
 import { useToast } from '../contexts/ToastContext';
 import { notificationTemplates, createNotification } from '../services/notificationService';
 import AddReview from './AddReview';
+import { normalizePhone } from '../utils/countryValidation';
 
 interface Hiring {
   id: string;
@@ -17,7 +18,6 @@ interface Hiring {
   professional_email?: string;
   professional_user_id?: string;
   status: 'pending' | 'accepted' | 'rejected' | 'in_progress' | 'completed' | 'cancelled' | 'waiting_client_approval';
-  accepted_status?: 'pending_acceptance' | 'accepted' | 'rejected' | 'waiting_your_approval';
   service_date: string;
   notes: string;
   message: string;
@@ -41,9 +41,36 @@ export default function ClientHirings({ userId }: ClientHiringsProps) {
   }, [userId]);
 
   function openWhatsApp(phoneNumber: string) {
-    const cleanPhone = phoneNumber.replace(/\D/g, '');
-    const url = `https://wa.me/${cleanPhone}`;
-    window.open(url, '_blank');
+    // Normalizar el número (si es 099... lo convierte a 59899...)
+    const normalized = normalizePhone(phoneNumber, 'UY');
+    
+    // Validar que tenga código de país (WhatsApp exige E.164, ej: 59899123456)
+    if (!normalized || normalized.length < 11) {
+      showToast('El teléfono no tiene formato válido. Debe ser formato nacional (099...) o internacional (+598...)', 'error');
+      return;
+    }
+
+    const url = `https://wa.me/${normalized}`;
+    
+    // En web, usar window.open directamente
+    if (Platform.OS === 'web') {
+      window.open(url, '_blank');
+      return;
+    }
+    
+    // En mobile, usar Linking
+    Linking.canOpenURL(url)
+      .then((supported) => {
+        if (supported) {
+          Linking.openURL(url);
+        } else {
+          showToast('No se pudo abrir WhatsApp', 'error');
+        }
+      })
+      .catch((err) => {
+        console.error('Error opening WhatsApp:', err);
+        showToast('Error al abrir WhatsApp', 'error');
+      });
   }
 
   async function fetchHirings() {
@@ -84,12 +111,13 @@ export default function ClientHirings({ userId }: ClientHiringsProps) {
           profession: item.professional?.profession || '',
           professional_phone: item.professional?.phone || undefined,
           status: item.status,
-          accepted_status: item.status === 'pending' ? 'pending_acceptance' : item.status === 'rejected' ? 'rejected' : item.status === 'waiting_client_approval' ? 'waiting_your_approval' : 'accepted',
           service_date: item.started_at || item.created_at,
           notes: '',
           message: item.proposal_message || '',
           rating: review?.rating,
           review: review?.comment,
+          professional_address: undefined,
+          professional_email: undefined,
         };
       });
 
@@ -197,31 +225,24 @@ export default function ClientHirings({ userId }: ClientHiringsProps) {
           </View>
         </View>
 
-        {/* Acceptance Status Section */}
-        {item.accepted_status && (
-          <View style={[styles.acceptanceStatusBar, { backgroundColor: `${getAcceptanceStatusColor(item.accepted_status)}15`, borderLeftColor: getAcceptanceStatusColor(item.accepted_status) }]}>
-            <Text style={[styles.acceptanceStatusText, { color: getAcceptanceStatusColor(item.accepted_status) }]}>
-              {getAcceptanceStatusText(item.accepted_status)}
-            </Text>
-          </View>
-        )}
+
 
         <View style={styles.cardBody}>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>📅 Fecha del servicio:</Text>
+            <Text style={styles.infoLabel}>Fecha del servicio:</Text>
             <Text style={styles.infoValue}>{new Date(item.service_date).toLocaleDateString('es-AR')}</Text>
           </View>
           
           {item.message && (
             <View style={styles.messageSection}>
-              <Text style={styles.messageLabel}>💬 Tu solicitud:</Text>
+              <Text style={styles.messageLabel}>Tu solicitud:</Text>
               <Text style={styles.messageText}>"{item.message}"</Text>
             </View>
           )}
 
-          {item.accepted_status === 'accepted' && (item.professional_phone || item.professional_address || item.professional_email) && (
+          {(item.status === 'accepted' || item.status === 'in_progress' || item.status === 'completed' || item.status === 'waiting_client_approval') && item.professional_phone && (
             <View style={styles.contactSection}>
-              <Text style={styles.contactLabel}>📍 Datos de contacto del trabajador:</Text>
+              <Text style={styles.contactLabel}>Datos de contacto del trabajador:</Text>
               {item.professional_phone && (
                 <View style={styles.contactRow}>
                   <Text style={styles.contactIcon}>📱</Text>
@@ -253,7 +274,7 @@ export default function ClientHirings({ userId }: ClientHiringsProps) {
 
           {item.notes && (
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>📝 Notas:</Text>
+              <Text style={styles.infoLabel}>Notas:</Text>
               <Text style={styles.infoValue}>{item.notes}</Text>
             </View>
           )}
@@ -282,11 +303,11 @@ export default function ClientHirings({ userId }: ClientHiringsProps) {
                 setShowReviewModal(true);
               }}
             >
-              <Text style={styles.reviewButtonText}>✍️ Dejar Reseña</Text>
+              <Text style={styles.reviewButtonText}>Dejar Reseña</Text>
             </TouchableOpacity>
           )}
 
-          {item.accepted_status === 'rejected' && item.status === 'pending' && (
+          {item.status === 'rejected' && (
             <View style={styles.rejectedContainer}>
               <Text style={styles.rejectedTitle}>✕ Solicitud Rechazada</Text>
               <Text style={styles.rejectedText}>
@@ -295,9 +316,9 @@ export default function ClientHirings({ userId }: ClientHiringsProps) {
             </View>
           )}
 
-          {item.status === 'in_progress' && item.accepted_status === 'accepted' && (
+          {item.status === 'in_progress' && (
             <View style={styles.inProgressContainer}>
-              <Text style={styles.inProgressTitle}>🔧 Trabajo en proceso</Text>
+              <Text style={styles.inProgressTitle}>Trabajo en proceso</Text>
               <Text style={styles.inProgressText}>
                 El profesional está trabajando en tu solicitud. Te avisaremos cuando solicite la finalización.
               </Text>

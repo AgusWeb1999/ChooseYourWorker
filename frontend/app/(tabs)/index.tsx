@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Image } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Image, Platform, SafeAreaView, ScrollView, Modal } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/contexts/AuthContext';
@@ -27,27 +27,12 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProfession, setSelectedProfession] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
-
-  const professions = [
-    'Todos',
-    'Carpintero',
-    'Electricista',
-    'Plomero',
-    'Pintor',
-    'Jardinero',
-    'Limpieza del Hogar',
-    'Mantenimiento General',
-  ];
-
-  const cities = [
-    'Todas',
-    'Montevideo',
-    'Aguada',
-    'maldonado',
-    'Canelones',
-    'Punta del Este',
-    'Salto',
-  ];
+  const [categoryModalVisible, setCategoryModalVisible] = useState(false);
+  const [cityModalVisible, setCityModalVisible] = useState(false);
+  
+  // Filtros dinámicos desde la BD
+  const [professions, setProfessions] = useState<string[]>(['Todos']);
+  const [cities, setCities] = useState<string[]>(['Todas']);
 
   useEffect(() => {
     fetchProfessionals();
@@ -66,6 +51,31 @@ export default function HomeScreen() {
 
       if (!error && data) {
         setProfessionals(data);
+        
+        // Extraer profesiones únicas y normalizadas (capitalizar primera letra)
+        const professionSet = new Set<string>();
+        data.forEach(p => {
+          if (p.profession) {
+            // Limpiar espacios y normalizar
+            const cleaned = p.profession.trim();
+            const normalized = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+            professionSet.add(normalized);
+          }
+        });
+        setProfessions(['Todos', ...Array.from(professionSet).sort()]);
+        
+        // Extraer ciudades únicas y normalizadas (capitalizar primera letra)
+        const citySet = new Set<string>();
+        data.forEach(p => {
+          if (p.city) {
+            // Limpiar espacios y normalizar
+            const cleaned = p.city.trim();
+            const normalized = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+            citySet.add(normalized);
+          }
+        });
+        setCities(['Todas', ...Array.from(citySet).sort()]);
+        
         // Fetch premium flags for user_ids
         const userIds = data.map(p => p.user_id).filter(Boolean);
         if (userIds.length > 0) {
@@ -102,17 +112,20 @@ export default function HomeScreen() {
       );
     }
 
-    // Filtrar por profesión
+    // Filtrar por profesión (normalizar comparación)
     if (selectedProfession && selectedProfession !== 'Todos') {
-      filtered = filtered.filter((prof) => prof.profession === selectedProfession);
+      filtered = filtered.filter((prof) => {
+        const profNormalized = prof.profession?.trim().charAt(0).toUpperCase() + prof.profession?.trim().slice(1).toLowerCase();
+        return profNormalized === selectedProfession;
+      });
     }
 
-    // Filtrar por ciudad
+    // Filtrar por ciudad (normalizar comparación)
     if (selectedCity && selectedCity !== 'Todas') {
-      filtered = filtered.filter((prof) => 
-        prof.city?.toLowerCase() === selectedCity.toLowerCase() ||
-        prof.state?.toLowerCase() === selectedCity.toLowerCase()
-      );
+      filtered = filtered.filter((prof) => {
+        const cityNormalized = prof.city?.trim().charAt(0).toUpperCase() + prof.city?.trim().slice(1).toLowerCase();
+        return cityNormalized === selectedCity;
+      });
     }
 
     // Premium first, then by rating
@@ -135,7 +148,7 @@ export default function HomeScreen() {
         </Text>
       );
     }
-    return stars;
+    return <>{stars}</>;
   }
 
   function renderProfessionalCard({ item }: { item: Professional }) {
@@ -212,130 +225,305 @@ export default function HomeScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      {/* Nav Bar Superior */}
-      <View style={styles.topNav}>
-        <Text style={styles.logo}>ChooseYourWorker</Text>
-        <TouchableOpacity 
-          style={styles.profileButton}
-          onPress={() => router.push('/(tabs)/profile' as any)}
-        >
-          {userProfile?.avatar_url ? (
-            <Image source={{ uri: userProfile.avatar_url }} style={styles.navAvatar} />
-          ) : (
-            <View style={styles.navAvatarPlaceholder}>
-              <Text style={styles.navAvatarText}>
-                {userProfile?.full_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || '?'}
-              </Text>
-            </View>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* Nav Bar Superior */}
+        <View style={styles.topNav}>
+          <Text style={styles.logo}>ChooseYourWorker</Text>
+          <TouchableOpacity 
+            style={styles.profileButton}
+            onPress={() => router.push('/(tabs)/profile' as any)}
+          >
+            {userProfile?.avatar_url ? (
+              <Image source={{ uri: userProfile.avatar_url }} style={styles.navAvatar} />
+            ) : (
+              <View style={styles.navAvatarPlaceholder}>
+                <Text style={styles.navAvatarText}>
+                  {userProfile?.full_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || '?'}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.contentLimiter}>
+          {/* Header y Search solo en mobile o en web pero fuera del layout de columnas */}
+          {Platform.OS !== 'web' && (
+            <>
+              <View style={styles.headerCompact}>
+                <Text style={styles.welcomeTextCompact}>Hola, encuentra tu profesional ideal</Text>
+                <Text style={styles.subtitleCompact}>Miles de expertos listos para ayudarte</Text>
+              </View>
+
+              {/* Search Bar */}
+              <View style={styles.searchSection}>
+                <View style={styles.searchContainerCompact}>
+                  <Text style={styles.searchIcon}>🔍</Text>
+                  <TextInput
+                    style={styles.searchInputCompact}
+                    placeholder="Buscar por nombre, profesion o ciudad..."
+                    placeholderTextColor="#9ca3af"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
+                </View>
+              </View>
+            </>
           )}
-        </TouchableOpacity>
-      </View>
 
-      <View style={styles.contentLimiter}>
-        <View style={styles.headerCompact}>
-          <Text style={styles.welcomeTextCompact}>👋 Hola, encuentra tu profesional ideal</Text>
-          <Text style={styles.subtitleCompact}>Miles de expertos listos para ayudarte</Text>
-        </View>
+          {/* Layout Web con Sidebar */}
+          {Platform.OS === 'web' ? (
+            <View style={styles.webLayoutContainer}>
+              {/* Sidebar de filtros */}
+              <View style={styles.sidebarFilters}>
+                <View style={styles.sidebarHeader}>
+                  <Text style={styles.sidebarTitle}>Filtros</Text>
+                  <TouchableOpacity onPress={() => { setSelectedProfession(null); setSelectedCity(null); }}>
+                    <Text style={styles.clearText}>Limpiar</Text>
+                  </TouchableOpacity>
+                </View>
 
-        <View style={styles.filtersGrid}>
-          {/* Search Bar */}
-          <View style={styles.searchSection}>
-            <View style={styles.searchContainerCompact}>
-              <Text style={styles.searchIcon}>🔍</Text>
-              <TextInput
-                style={styles.searchInputCompact}
-                placeholder="Buscar por nombre, profesión o ciudad..."
-                placeholderTextColor="#9ca3af"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
+                {/* Search Bar en sidebar */}
+                <View style={styles.sidebarSearchContainer}>
+                  <Text style={styles.searchIcon}>🔍</Text>
+                  <TextInput
+                    style={styles.sidebarSearchInput}
+                    placeholder="Buscar..."
+                    placeholderTextColor="#9ca3af"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
+                </View>
+
+                {/* Categorías */}
+                <View style={styles.filterGroup}>
+                  <Text style={styles.filterGroupTitle}>Categorías</Text>
+                  <View style={styles.verticalChipList}>
+                    {professions.map((item) => (
+                      <TouchableOpacity
+                        key={item}
+                        style={[
+                          styles.sidebarChip,
+                          selectedProfession === item && styles.sidebarChipActive,
+                        ]}
+                        onPress={() => setSelectedProfession(item === 'Todos' ? null : item)}
+                      >
+                        <Text
+                          style={[
+                            styles.sidebarChipText,
+                            selectedProfession === item && styles.sidebarChipTextActive,
+                          ]}
+                        >
+                          {item}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.sidebarDivider} />
+
+                {/* Ciudades */}
+                <View style={styles.filterGroup}>
+                  <Text style={styles.filterGroupTitle}>Ciudades</Text>
+                  <View style={styles.verticalChipList}>
+                    {cities.map((item) => (
+                      <TouchableOpacity
+                        key={item}
+                        style={[
+                          styles.sidebarChip,
+                          selectedCity === item && styles.sidebarChipActive,
+                        ]}
+                        onPress={() => setSelectedCity(item === 'Todas' ? null : item)}
+                      >
+                        <Text
+                          style={[
+                            styles.sidebarChipText,
+                            selectedCity === item && styles.sidebarChipTextActive,
+                          ]}
+                        >
+                          {item}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </View>
+
+              {/* Contenido principal */}
+              <View style={styles.mainContent}>
+                <View style={styles.webHeaderCompact}>
+                  <Text style={styles.webWelcomeText}>Encuentra tu profesional ideal</Text>
+                  <Text style={styles.webSubtitle}>Miles de expertos listos para ayudarte</Text>
+                </View>
+
+                {filteredProfessionals.length === 0 ? (
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyIcon}>🔍</Text>
+                    <Text style={styles.emptyText}>No se encontraron profesionales</Text>
+                    <Text style={styles.emptySubtext}>
+                      Intenta con otros términos de búsqueda
+                    </Text>
+                  </View>
+                ) : (
+                  <FlatList
+                    data={filteredProfessionals}
+                    keyExtractor={(item) => item.id}
+                    renderItem={renderProfessionalCard}
+                    contentContainerStyle={styles.list}
+                    showsVerticalScrollIndicator={false}
+                  />
+                )}
+              </View>
             </View>
-          </View>
-
-          {/* Categories Section */}
-          <View style={styles.filterSection}>
-            <Text style={styles.filterSectionTitle}>Categorías</Text>
-            <View style={styles.chipGrid}>
-              {professions.map((item) => (
-                <TouchableOpacity
-                  key={item}
-                  style={[
-                    styles.chipButton,
-                    selectedProfession === item && styles.chipButtonActive,
-                  ]}
-                  onPress={() => setSelectedProfession(item === 'Todos' ? null : item)}
+          ) : (
+            <>
+              {/* Filters for Mobile - Dropdowns */}
+              <View style={styles.mobileFiltersCompact}>
+                <TouchableOpacity 
+                  style={styles.filterButton}
+                  onPress={() => setCategoryModalVisible(true)}
                 >
-                  <Text
-                    style={[
-                      styles.chipButtonText,
-                      selectedProfession === item && styles.chipButtonTextActive,
-                    ]}
-                  >
-                    {item}
+                  <Text style={styles.filterButtonText}>
+                    {selectedProfession || 'Categoría'}
                   </Text>
+                  <Text style={styles.filterArrow}>▼</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-          </View>
 
-          {/* Cities Section */}
-          <View style={styles.filterSection}>
-            <Text style={styles.filterSectionTitle}>Ciudades</Text>
-            <View style={styles.chipGrid}>
-              {cities.map((item) => (
-                <TouchableOpacity
-                  key={item}
-                  style={[
-                    styles.chipButton,
-                    selectedCity === item && styles.chipButtonActive,
-                  ]}
-                  onPress={() => setSelectedCity(item === 'Todas' ? null : item)}
+                <TouchableOpacity 
+                  style={styles.filterButton}
+                  onPress={() => setCityModalVisible(true)}
                 >
-                  <Text
-                    style={[
-                      styles.chipButtonText,
-                      selectedCity === item && styles.chipButtonTextActive,
-                    ]}
-                  >
-                    {item}
+                  <Text style={styles.filterButtonText}>
+                    {selectedCity || 'Ciudad'}
                   </Text>
+                  <Text style={styles.filterArrow}>▼</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        </View>
+              </View>
 
-      {filteredProfessionals.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>🔍</Text>
-          <Text style={styles.emptyText}>No se encontraron profesionales</Text>
-          <Text style={styles.emptySubtext}>
-            Intenta con otros términos de búsqueda
-          </Text>
+              {filteredProfessionals.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyIcon}>🔍</Text>
+                  <Text style={styles.emptyText}>No se encontraron profesionales</Text>
+                  <Text style={styles.emptySubtext}>
+                    Intenta con otros términos de búsqueda
+                  </Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={filteredProfessionals}
+                  keyExtractor={(item) => item.id}
+                  renderItem={renderProfessionalCard}
+                  contentContainerStyle={styles.list}
+                  showsVerticalScrollIndicator={false}
+                />
+              )}
+            </>
+          )}
+
+          {/* Category Modal */}
+          <Modal
+            visible={categoryModalVisible}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setCategoryModalVisible(false)}
+          >
+            <TouchableOpacity 
+              style={styles.modalOverlay}
+              activeOpacity={1}
+              onPress={() => setCategoryModalVisible(false)}
+            >
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Selecciona una categoría</Text>
+                <ScrollView style={styles.modalScroll}>
+                  {professions.map((prof) => (
+                    <TouchableOpacity
+                      key={prof}
+                      style={[
+                        styles.modalOption,
+                        (selectedProfession === prof || (prof === 'Todos' && !selectedProfession)) && styles.modalOptionSelected
+                      ]}
+                      onPress={() => {
+                        setSelectedProfession(prof === 'Todos' ? null : prof);
+                        setCategoryModalVisible(false);
+                      }}
+                    >
+                      <Text style={[
+                        styles.modalOptionText,
+                        (selectedProfession === prof || (prof === 'Todos' && !selectedProfession)) && styles.modalOptionTextSelected
+                      ]}>
+                        {prof}
+                      </Text>
+                      {(selectedProfession === prof || (prof === 'Todos' && !selectedProfession)) && (
+                        <Text style={styles.checkmark}>✓</Text>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </TouchableOpacity>
+          </Modal>
+
+          {/* City Modal */}
+          <Modal
+            visible={cityModalVisible}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setCityModalVisible(false)}
+          >
+            <TouchableOpacity 
+              style={styles.modalOverlay}
+              activeOpacity={1}
+              onPress={() => setCityModalVisible(false)}
+            >
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Selecciona una ciudad</Text>
+                <ScrollView style={styles.modalScroll}>
+                  {cities.map((city) => (
+                    <TouchableOpacity
+                      key={city}
+                      style={[
+                        styles.modalOption,
+                        (selectedCity === city || (city === 'Todas' && !selectedCity)) && styles.modalOptionSelected
+                      ]}
+                      onPress={() => {
+                        setSelectedCity(city === 'Todas' ? null : city);
+                        setCityModalVisible(false);
+                      }}
+                    >
+                      <Text style={[
+                        styles.modalOptionText,
+                        (selectedCity === city || (city === 'Todas' && !selectedCity)) && styles.modalOptionTextSelected
+                      ]}>
+                        {city}
+                      </Text>
+                      {(selectedCity === city || (city === 'Todas' && !selectedCity)) && (
+                        <Text style={styles.checkmark}>✓</Text>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </TouchableOpacity>
+          </Modal>
         </View>
-      ) : (
-        <FlatList
-          data={filteredProfessionals}
-          keyExtractor={(item) => item.id}
-          renderItem={renderProfessionalCard}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
   },
   topNav: {
     width: '100%',
-    height: 60,
+    height: Platform.OS === 'web' ? 60 : 56,
     backgroundColor: '#fff',
     flexDirection: 'row',
     alignItems: 'center',
@@ -380,12 +568,13 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 1200,
     alignSelf: 'center',
+    paddingHorizontal: Platform.OS === 'web' ? 0 : 0,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
+    padding: Platform.OS === 'web' ? 40 : 20,
     backgroundColor: '#f5f7fa',
   },
   loadingText: {
@@ -394,62 +583,232 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   headerCompact: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    marginTop: 8,
+    alignSelf: 'center',
+  },
+  webLayoutContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  sidebarFilters: {
+    width: 280,
+    backgroundColor: '#fff',
+    borderRadius: 16,
     padding: 20,
-    paddingTop: 24,
-    paddingBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    maxHeight: 'calc(100vh - 120px)',
+    overflowY: 'auto' as any,
+  },
+  sidebarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: '#e5e7eb',
+  },
+  sidebarTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  sidebarSearchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#f8fafc',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 20,
+  },
+  sidebarSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#0f172a',
+    paddingVertical: 2,
+  },
+  filterGroup: {
+    marginBottom: 20,
+  },
+  filterGroupTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 12,
+  },
+  verticalChipList: {
+    gap: 6,
+  },
+  sidebarChip: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  sidebarChipActive: {
+    backgroundColor: '#e0e7ff',
+    borderColor: '#6366f1',
+  },
+  sidebarChipText: {
+    fontSize: 14,
+    color: '#475569',
+    fontWeight: '500',
+  },
+  sidebarChipTextActive: {
+    color: '#4f46e5',
+    fontWeight: '600',
+  },
+  sidebarDivider: {
+    height: 1,
+    backgroundColor: '#e5e7eb',
+    marginVertical: 20,
+  },
+  mainContent: {
+    flex: 1,
+    minWidth: 0,
+  },
+  webHeaderCompact: {
+    marginBottom: 20,
+  },
+  webWelcomeText: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 6,
+  },
+  webSubtitle: {
+    fontSize: 16,
+    color: '#475569'
   },
   welcomeTextCompact: {
     fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 4,
+    fontWeight: '700',
+    color: '#0f172a',
   },
   subtitleCompact: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  filtersGrid: {
-    padding: 16,
-    paddingTop: 0,
-    gap: 16,
+    fontSize: 15,
+    color: '#475569',
   },
   searchSection: {
-    width: '100%',
+    paddingHorizontal: 16,
+    paddingBottom: 10,
   },
   searchContainerCompact: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 2,
-    shadowColor: '#6366f1',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#e0e7ff',
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 14,
+    paddingVertical: Platform.OS === 'web' ? 12 : 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   searchIcon: {
     fontSize: 18,
+    color: '#475569',
     marginRight: 10,
   },
   searchInputCompact: {
     flex: 1,
     fontSize: 15,
-    paddingVertical: 12,
-    color: '#1f2937',
+    color: '#0f172a',
+    paddingVertical: Platform.OS === 'web' ? 6 : 4,
   },
-  filterSection: {
-    width: '100%',
+  webFiltersShell: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  webFiltersCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  webFiltersHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  webFiltersTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  clearText: {
+    color: '#64748b',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  webFiltersColumns: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  webColumn: {
+    flex: 1,
+    gap: 10,
   },
   filterSectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#1f2937',
-    marginBottom: 10,
+    color: '#0f172a',
+    marginBottom: 6,
+  },
+  webDivider: {
+    width: 1,
+    backgroundColor: '#e5e7eb',
+  },
+  chipGridCompact: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chipButtonCompact: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  chipButtonCompactActive: {
+    backgroundColor: '#e0e7ff',
+    borderColor: '#6366f1',
+  },
+  chipButtonTextCompact: {
+    color: '#0f172a',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  chipButtonTextCompactActive: {
+    color: '#4f46e5',
   },
   chipGrid: {
     flexDirection: 'row',
@@ -488,28 +847,28 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   header: {
-    padding: 24,
-    paddingTop: 32,
-    paddingBottom: 24,
+    padding: Platform.OS === 'web' ? 24 : 16,
+    paddingTop: Platform.OS === 'web' ? 32 : 16,
+    paddingBottom: Platform.OS === 'web' ? 24 : 16,
     backgroundColor: '#f8fafc',
   },
   welcomeText: {
-    fontSize: 26,
+    fontSize: Platform.OS === 'web' ? 26 : 22,
     fontWeight: 'bold',
     color: '#1f2937',
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 16 : 14,
     color: '#6b7280',
-    marginBottom: 24,
+    marginBottom: Platform.OS === 'web' ? 24 : 16,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
     borderRadius: 16,
-    paddingHorizontal: 16,
+    paddingHorizontal: Platform.OS === 'web' ? 16 : 12,
     paddingVertical: 4,
     shadowColor: '#6366f1',
     shadowOffset: { width: 0, height: 4 },
@@ -520,13 +879,13 @@ const styles = StyleSheet.create({
     borderColor: '#e0e7ff',
   },
   searchIconLarge: {
-    fontSize: 22,
-    marginRight: 12,
+    fontSize: Platform.OS === 'web' ? 22 : 18,
+    marginRight: Platform.OS === 'web' ? 12 : 8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
-    paddingVertical: 14,
+    fontSize: Platform.OS === 'web' ? 16 : 14,
+    paddingVertical: Platform.OS === 'web' ? 14 : 10,
     color: '#1f2937',
   },
   filterContainer: {
@@ -574,15 +933,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   list: {
-    padding: 16,
+    padding: Platform.OS === 'web' ? 16 : 8,
     paddingTop: 8,
   },
   card: {
     backgroundColor: '#fff',
     borderRadius: 20,
-    padding: 18,
+    padding: Platform.OS === 'web' ? 18 : 14,
     marginBottom: 14,
-    marginHorizontal: 8,
+    marginHorizontal: Platform.OS === 'web' ? 8 : 4,
     borderWidth: 1,
     borderColor: '#e0e7ff',
     shadowColor: '#6366f1',
@@ -593,17 +952,20 @@ const styles = StyleSheet.create({
   },
   premiumCard: {
     borderColor: '#fbbf24',
+    borderWidth: 2,
     backgroundColor: '#fffbeb',
     shadowColor: '#fbbf24',
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
   },
   cardHeader: {
     flexDirection: 'row',
     marginBottom: 12,
   },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: Platform.OS === 'web' ? 60 : 52,
+    height: Platform.OS === 'web' ? 60 : 52,
+    borderRadius: Platform.OS === 'web' ? 30 : 26,
     backgroundColor: '#6366f1',
     justifyContent: 'center',
     alignItems: 'center',
@@ -611,12 +973,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   avatarImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: Platform.OS === 'web' ? 60 : 52,
+    height: Platform.OS === 'web' ? 60 : 52,
+    borderRadius: Platform.OS === 'web' ? 30 : 26,
   },
   avatarText: {
-    fontSize: 24,
+    fontSize: Platform.OS === 'web' ? 24 : 20,
     fontWeight: 'bold',
     color: '#fff',
   },
@@ -630,7 +992,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   name: {
-    fontSize: 18,
+    fontSize: Platform.OS === 'web' ? 18 : 16,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 4,
@@ -647,17 +1009,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   profession: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'web' ? 14 : 13,
     color: '#6366f1',
     fontWeight: '600',
     marginBottom: 2,
   },
   location: {
-    fontSize: 12,
+    fontSize: Platform.OS === 'web' ? 12 : 11,
     color: '#999',
   },
   bio: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'web' ? 14 : 13,
     color: '#666',
     lineHeight: 20,
     marginBottom: 12,
@@ -727,11 +1089,100 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
+  mobileFiltersCompact: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  filterButton: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+    marginBottom: 6,
+  },
+  filterButtonText: {
+    fontSize: 14,
+    color: '#4b5563',
+    fontWeight: '500',
+  },
+  filterArrow: {
+    fontSize: 10,
+    color: '#9ca3af',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '85%',
+    maxHeight: '70%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalScroll: {
+    maxHeight: 400,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginBottom: 8,
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  modalOptionSelected: {
+    backgroundColor: '#e0e7ff',
+    borderColor: '#6366f1',
+  },
+  modalOptionText: {
+    fontSize: 15,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  modalOptionTextSelected: {
+    color: '#6366f1',
+    fontWeight: '600',
+  },
+  checkmark: {
+    fontSize: 18,
+    color: '#6366f1',
+    fontWeight: 'bold',
     position: 'absolute',
+    right: 10,
   },
   titleContainer: {
     flexDirection: 'row',

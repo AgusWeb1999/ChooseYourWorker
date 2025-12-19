@@ -76,10 +76,10 @@ export default function EditProfessionalProfile({
         .from('professionals')
         .update({
           display_name: displayName,
-          profession: finalProfession,
+          profession: finalProfession.charAt(0).toUpperCase() + finalProfession.slice(1).toLowerCase(),
           bio,
           zip_code: zipCode,
-          city,
+          city: city.charAt(0).toUpperCase() + city.slice(1).toLowerCase(),
           state,
           hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
           years_experience: yearsExperience ? parseInt(yearsExperience) : null,
@@ -185,7 +185,7 @@ export default function EditProfessionalProfile({
             placeholder="Ciudad"
             placeholderTextColor="#999"
             value={city}
-            onChangeText={setCity}
+            onChangeText={(text) => setCity(text.charAt(0).toUpperCase() + text.slice(1).toLowerCase())}
           />
           <TextInput
             style={[styles.input, styles.inputSmall]}

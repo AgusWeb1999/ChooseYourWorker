@@ -34,7 +34,7 @@ interface OtherUser {
 
 export default function ChatScreen() {
   const { id: otherUserId } = useLocalSearchParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, userProfile, isPremium } = useAuth();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -42,6 +42,11 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [otherUser, setOtherUser] = useState<OtherUser | null>(null);
+  const [messageCount, setMessageCount] = useState(0);
+  const [otherUserIsPremium, setOtherUserIsPremium] = useState(false);
+  
+  const MESSAGE_LIMIT_FREE = 10;
+  const hasReachedLimit = !isPremium && messageCount >= MESSAGE_LIMIT_FREE;
 
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -186,6 +191,9 @@ export default function ChatScreen() {
 
     if (data) {
       setMessages(data);
+      // Contar mensajes enviados por el usuario actual
+      const myMessages = data.filter(msg => msg.sender_id === user?.id);
+      setMessageCount(myMessages.length);
       scrollToBottom();
     }
   }
@@ -207,6 +215,19 @@ export default function ChatScreen() {
   async function sendMessage() {
     if (!newMessage.trim() || !conversationId || sending || !user) return;
 
+    // Verificar límite de mensajes para usuarios gratuitos
+    if (!isPremium && messageCount >= MESSAGE_LIMIT_FREE) {
+      Alert.alert(
+        'Límite alcanzado',
+        `Has alcanzado el límite de ${MESSAGE_LIMIT_FREE} mensajes de la versión gratuita. Actualiza a Premium para enviar mensajes ilimitados.`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Ver Planes', onPress: () => router.push('/subscription/plan') }
+        ]
+      );
+      return;
+    }
+
     try {
       setSending(true);
 
@@ -223,6 +244,7 @@ export default function ChatScreen() {
       }
 
       setNewMessage('');
+      setMessageCount(prev => prev + 1);
       scrollToBottom();
     } catch (error) {
       console.error('Error sending message:', error);
@@ -357,24 +379,49 @@ export default function ChatScreen() {
           )}
         </ScrollView>
 
+        {/* Advertencia de límite para usuarios gratuitos */}
+        {!isPremium && (
+          <View style={[styles.limitWarning, hasReachedLimit && styles.limitWarningDanger]}>
+            <Ionicons 
+              name={hasReachedLimit ? "alert-circle" : "information-circle"} 
+              size={16} 
+              color={hasReachedLimit ? "#ef4444" : "#f59e0b"} 
+            />
+            <Text style={[styles.limitWarningText, hasReachedLimit && styles.limitWarningTextDanger]}>
+              {hasReachedLimit 
+                ? `Límite alcanzado (${messageCount}/${MESSAGE_LIMIT_FREE}). Actualiza a Premium para continuar.`
+                : `${messageCount}/${MESSAGE_LIMIT_FREE} mensajes usados. Actualiza a Premium para mensajes ilimitados.`
+              }
+            </Text>
+            {hasReachedLimit && (
+              <TouchableOpacity 
+                style={styles.upgradeButton}
+                onPress={() => router.push('/subscription/plan')}
+              >
+                <Text style={styles.upgradeButtonText}>Actualizar</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
         <View style={styles.inputContainer}>
           <TextInput
-            style={styles.input}
+            style={[styles.input, hasReachedLimit && styles.inputDisabled]}
             value={newMessage}
             onChangeText={setNewMessage}
-            placeholder="Escribe un mensaje..."
+            placeholder={hasReachedLimit ? "Límite de mensajes alcanzado..." : "Escribe un mensaje..."}
             placeholderTextColor="#999"
             multiline
             maxLength={1000}
-            editable={!sending}
+            editable={!sending && !hasReachedLimit}
           />
           <TouchableOpacity
             style={[
               styles.sendButton,
-              (!newMessage.trim() || sending) && styles.sendButtonDisabled,
+              (!newMessage.trim() || sending || hasReachedLimit) && styles.sendButtonDisabled,
             ]}
             onPress={sendMessage}
-            disabled={!newMessage.trim() || sending}
+            disabled={!newMessage.trim() || sending || hasReachedLimit}
           >
             {sending ? (
               <ActivityIndicator size="small" color="#FFF" />
@@ -492,6 +539,38 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E5E5EA',
   },
+  limitWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#fef3c7',
+    borderTopWidth: 1,
+    borderTopColor: '#fbbf24',
+    gap: 8,
+  },
+  limitWarningDanger: {
+    backgroundColor: '#fee2e2',
+    borderTopColor: '#ef4444',
+  },
+  limitWarningText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#92400e',
+  },
+  limitWarningTextDanger: {
+    color: '#991b1b',
+  },
+  upgradeButton: {
+    backgroundColor: '#6366f1',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  upgradeButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   input: {
     flex: 1,
     backgroundColor: '#F2F2F7',
@@ -502,6 +581,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     maxHeight: 100,
     marginRight: 8,
+  },
+  inputDisabled: {
+    backgroundColor: '#e5e5ea',
+    opacity: 0.6,
   },
   sendButton: {
     width: 40,

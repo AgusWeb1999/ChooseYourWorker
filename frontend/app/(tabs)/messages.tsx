@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   Image,
+  SafeAreaView,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
@@ -249,25 +251,26 @@ export default function MessagesScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      {/* Nav Bar Superior */}
-      <View style={styles.topNav}>
-        <Text style={styles.logo}>ChooseYourWorker</Text>
-        <TouchableOpacity 
-          style={styles.profileButton}
-          onPress={() => router.push('/(tabs)/profile' as any)}
-        >
-          {userProfile?.avatar_url ? (
-            <Image source={{ uri: userProfile.avatar_url }} style={styles.navAvatar} />
-          ) : (
-            <View style={styles.navAvatarPlaceholder}>
-              <Text style={styles.navAvatarText}>
-                {userProfile?.full_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || '?'}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* Nav Bar Superior */}
+        <View style={styles.topNav}>
+          <Text style={styles.logo}>ChooseYourWorker</Text>
+          <TouchableOpacity 
+            style={styles.profileButton}
+            onPress={() => router.push('/(tabs)/profile' as any)}
+          >
+            {userProfile?.avatar_url ? (
+              <Image source={{ uri: userProfile.avatar_url }} style={styles.navAvatar} />
+            ) : (
+              <View style={styles.navAvatarPlaceholder}>
+                <Text style={styles.navAvatarText}>
+                  {userProfile?.full_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || '?'}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
 
       <View style={styles.contentLimiter}>
       {conversations.length === 0 ? (
@@ -284,6 +287,7 @@ export default function MessagesScreen() {
           renderItem={renderConversation}
           keyExtractor={(item) => item.conversation_id}
           contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -295,10 +299,15 @@ export default function MessagesScreen() {
       )}
       </View>
     </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
@@ -380,16 +389,16 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingVertical: 16,
-    paddingTop: 24,
+    paddingTop: Platform.OS === 'web' ? 24 : 8,
   },
   conversationItem: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF',
-    marginHorizontal: 16,
-    marginVertical: 6,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    marginHorizontal: Platform.OS === 'web' ? 16 : 12,
+    marginVertical: Platform.OS === 'web' ? 6 : 4,
+    paddingVertical: Platform.OS === 'web' ? 14 : 10,
+    paddingHorizontal: Platform.OS === 'web' ? 16 : 12,
     borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -399,12 +408,12 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     position: 'relative',
-    marginRight: 12,
+    marginRight: Platform.OS === 'web' ? 12 : 10,
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: Platform.OS === 'web' ? 56 : 48,
+    height: Platform.OS === 'web' ? 56 : 48,
+    borderRadius: Platform.OS === 'web' ? 28 : 24,
     backgroundColor: '#6366f1',
     justifyContent: 'center',
     alignItems: 'center',
@@ -421,7 +430,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
   },
   avatarText: {
-    fontSize: 24,
+    fontSize: Platform.OS === 'web' ? 24 : 20,
     fontWeight: 'bold',
     color: '#fff',
   },
@@ -455,18 +464,18 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   userName: {
-    fontSize: 17,
+    fontSize: Platform.OS === 'web' ? 17 : 16,
     fontWeight: '600',
     color: '#000',
     flex: 1,
     marginRight: 8,
   },
   time: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'web' ? 14 : 12,
     color: '#8E8E93',
   },
   profession: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'web' ? 14 : 13,
     color: '#007AFF',
     marginBottom: 4,
   },
