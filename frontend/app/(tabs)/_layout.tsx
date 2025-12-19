@@ -26,23 +26,23 @@ export default function TabLayout() {
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.1,
           shadowRadius: 8,
-          height: Platform.OS === 'web' ? 56 : 50,
-          paddingBottom: Platform.OS === 'web' ? 4 : 2,
-          paddingTop: Platform.OS === 'web' ? 4 : 2,
+          height: Platform.OS === 'web' ? 65 : 55,
+          paddingBottom: Platform.OS === 'web' ? 8 : 4,
+          paddingTop: Platform.OS === 'web' ? 8 : 4,
         },
         tabBarLabelStyle: {
-          fontSize: Platform.OS === 'web' ? 11 : 10,
+          fontSize: Platform.OS === 'web' ? 12 : 10,
           fontWeight: '600',
+          marginTop: 4,
+          marginBottom: 2,
+        },
+        tabBarIconStyle: {
           marginTop: 2,
           marginBottom: 0,
         },
-        tabBarIconStyle: {
-          marginTop: 0,
-          marginBottom: 2,
-        },
         tabBarItemStyle: {
-          paddingVertical: 0,
-          gap: 2,
+          paddingVertical: 2,
+          height: Platform.OS === 'web' ? 'auto' : undefined,
         },
         tabBarShowLabel: true,
       }}>
