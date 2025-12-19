@@ -251,7 +251,7 @@ export default function HomeScreen() {
           {(Platform.OS !== 'web' || typeof window !== 'undefined' && window.innerWidth < 768) && (
             <>
               <View style={styles.headerCompact}>
-                <Text style={styles.welcomeTextCompact}>Hola, encuentra tu profesional ideal</Text>
+                <Text style={styles.welcomeTextCompact}>Hola, encuentra tu profesional</Text>
                 <Text style={styles.subtitleCompact}>Miles de expertos listos para ayudarte</Text>
               </View>
 
