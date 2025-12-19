@@ -107,23 +107,15 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.contentLimiter}>
-          {Platform.OS !== 'web' && (
+          {/* Navbar mobile - Mobile nativo y Web Mobile */}
+          {(Platform.OS !== 'web' || typeof window !== 'undefined' && window.innerWidth < 768) && (
             <View style={styles.mobileNav}>
               <Text style={styles.mobileNavTitle}>Mi perfil</Text>
-              <View style={styles.mobileNavAvatar}>
-                {userProfile?.avatar_url ? (
-                  <Image source={{ uri: userProfile.avatar_url }} style={styles.mobileNavAvatarImg} />
-                ) : (
-                  <Text style={styles.mobileNavAvatarText}>
-                    {userProfile?.full_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || '?'}
-                  </Text>
-                )}
-              </View>
             </View>
           )}
           <View style={styles.layoutWrapper}>
-            {/* Sidebar Fijo - Solo en Web */}
-            {Platform.OS === 'web' && (
+            {/* Sidebar Fijo - Solo en Web Desktop (>768px) */}
+            {Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth >= 768 && (
               <View style={styles.sidebar}>
                 <View style={styles.sidebarCard}>
                   <AvatarUpload
@@ -152,6 +144,28 @@ export default function ProfileScreen() {
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
             >
+      {/* Header de perfil para mobile y web mobile (solo ocultar en web desktop con sidebar) */}
+      {(Platform.OS !== 'web' || typeof window !== 'undefined' && window.innerWidth < 768) && (
+        <View style={styles.mobileProfileHeader}>
+          <AvatarUpload
+            userId={userProfile?.id || ''}
+            currentUrl={userProfile?.avatar_url}
+            onUpload={async () => {
+              await refreshProfiles();
+            }}
+            size={100}
+            editable={true}
+          />
+          <Text style={styles.mobileProfileName}>{userProfile?.full_name || 'Usuario'}</Text>
+          <Text style={styles.mobileProfileEmail}>{user?.email}</Text>
+          <View style={styles.mobileProfileBadge}>
+            <Text style={styles.mobileProfileBadgeText}>
+              {userProfile?.is_professional ? '🛠️ Trabajador' : '🔍 Cliente'}
+            </Text>
+          </View>
+        </View>
+      )}
+
       {/* Premium Banner solo para profesionales */}
       {userProfile?.is_professional && <PremiumBanner variant="banner" />}
 
@@ -643,6 +657,45 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 16,
+  },
+  mobileProfileHeader: {
+    backgroundColor: '#fff',
+    paddingVertical: 32,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  mobileProfileName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginTop: 16,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  mobileProfileEmail: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  mobileProfileBadge: {
+    backgroundColor: '#6366f1',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  mobileProfileBadgeText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
   },
   container: {
     flex: 1,
