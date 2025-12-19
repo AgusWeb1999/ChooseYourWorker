@@ -26,36 +26,40 @@ export default function TabLayout() {
           shadowOffset: { width: 0, height: -4 },
           shadowOpacity: 0.15,
           shadowRadius: 12,
-          height: Platform.OS === 'web' ? 70 : 60,
-          paddingBottom: Platform.OS === 'web' ? 10 : 8,
-          paddingTop: Platform.OS === 'web' ? 10 : 8,
+          height: Platform.OS === 'web' ? 56 : 50,
+          paddingBottom: Platform.OS === 'web' ? 6 : 4,
+          paddingTop: Platform.OS === 'web' ? 6 : 4,
           backdropFilter: 'blur(10px)',
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: '600',
-          display: Platform.OS === 'web' ? 'flex' : 'none',
+          marginTop: 2,
+          marginBottom: 0,
+        },
+        tabBarIconStyle: {
+          marginTop: 2,
         },
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: 'Inicio',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="house.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={22} name="house.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="messages"
         options={{
-          title: '💬 Mensajes',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="bubble.left.and.bubble.right.fill" color={color} />,
+          title: 'Mensajes',
+          tabBarIcon: ({ color }) => <IconSymbol size={22} name="bubble.left.and.bubble.right.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: '👤 Perfil',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="person.fill" color={color} />,
+          title: 'Perfil',
+          tabBarIcon: ({ color }) => <IconSymbol size={22} name="person.fill" color={color} />,
         }}
       />
     </Tabs>
