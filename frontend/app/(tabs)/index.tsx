@@ -696,8 +696,8 @@ const styles = StyleSheet.create<Styles>({
   },
   headerCompact: {
     paddingHorizontal: 16,
-    paddingTop: 16,
-    marginTop: 8,
+    paddingTop: 8,
+    marginTop: 0,
     alignSelf: 'center',
   },
   webLayoutContainer: {
@@ -808,17 +808,17 @@ const styles = StyleSheet.create<Styles>({
     color: '#475569'
   },
   welcomeTextCompact: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
     color: '#0f172a',
   },
   subtitleCompact: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#475569',
   },
   searchSection: {
     paddingHorizontal: 16,
-    paddingBottom: 10,
+    paddingBottom: 6,
   },
   searchContainerCompact: {
     flexDirection: 'row',
@@ -828,7 +828,7 @@ const styles = StyleSheet.create<Styles>({
     borderWidth: 1,
     borderColor: '#e2e8f0',
     paddingHorizontal: 14,
-    paddingVertical: Platform.OS === 'web' ? 12 : 10,
+    paddingVertical: Platform.OS === 'web' ? 10 : 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -1203,7 +1203,7 @@ const styles = StyleSheet.create<Styles>({
   mobileFiltersCompact: {
     flexDirection: 'row',
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 4,
     gap: 8,
   },
   filterButton: {
@@ -1212,7 +1212,7 @@ const styles = StyleSheet.create<Styles>({
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#fff',
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,
@@ -1222,7 +1222,7 @@ const styles = StyleSheet.create<Styles>({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   filterButtonText: {
     fontSize: 14,
