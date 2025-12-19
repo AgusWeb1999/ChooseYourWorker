@@ -247,8 +247,8 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.contentLimiter}>
-          {/* Header y Search solo en mobile o en web pero fuera del layout de columnas */}
-          {Platform.OS !== 'web' && (
+          {/* Header y Search para mobile nativo y web mobile */}
+          {(Platform.OS !== 'web' || typeof window !== 'undefined' && window.innerWidth < 768) && (
             <>
               <View style={styles.headerCompact}>
                 <Text style={styles.welcomeTextCompact}>Hola, encuentra tu profesional ideal</Text>
@@ -271,8 +271,8 @@ export default function HomeScreen() {
             </>
           )}
 
-          {/* Layout Web con Sidebar */}
-          {Platform.OS === 'web' ? (
+          {/* Layout Web con Sidebar - Solo desktop (>768px) */}
+          {Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth >= 768 ? (
             <View style={styles.webLayoutContainer}>
               {/* Sidebar de filtros */}
               <View style={styles.sidebarFilters}>
@@ -377,6 +377,7 @@ export default function HomeScreen() {
               </View>
             </View>
           ) : (
+            // Mobile view (nativo y web mobile < 768px)
             <>
               {/* Filters for Mobile - Dropdowns */}
               <View style={styles.mobileFiltersCompact}>
