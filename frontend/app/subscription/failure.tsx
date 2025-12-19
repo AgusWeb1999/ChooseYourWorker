@@ -61,7 +61,7 @@ export default function SubscriptionFailure() {
             ¿Necesitas ayuda?
           </Text>
           <Text style={styles.supportEmail}>
-            soporte@chooseyourworker.com
+            soporte@workinggo.com
           </Text>
         </View>
       </View>

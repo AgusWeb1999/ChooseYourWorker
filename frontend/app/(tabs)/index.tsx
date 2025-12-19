@@ -229,7 +229,7 @@ export default function HomeScreen() {
       <View style={styles.container}>
         {/* Nav Bar Superior */}
         <View style={styles.topNav}>
-          <Text style={styles.logo}>ChooseYourWorker</Text>
+          <Text style={styles.logo}>WorkingGo</Text>
           <TouchableOpacity 
             style={styles.profileButton}
             onPress={() => router.push('/(tabs)/profile' as any)}

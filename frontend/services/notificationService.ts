@@ -213,7 +213,7 @@ export function generateEmailHTML(
 <body>
   <div class="container">
     <div class="header">
-      <h1>ChooseYourWorker</h1>
+      <h1>WorkingGo</h1>
     </div>
     
     <div class="content">
@@ -232,13 +232,13 @@ export function generateEmailHTML(
       <div style="margin-top: 30px; font-size: 14px; color: #6b7280;">
         <p>Si tienes problemas, copia y pega este link en tu navegador:</p>
         <p style="word-break: break-all; background-color: #f3f4f6; padding: 10px; border-radius: 6px;">
-          ${buttonUrl || 'chooseyourworker.app'}
+          ${buttonUrl || 'workinggo.app'}
         </p>
       </div>
     </div>
     
     <div class="footer">
-      <p>© 2024 ChooseYourWorker. Todos los derechos reservados.</p>
+      <p>© 2024 WorkingGo. Todos los derechos reservados.</p>
       <p>Este es un mensaje automático. Por favor no respondas a este email.</p>
     </div>
   </div>

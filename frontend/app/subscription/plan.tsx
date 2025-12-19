@@ -207,7 +207,7 @@ export default function SubscriptionPlan() {
         </TouchableOpacity>
         <Text style={styles.title}>Elige tu Plan</Text>
         <Text style={styles.subtitle}>
-          Desbloquea todas las funcionalidades de ChooseYourWorker
+          Desbloquea todas las funcionalidades de WorkingGo
         </Text>
         <TouchableOpacity 
           style={[styles.backButton, { left: 'auto', right: 16 }]}

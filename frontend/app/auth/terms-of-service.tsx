@@ -19,12 +19,12 @@ export default function TermsOfService() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={true}>
         <Text style={styles.sectionTitle}>1. Aceptación de Términos</Text>
         <Text style={styles.paragraph}>
-          Al utilizar ChooseYourWorker, aceptas estos términos y condiciones. Si no estás de acuerdo, no uses la plataforma.
+          Al utilizar WorkingGo, aceptas estos términos y condiciones. Si no estás de acuerdo, no uses la plataforma.
         </Text>
 
         <Text style={styles.sectionTitle}>2. Descripción del Servicio</Text>
         <Text style={styles.paragraph}>
-          ChooseYourWorker es una plataforma que conecta a clientes con profesionales independientes. Facilitamos la comunicación y coordinación de servicios, pero no somos responsables de la ejecución del trabajo.
+          WorkingGo es una plataforma que conecta a clientes con profesionales independientes. Facilitamos la comunicación y coordinación de servicios, pero no somos responsables de la ejecución del trabajo.
         </Text>
 
         <Text style={styles.sectionTitle}>3. Responsabilidad del Usuario sobre Servicios Publicados</Text>
@@ -33,12 +33,12 @@ export default function TermsOfService() {
           {'\n'}• Cada usuario que publica un trabajo o servicio es <Text style={styles.bold}>única y exclusivamente responsable</Text> por su contenido y legalidad.{'\n'}
           • El usuario confirma que todos los servicios que ofrece son <Text style={styles.bold}>completamente legales</Text> en su jurisdicción.{'\n'}
           • El usuario es responsable de cumplir con todas las leyes, regulaciones y requisitos profesionales aplicables a su servicio.{'\n'}
-          • ChooseYourWorker <Text style={styles.bold}>NO verifica, valida ni se responsabiliza</Text> por la legalidad o cumplimiento de los servicios publicados.
+          • WorkingGo <Text style={styles.bold}>NO verifica, valida ni se responsabiliza</Text> por la legalidad o cumplimiento de los servicios publicados.
         </Text>
 
         <Text style={styles.sectionTitle}>4. Servicios Prohibidos</Text>
         <Text style={styles.paragraph}>
-          Los siguientes servicios están <Text style={styles.bold}>estrictamente prohibidos</Text> en ChooseYourWorker:{'\n\n'}
+          Los siguientes servicios están <Text style={styles.bold}>estrictamente prohibidos</Text> en WorkingGo:{'\n\n'}
           • Servicios ilegales o que violen leyes nacionales/internacionales{'\n'}
           • Tráfico de drogas, armas u otros artículos ilícitos{'\n'}
           • Explotación sexual o servicios de naturaleza sexual{'\n'}
@@ -48,12 +48,12 @@ export default function TermsOfService() {
           • Cualquier actividad que viole derechos humanos{'\n'}
           • Acoso, difamación o discriminación{'\n'}
           • Venta de datos personales sin consentimiento{'\n'}
-          • Cualquier otro servicio que ChooseYourWorker determine como ilegítimo
+          • Cualquier otro servicio que WorkingGo determine como ilegítimo
         </Text>
 
         <Text style={styles.sectionTitle}>5. Renuncia de Responsabilidad</Text>
         <Text style={styles.paragraph}>
-          <Text style={styles.bold}>ChooseYourWorker NO es responsable por:</Text>
+          <Text style={styles.bold}>WorkingGo NO es responsable por:</Text>
           {'\n'}• Servicios ilegales o fraudulentos publicados por usuarios{'\n'}
           • Incumplimiento de leyes o regulaciones por parte del proveedor{'\n'}
           • Calidad, completitud o legalidad de los servicios ofrecidos{'\n'}
@@ -62,9 +62,9 @@ export default function TermsOfService() {
           • Cualquier consecuencia legal derivada del incumplimiento de términos
         </Text>
 
-        <Text style={styles.sectionTitle}>6. Derechos de ChooseYourWorker</Text>
+        <Text style={styles.sectionTitle}>6. Derechos de WorkingGo</Text>
         <Text style={styles.paragraph}>
-          ChooseYourWorker se reserva el derecho de:{'\n'}
+          WorkingGo se reserva el derecho de:{'\n'}
           • Eliminar contenido que viole estos términos{'\n'}
           • Suspender o cancelar cuentas de usuarios infractores{'\n'}
           • Reportar actividades ilícitas a autoridades competentes{'\n'}
@@ -84,7 +84,7 @@ export default function TermsOfService() {
         <Text style={styles.sectionTitle}>8. Contacto y Reporte</Text>
         <Text style={styles.paragraph}>
           Si identificas un servicio ilegal o fraudulento, reportalo inmediatamente a:{'\n'}
-          Email: soporte@chooseyourworker.com{'\n'}
+          Email: soporte@workinggo.com{'\n'}
           Nos comprometeemos a investigar y tomar medidas dentro de 48 horas.
         </Text>
 
@@ -94,7 +94,7 @@ export default function TermsOfService() {
         </Text>
 
         <Text style={styles.highlight}>
-          Al usar ChooseYourWorker, reconoces haber leído, entendido y estar de acuerdo con estos Términos de Servicio en su totalidad.
+          Al usar WorkingGo, reconoces haber leído, entendido y estar de acuerdo con estos Términos de Servicio en su totalidad.
         </Text>
 
         <Text style={styles.lastUpdate}>

@@ -39,7 +39,7 @@ export default function TermsAndConditions() {
             <Text style={styles.sectionTitle}>Términos del Servicio - Mercado Pago</Text>
             
             <Text style={styles.paragraph}>
-              Al realizar un pago a través de Mercado Pago para la suscripción premium de ChooseYourWorker, 
+              Al realizar un pago a través de Mercado Pago para la suscripción premium de WorkingGo, 
               aceptas los siguientes términos y condiciones:
             </Text>
 
@@ -54,7 +54,7 @@ export default function TermsAndConditions() {
             <Text style={styles.paragraph}>
               • Los pagos se procesan de forma segura a través de Mercado Pago.{'\n'}
               • Aceptamos tarjetas de crédito, débito y otros medios de pago disponibles en Mercado Pago.{'\n'}
-              • El cargo aparecerá en tu resumen como "ChooseYourWorker".{'\n'}
+              • El cargo aparecerá en tu resumen como "WorkingGo".{'\n'}
               • Recibirás un comprobante de pago por email una vez confirmada la transacción.
             </Text>
 
@@ -97,7 +97,7 @@ export default function TermsAndConditions() {
             <Text style={styles.subtitle}>8. Contacto y Soporte</Text>
             <Text style={styles.paragraph}>
               Para consultas sobre tu suscripción o problemas con pagos:{'\n'}
-              • Email: soporte@chooseyourworker.com{'\n'}
+              • Email: soporte@workinggo.com{'\n'}
               • Tiempo de respuesta: 24-48 horas
             </Text>
           </>
@@ -106,7 +106,7 @@ export default function TermsAndConditions() {
             <Text style={styles.sectionTitle}>Términos del Servicio - PayPal</Text>
             
             <Text style={styles.paragraph}>
-              Al realizar un pago a través de PayPal para la suscripción premium de ChooseYourWorker, 
+              Al realizar un pago a través de PayPal para la suscripción premium de WorkingGo, 
               aceptas los siguientes términos y condiciones:
             </Text>
 
@@ -121,7 +121,7 @@ export default function TermsAndConditions() {
             <Text style={styles.paragraph}>
               • Los pagos se procesan de forma segura a través de PayPal.{'\n'}
               • Puedes pagar con tu saldo de PayPal, tarjetas vinculadas o cuenta bancaria.{'\n'}
-              • El cargo aparecerá en tu estado de cuenta como "ChooseYourWorker".{'\n'}
+              • El cargo aparecerá en tu estado de cuenta como "WorkingGo".{'\n'}
               • Recibirás un comprobante de pago por email una vez confirmada la transacción.
             </Text>
 
@@ -179,7 +179,7 @@ export default function TermsAndConditions() {
             <Text style={styles.subtitle}>10. Contacto y Soporte</Text>
             <Text style={styles.paragraph}>
               Para consultas sobre tu suscripción o problemas con pagos:{'\n'}
-              • Email: soporte@chooseyourworker.com{'\n'}
+              • Email: soporte@workinggo.com{'\n'}
               • Tiempo de respuesta: 24-48 horas
             </Text>
           </>
@@ -190,7 +190,7 @@ export default function TermsAndConditions() {
             Última actualización: Noviembre 2025
           </Text>
           <Text style={styles.footerText}>
-            ChooseYourWorker © 2025. Todos los derechos reservados.
+            WorkingGo © 2025. Todos los derechos reservados.
           </Text>
         </View>
       </ScrollView>
