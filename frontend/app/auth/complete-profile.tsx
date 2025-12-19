@@ -222,9 +222,9 @@ export default function CompleteProfileScreen() {
         />
 
         <Text style={styles.label}>Ubicación *</Text>
-        <View style={styles.row}>
+        <View style={styles.locationContainer}>
           <TextInput
-            style={[styles.input, styles.inputSmall]}
+            style={[styles.input, styles.inputZip]}
             placeholder="Código Postal"
             placeholderTextColor="#999"
             value={zipCode}
@@ -232,14 +232,14 @@ export default function CompleteProfileScreen() {
             keyboardType="number-pad"
           />
           <TextInput
-            style={[styles.input, styles.inputMedium]}
+            style={[styles.input, styles.inputCity]}
             placeholder="Ciudad"
             placeholderTextColor="#999"
             value={city}
             onChangeText={(text) => setCity(text.charAt(0).toUpperCase() + text.slice(1).toLowerCase())}
           />
           <TextInput
-            style={[styles.input, styles.inputSmall]}
+            style={[styles.input, styles.inputState]}
             placeholder="Departamento"
             placeholderTextColor="#999"
             value={state}
@@ -388,6 +388,19 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: 12,
+  },
+  locationContainer: {
+    flexDirection: Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth < 768 ? 'column' : 'row',
+    gap: 12,
+  },
+  inputZip: {
+    flex: Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth < 768 ? undefined : 1,
+  },
+  inputCity: {
+    flex: Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth < 768 ? undefined : 2,
+  },
+  inputState: {
+    flex: Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth < 768 ? undefined : 1,
   },
   inputSmall: {
     flex: 1,

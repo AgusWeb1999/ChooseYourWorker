@@ -32,33 +32,33 @@ export default function TabLayout() {
           backdropFilter: 'blur(10px)',
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: '600',
-          marginTop: 2,
-          marginBottom: 0,
+          marginTop: 1,
+          marginBottom: 1,
         },
         tabBarIconStyle: {
-          marginTop: 2,
+          marginTop: 1,
         },
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Inicio',
+          title: '🏠 Inicio',
           tabBarIcon: ({ color }) => <IconSymbol size={22} name="house.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="messages"
         options={{
-          title: 'Mensajes',
+          title: '💬 Mensajes',
           tabBarIcon: ({ color }) => <IconSymbol size={22} name="bubble.left.and.bubble.right.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Perfil',
+          title: '👤 Perfil',
           tabBarIcon: ({ color }) => <IconSymbol size={22} name="person.fill" color={color} />,
         }}
       />
