@@ -4,11 +4,12 @@ import { createClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 
 // Leer credenciales desde variables de entorno Expo (prefijo EXPO_PUBLIC_)
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+// Si no están disponibles (producción), usar valores por defecto
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://oeabhlewxekejmgrucrz.supabase.co';
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9lYWJobGV3eGVrZWptZ3J1Y3J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTIzNTk4NjcsImV4cCI6MjAyNzkzNTg2N30.vY7O6KBvR0SfnbjIqVDtw0hI0MfHLfUpBJO4DQmVd0Q';
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Faltan EXPO_PUBLIC_SUPABASE_URL o EXPO_PUBLIC_SUPABASE_ANON_KEY en .env.local');
+  throw new Error('Faltan credenciales de Supabase');
 }
 
 let storage;
