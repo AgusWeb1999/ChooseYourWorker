@@ -18,7 +18,7 @@ export default function TabLayout() {
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: {
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          backgroundColor: 'rgba(255, 255, 255, 0.98)',
           borderTopWidth: 1,
           borderTopColor: 'rgba(99, 102, 241, 0.1)',
           elevation: 12,
@@ -26,40 +26,45 @@ export default function TabLayout() {
           shadowOffset: { width: 0, height: -4 },
           shadowOpacity: 0.15,
           shadowRadius: 12,
-          height: Platform.OS === 'web' ? 56 : 50,
-          paddingBottom: Platform.OS === 'web' ? 6 : 4,
-          paddingTop: Platform.OS === 'web' ? 6 : 4,
+          height: Platform.OS === 'web' ? 75 : 60,
+          paddingBottom: Platform.OS === 'web' ? 10 : 6,
+          paddingTop: Platform.OS === 'web' ? 10 : 6,
           backdropFilter: 'blur(10px)',
         },
         tabBarLabelStyle: {
-          fontSize: 10,
+          fontSize: Platform.OS === 'web' ? 13 : 11,
           fontWeight: '600',
-          marginTop: 1,
-          marginBottom: 1,
+          marginTop: 4,
+          marginBottom: 0,
+          display: 'flex',
         },
         tabBarIconStyle: {
-          marginTop: 1,
+          marginTop: 0,
+          marginBottom: 4,
+        },
+        tabBarItemStyle: {
+          paddingVertical: Platform.OS === 'web' ? 6 : 2,
         },
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: '🏠 Inicio',
-          tabBarIcon: ({ color }) => <IconSymbol size={22} name="house.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={18} name="house.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="messages"
         options={{
           title: '💬 Mensajes',
-          tabBarIcon: ({ color }) => <IconSymbol size={22} name="bubble.left.and.bubble.right.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={18} name="bubble.left.and.bubble.right.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: '👤 Perfil',
-          tabBarIcon: ({ color }) => <IconSymbol size={22} name="person.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={18} name="person.fill" color={color} />,
         }}
       />
     </Tabs>
