@@ -247,7 +247,7 @@ export default function ProfileScreen() {
               style={[styles.menuItem, styles.menuItemPortfolio]}
               onPress={() => setPortfolioModalVisible(true)}
             >
-              <Text style={styles.menuTextPortfolio}>📸 Mi Portafolio de Trabajos</Text>
+              <Text style={styles.menuTextPortfolio}>📸 Portafolio de Trabajos</Text>
             </TouchableOpacity>
           </>
         ) : (

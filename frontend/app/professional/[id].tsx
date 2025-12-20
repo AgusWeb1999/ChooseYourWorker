@@ -9,6 +9,7 @@ import AddReview from '../../components/AddReview';
 import ClientReviewsList from '../../components/ClientReviewsList';
 import AddClientReview from '../../components/AddClientReview';
 import { HireModal } from '../../components/HireModal';
+import WorkPortfolio from '../../components/WorkPortfolio';
 
 interface Professional {
   id: string;
@@ -491,6 +492,14 @@ export default function ProfessionalProfileScreen() {
               </TouchableOpacity>
             </View>
           )}
+
+          {/* Portafolio público del profesional */}
+          <View style={{ marginVertical: 24 }}>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 8, color: '#1e293b', textAlign: 'center' }}>
+              Portafolio de Trabajos
+            </Text>
+            <WorkPortfolio professionalId={professional.id} editable={false} />
+          </View>
 
           {/* Reseñas del Profesional (visibles para todos) */}
           <View style={styles.section}>

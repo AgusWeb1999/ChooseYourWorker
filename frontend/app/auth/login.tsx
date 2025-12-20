@@ -107,7 +107,11 @@ export default function LoginScreen() {
     });
 
     if (error) {
-      Alert.alert('Error', 'No se pudo enviar el email de recuperación. Intentá de nuevo.');
+      if (error.status === 429) {
+        Alert.alert('Demasiados intentos', 'Has solicitado recuperar la contraseña demasiadas veces. Espera unos minutos antes de volver a intentarlo.');
+      } else {
+        Alert.alert('Error', 'No se pudo enviar el email de recuperación. Intentá de nuevo.');
+      }
     } else {
       Alert.alert('Email enviado', 'Revisá tu bandeja de entrada para restablecer tu contraseña');
     }
@@ -201,7 +205,7 @@ export default function LoginScreen() {
 
       <TouchableOpacity 
         style={styles.forgotPassword}
-        onPress={handlePasswordReset}
+        onPress={() => router.push('/auth/forgot-password')}
       >
         <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
       </TouchableOpacity>

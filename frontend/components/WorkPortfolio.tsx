@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Modal, Pressable } from 'react-native';
 import { 
   View, 
   Text, 
@@ -13,7 +14,10 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../src/lib/supabase';
-
+interface WorkPortfolioProps {
+  professionalId: string;
+  editable?: boolean;
+}
 interface PortfolioImage {
   id: string;
   image_url: string;
@@ -21,15 +25,13 @@ interface PortfolioImage {
   created_at: string;
 }
 
-interface WorkPortfolioProps {
-  professionalId: string;
-  editable?: boolean;
-}
 
 export default function WorkPortfolio({ professionalId, editable = true }: WorkPortfolioProps) {
   const [images, setImages] = useState<PortfolioImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
     loadPortfolioImages();
@@ -86,7 +88,24 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
       });
 
       if (!result.canceled && result.assets[0]) {
-        await uploadImage(result.assets[0].uri);
+        // Validar tipo de archivo
+        const asset = result.assets[0];
+        const allowedTypes = ['jpg', 'jpeg', 'png', 'webp'];
+        let fileExt = '';
+        if (asset.fileName) {
+          fileExt = asset.fileName.split('.').pop()?.toLowerCase() || '';
+        } else {
+          // fallback: try to get extension from uri
+          fileExt = asset.uri.split('.').pop()?.toLowerCase() || '';
+        }
+        if (!allowedTypes.includes(fileExt)) {
+          Alert.alert(
+            'Formato no soportado',
+            'Solo puedes subir imágenes en formato JPG, JPEG, PNG o WEBP.'
+          );
+          return;
+        }
+        await uploadImage(asset.uri);
       }
     } catch (error: any) {
       console.error('Error picking image:', error);
@@ -209,27 +228,35 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
   }
 
   const screenWidth = Dimensions.get('window').width;
-  
   // Responsive image sizing
-  // Web Desktop (>768px): 3 columnas, máx 150px
-  // Web Mobile (<768px): 2 columnas, responsive
+  // Web Desktop (>900px): 3 columnas, máx 180px
+  // Web Tablet (600-900px): 2 columnas, máx 160px
+  // Web Mobile (<600px): 2 columnas, responsive
   // Mobile nativo: 2 columnas, responsive
-  const isWebDesktop = Platform.OS === 'web' && screenWidth >= 768;
-  const imageSize = isWebDesktop
-    ? Math.min((screenWidth - 80) / 3, 150)
-    : (screenWidth - 60) / 2;
+  let numColumns = 2;
+  let maxImageSize = 160;
+  if (Platform.OS === 'web') {
+    if (screenWidth >= 900) {
+      numColumns = 3;
+      maxImageSize = 180;
+    } else if (screenWidth >= 600) {
+      numColumns = 2;
+      maxImageSize = 160;
+    } else {
+      numColumns = 2;
+      maxImageSize = 140;
+    }
+  }
+  const imageSize = Math.min((screenWidth - 40 - (numColumns * 10)) / numColumns, maxImageSize);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Mis Trabajos</Text>
-        <Text style={styles.subtitle}>
-          Muestra fotos de tus trabajos realizados ({images.length}/5)
-        </Text>
+        <Text style={styles.title}>Trabajos realizados:</Text>
       </View>
 
       <ScrollView 
-        contentContainerStyle={styles.grid}
+        contentContainerStyle={[styles.grid, { justifyContent: images.length === 1 ? 'flex-start' : 'flex-start' }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Botón para agregar imagen */}
@@ -238,6 +265,7 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
             style={[styles.addButton, { width: imageSize, height: imageSize }]}
             onPress={pickImage}
             disabled={uploading}
+            activeOpacity={0.8}
           >
             {uploading ? (
               <ActivityIndicator size="small" color="#007AFF" />
@@ -252,7 +280,15 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
 
         {/* Grid de imágenes */}
         {images.map((image) => (
-          <View key={image.id} style={[styles.imageContainer, { width: imageSize, height: imageSize }]}>
+          <Pressable
+            key={image.id}
+            style={[styles.imageContainer, { width: imageSize, height: imageSize }]}
+            onPress={() => {
+              setSelectedImage(image.image_url);
+              setModalVisible(true);
+            }}
+            android_ripple={{ color: '#e0e0e0' }}
+          >
             <Image 
               source={{ uri: image.image_url }} 
               style={styles.image}
@@ -266,9 +302,29 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
                 <Text style={styles.deleteIcon}>×</Text>
               </TouchableOpacity>
             )}
-          </View>
+          </Pressable>
         ))}
       </ScrollView>
+
+      {/* Modal para imagen ampliada */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
+          <View style={styles.modalContent}>
+            {selectedImage && (
+              <Image
+                source={{ uri: selectedImage }}
+                style={styles.modalImage}
+                resizeMode="contain"
+              />
+            )}
+          </View>
+        </Pressable>
+      </Modal>
 
       {images.length === 0 && !editable && (
         <View style={styles.emptyState}>
@@ -316,7 +372,39 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     padding: 10,
     gap: 10,
+    justifyContent: 'flex-start',
   },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.85)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 16,
+    },
+    modalContent: {
+      width: '100%',
+      maxWidth: 420,
+      maxHeight: '90%',
+      borderRadius: 16,
+      overflow: 'hidden',
+      backgroundColor: '#fff',
+      justifyContent: 'center',
+      alignItems: 'center',
+      alignSelf: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      elevation: 8,
+    },
+    modalImage: {
+      width: '100%',
+      height: 340,
+      maxWidth: 400,
+      maxHeight: 340,
+      borderRadius: 8,
+      backgroundColor: '#eee',
+    },
   addButton: {
     backgroundColor: '#fff',
     borderRadius: 12,
