@@ -10,6 +10,7 @@ import AvatarUpload from '../../components/AvatarUpload';
 import PremiumBanner from '../../components/PremiumBanner';
 import ClientHirings from '../../components/ClientHirings';
 import ProfessionalJobs from '../../components/ProfessionalJobs';
+import WorkPortfolio from '../../components/WorkPortfolio';
 
 export default function ProfileScreen() {
   const { user, userProfile, professionalProfile, signOut, refreshProfiles, isPremium, isSubscriptionActive } = useAuth();
@@ -21,6 +22,7 @@ export default function ProfileScreen() {
   const [aboutModalVisible, setAboutModalVisible] = useState(false);
   const [hiringsModalVisible, setHiringsModalVisible] = useState(false);
   const [jobsModalVisible, setJobsModalVisible] = useState(false);
+  const [portfolioModalVisible, setPortfolioModalVisible] = useState(false);
   
   // Settings state
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -233,12 +235,21 @@ export default function ProfileScreen() {
 
         {/* Nueva sección: Mis Trabajos o Contrataciones */}
         {userProfile?.is_professional ? (
-          <TouchableOpacity 
-            style={[styles.menuItem, styles.menuItemHighlight]}
-            onPress={() => setJobsModalVisible(true)}
-          >
-            <Text style={styles.menuTextHighlight}>Mis Trabajos</Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity 
+              style={[styles.menuItem, styles.menuItemHighlight]}
+              onPress={() => setJobsModalVisible(true)}
+            >
+              <Text style={styles.menuTextHighlight}>Mis Trabajos</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.menuItem, styles.menuItemPortfolio]}
+              onPress={() => setPortfolioModalVisible(true)}
+            >
+              <Text style={styles.menuTextPortfolio}>📸 Mi Portafolio de Trabajos</Text>
+            </TouchableOpacity>
+          </>
         ) : (
           <TouchableOpacity 
             style={[styles.menuItem, styles.menuItemHighlight]}
@@ -483,7 +494,7 @@ export default function ProfileScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setJobsModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
+        <View style={styles.fullModal}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Mis Trabajos</Text>
             <TouchableOpacity onPress={() => setJobsModalVisible(false)}>
@@ -491,6 +502,24 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
           {professionalProfile && <ProfessionalJobs professionalId={professionalProfile.id} />}
+        </View>
+      </Modal>
+
+      {/* Work Portfolio Modal */}
+      <Modal
+        visible={portfolioModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setPortfolioModalVisible(false)}
+      >
+        <View style={styles.fullModal}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Mi Portafolio</Text>
+            <TouchableOpacity onPress={() => setPortfolioModalVisible(false)}>
+              <Text style={styles.closeButton}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          {professionalProfile && <WorkPortfolio professionalId={professionalProfile.id} editable={true} />}
         </View>
       </Modal>
 
@@ -876,6 +905,16 @@ const styles = StyleSheet.create({
     color: '#4f46e5',
     fontWeight: '600',
   },
+  menuItemPortfolio: {
+    backgroundColor: '#f0f9ff',
+    borderWidth: 1,
+    borderColor: '#0ea5e9',
+  },
+  menuTextPortfolio: {
+    fontSize: 16,
+    color: '#0284c7',
+    fontWeight: '600',
+  },
   logoutButton: {
     margin: 20,
     marginBottom: 40,
@@ -1147,5 +1186,9 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  fullModal: {
+    flex: 1,
+    backgroundColor: '#fff',
   },
 });

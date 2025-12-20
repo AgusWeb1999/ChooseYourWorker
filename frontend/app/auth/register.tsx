@@ -287,7 +287,10 @@ export default function RegisterScreen() {
         value={fullName}
         onChangeText={(text) => {
           setFullName(text);
-          if (errors.fullName) setErrors({ ...errors, fullName: undefined });
+          if (errors.fullName) {
+            const { fullName, ...rest } = errors;
+            setErrors(rest);
+          }
         }}
       />
       {errors.fullName && <Text style={styles.errorFieldText}>{errors.fullName}</Text>}
@@ -299,7 +302,10 @@ export default function RegisterScreen() {
         value={email}
         onChangeText={(text) => {
           setEmail(text);
-          if (errors.email) setErrors({ ...errors, email: undefined });
+          if (errors.email) {
+            const { email, ...rest } = errors;
+            setErrors(rest);
+          }
         }}
         keyboardType="email-address"
         autoCapitalize="none"
@@ -313,7 +319,10 @@ export default function RegisterScreen() {
         value={password}
         onChangeText={(text) => {
           setPassword(text);
-          if (errors.password) setErrors({ ...errors, password: undefined });
+          if (errors.password) {
+            const { password, ...rest } = errors;
+            setErrors(rest);
+          }
         }}
         secureTextEntry
       />
@@ -326,7 +335,10 @@ export default function RegisterScreen() {
         value={phone}
         onChangeText={(text) => {
           setPhone(text);
-          if (errors.phone) setErrors({ ...errors, phone: undefined });
+          if (errors.phone) {
+            const { phone, ...rest } = errors;
+            setErrors(rest);
+          }
         }}
         keyboardType="phone-pad"
       />
@@ -339,7 +351,10 @@ export default function RegisterScreen() {
         value={idNumber}
         onChangeText={(text) => {
           setIdNumber(text);
-          if (errors.idNumber) setErrors({ ...errors, idNumber: undefined });
+          if (errors.idNumber) {
+            const { idNumber, ...rest } = errors;
+            setErrors(rest);
+          }
         }}
         autoCapitalize="characters"
       />
