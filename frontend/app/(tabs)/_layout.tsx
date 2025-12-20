@@ -12,8 +12,8 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { width } = useWindowDimensions();
 
-  // En web móvil (<768px) ocultar los labels del tab bar
-  const showLabels = Platform.OS !== 'web' || width >= 768;
+  // Ocultar labels en iOS y Android, solo mostrar en web desktop
+  const showLabels = Platform.OS === 'web' && width >= 768;
 
   return (
     <Tabs
