@@ -209,9 +209,15 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
   }
 
   const screenWidth = Dimensions.get('window').width;
-  const imageSize = Platform.OS === 'web' ? 
-    Math.min((screenWidth - 80) / 3, 150) : 
-    (screenWidth - 60) / 2;
+  
+  // Responsive image sizing
+  // Web Desktop (>768px): 3 columnas, máx 150px
+  // Web Mobile (<768px): 2 columnas, responsive
+  // Mobile nativo: 2 columnas, responsive
+  const isWebDesktop = Platform.OS === 'web' && screenWidth >= 768;
+  const imageSize = isWebDesktop
+    ? Math.min((screenWidth - 80) / 3, 150)
+    : (screenWidth - 60) / 2;
 
   return (
     <View style={styles.container}>
