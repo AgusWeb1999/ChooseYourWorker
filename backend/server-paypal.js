@@ -40,7 +40,7 @@ console.log('💳 PayPal configurado en modo:', process.env.NODE_ENV === 'produc
 console.log('✓ PayPal listo sin webhook (captura directa)');
 
 // Precio de suscripción
-const SUBSCRIPTION_PRICE_USD = 9.99;
+const SUBSCRIPTION_PRICE_USD = 0.5;
 
 // ============================================
 // ENDPOINT: Crear orden de PayPal

@@ -43,7 +43,7 @@ const preferenceClient = new Preference(mercadopago);
 const paymentClient = new Payment(mercadopago);
 
 // Precio de suscripción mensual
-const SUBSCRIPTION_PRICE_USD = 7.99;
+const SUBSCRIPTION_PRICE_USD = 0.5;
 
 // ============================================
 // ENDPOINT: Crear preferencia de pago

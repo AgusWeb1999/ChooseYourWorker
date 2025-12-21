@@ -254,7 +254,7 @@ export default function SubscriptionPlan() {
         </View>
         <View style={styles.planHeader}>
           <Text style={styles.planName}>Premium</Text>
-          <Text style={styles.planPrice}>USD $7.99</Text>
+          <Text style={styles.planPrice}>USD $0.5</Text>
         </View>
         <Text style={styles.planPeriod}>/mes</Text>
         <Text style={styles.planDuration}>por mes</Text>
@@ -294,26 +294,7 @@ export default function SubscriptionPlan() {
               </TouchableOpacity>
             </View>
 
-            {/* PayPal */}
-            <View style={styles.paymentMethodWrapper}>
-              <TouchableOpacity
-                style={[styles.paymentButton, styles.paypalButton]}
-                onPress={handlePayWithPayPal}
-                disabled={loading}
-              >
-                {loading && selectedProvider === 'paypal' ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <>
-                    <Ionicons name="logo-paypal" size={24} color="#fff" />
-                    <Text style={styles.paymentButtonText}>PayPal</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleViewTerms('paypal')}>
-                <Text style={styles.termsLink}>Ver términos</Text>
-              </TouchableOpacity>
-            </View>
+            {/* PayPal eliminado */}
           </View>
         </View>
 

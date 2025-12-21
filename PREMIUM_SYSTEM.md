@@ -1,3 +1,4 @@
+
 # Sistema Premium - ChooseYourWorker
 
 ## 📋 Resumen
@@ -32,8 +33,9 @@ Sistema completo de suscripción premium que diferencia usuarios gratuitos de us
 
 ### Flujo Completo
 
-1. **Usuario selecciona plan Premium** ($7.99 USD/mes)
+1. **Usuario selecciona plan Premium** ($0.5 USD/mes)
 2. **Elige método de pago**: MercadoPago o PayPal
+2. **Elige método de pago**: MercadoPago
 3. **Modal in-app se abre** con WebView (o iframe en web)
 4. **Usuario completa pago** en plataforma externa
 5. **Webhook backend recibe confirmación**
@@ -57,7 +59,9 @@ const handlePayWithMercadoPago = async () => {
 };
 
 const handlePayWithPayPal = async () => {
+
   // POST a /api/paypal/create-order
+
   // Abre modal con approval URL
 };
 
@@ -97,11 +101,14 @@ app.post('/webhooks', async (req, res) => {
 ```
 
 #### Backend: `backend/server-paypal.js`
+
 ```javascript
 // Capture order endpoint
 app.post('/api/paypal/capture-order', async (req, res) => {
+
   const { orderID, userId } = req.body;
   const request = new paypal.orders.OrdersCaptureRequest(orderID);
+
   const capture = await client.execute(request);
   
   if (capture.result.status === 'COMPLETED') {
@@ -274,6 +281,7 @@ CREATE TABLE users (
   subscription_start_date TIMESTAMPTZ,
   subscription_end_date TIMESTAMPTZ,
   payment_provider VARCHAR, -- 'mercadopago' o 'paypal'
+    payment_provider VARCHAR, -- 'mercadopago'
   -- ... otros campos
 );
 ```
@@ -316,6 +324,7 @@ EXPO_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=xxx
 EXPO_PUBLIC_BACKEND_URL=http://192.168.1.3:3000
 EXPO_PUBLIC_BACKEND_PAYPAL_URL=http://192.168.1.3:3001
+
 ```
 
 #### Backend: `backend/.env`
@@ -324,9 +333,12 @@ SUPABASE_URL=https://xxx.supabase.co
 SUPABASE_SERVICE_KEY=xxx
 MERCADOPAGO_ACCESS_TOKEN=APP_USR-xxx
 PAYPAL_CLIENT_ID=xxx
+
 PAYPAL_CLIENT_SECRET=xxx
+
 PORT=3000
 PAYPAL_PORT=3001
+
 ```
 
 ### Iniciar Servidores Backend
@@ -338,8 +350,10 @@ node server-mercadopago.js
 # Escucha en http://0.0.0.0:3000
 
 # Terminal 2: PayPal
+
 cd backend
 node server-paypal.js
+
 # Escucha en http://0.0.0.0:3001
 ```
 
@@ -374,8 +388,11 @@ npx expo start
 
 ### 2. Flujo de Pago PayPal
 
+
 - [ ] Click en "PayPal" abre modal
+
 - [ ] Modal muestra login de PayPal
+
 - [ ] Completar pago exitoso
 - [ ] Backend captura order
 - [ ] DB actualiza suscripción
@@ -424,6 +441,7 @@ ifconfig | grep "inet "
 ### Problema: Webhook no actualiza suscripción
 
 **Causa**: Webhook URL no configurada en MercadoPago/PayPal
+**Causa**: Webhook URL no configurada en MercadoPago
 
 **Solución MercadoPago**:
 1. Ir a https://www.mercadopago.com/developers
@@ -431,6 +449,7 @@ ifconfig | grep "inet "
 3. Eventos: `payment.created`, `payment.updated`
 
 **Solución PayPal**:
+
 - Webhook se configura automáticamente con SDK
 - Verificar logs en backend: `console.log('Capture result:', capture)`
 
@@ -473,6 +492,7 @@ if (state.url.includes('/subscription/success')) {
 
 - [MercadoPago API Docs](https://www.mercadopago.com/developers)
 - [PayPal SDK Node.js](https://github.com/paypal/Checkout-NodeJS-SDK)
+
 - [Supabase RPC Functions](https://supabase.com/docs/guides/database/functions)
 - [React Native WebView](https://github.com/react-native-webview/react-native-webview)
 - [Expo Router](https://docs.expo.dev/router/introduction/)
@@ -490,6 +510,7 @@ if (state.url.includes('/subscription/success')) {
 ### Backend
 1. ✅ `backend/server-mercadopago.js` - Webhook + update_subscription
 2. ✅ `backend/server-paypal.js` - Capture order + update_subscription
+
 
 ### Base de Datos
 1. ✅ Tabla `users` con campos de suscripción

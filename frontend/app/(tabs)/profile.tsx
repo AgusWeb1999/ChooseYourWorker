@@ -136,6 +136,11 @@ export default function ProfileScreen() {
                       {userProfile?.is_professional ? '🛠️ Trabajador' : '🔍 Cliente'}
                     </Text>
                   </View>
+                  {Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth >= 768 && (
+                    <TouchableOpacity style={[styles.logoutButton, {margin: 0, marginTop: 24, width: '100%'}]} onPress={handleLogout}>
+                      <Text style={styles.logoutText}>Cerrar Sesión</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             )}
@@ -280,9 +285,12 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Cerrar Sesión</Text>
-      </TouchableOpacity>
+      {/* Botón solo en mobile y web mobile */}
+      {(Platform.OS !== 'web' || typeof window !== 'undefined' && window.innerWidth < 768) && (
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutText}>Cerrar Sesión</Text>
+        </TouchableOpacity>
+      )}
       </ScrollView>
 
       {/* Edit Professional Profile Modal */}

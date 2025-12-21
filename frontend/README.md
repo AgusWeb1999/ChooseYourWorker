@@ -1,3 +1,7 @@
+Este proyecto integra pagos solo con Mercado Pago para la suscripción Premium. El estado de pago de los clientes se actualiza desde el backend.
+
+
+
 # Welcome to your Expo app 👋
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
@@ -62,7 +66,7 @@ Este proyecto integra pagos con Mercado Pago y PayPal para la suscripción Premi
 
 ### Pasos rápidos
 
-1. Backend corriendo (ver carpeta `backend/`):
+1. Backend corriendo en producción (ver carpeta `backend/`):
 
 ```bash
 cd ../backend
@@ -78,8 +82,10 @@ npm run dev:both
 
 3. Configurar Webhooks en proveedores:
 
-- Mercado Pago → Notificaciones: URL → `https://tu-dominio/api/mercadopago/webhook` (Producción) y `http://localhost:3000/api/mercadopago/webhook` para pruebas (usá `ngrok` si lo necesitás).
-- PayPal → Webhooks: URL → `https://tu-dominio/api/paypal/webhook`. Seleccioná eventos como `PAYMENT.CAPTURE.DENIED`, `PAYMENT.CAPTURE.REFUNDED`, `PAYMENT.CAPTURE.COMPLETED`.
+3. Configurar Webhooks en proveedores:
+   - Mercado Pago → Notificaciones: URL → `https://tu-dominio/api/mercadopago/webhook` (Producción).
+   - PayPal → Webhooks: URL → `https://tu-dominio/api/paypal/webhook` (Producción). Seleccioná eventos como `PAYMENT.CAPTURE.DENIED`, `PAYMENT.CAPTURE.REFUNDED`, `PAYMENT.CAPTURE.COMPLETED`.
+El estado de pago de los clientes se actualiza desde el backend. El precio de la suscripción Premium es USD $0.5 por mes.
 
 4. Pruebas locales (opcional):
 

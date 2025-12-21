@@ -128,101 +128,182 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.container}>
-            <View style={styles.logoContainer}>
-              <Image 
-                source={require('../../assets/images/icon.png')} 
-                style={styles.logo}
-                resizeMode="contain"
-              />
+          {Platform.OS === 'web' ? (
+            <View style={{ maxWidth: 400, marginHorizontal: 'auto', width: '100%' }}>
+              <View style={styles.container}>
+                <View style={styles.logoContainer}>
+                  <Image 
+                    source={require('../../assets/images/icon.png')} 
+                    style={styles.logo}
+                    resizeMode="contain"
+                  />
+                </View>
+                <Text style={styles.title}>WorkingGo</Text>
+                <Text style={styles.subtitle}>Iniciá sesión en tu cuenta</Text>
+                {errorMsg ? (
+                  <View style={styles.errorBox}>
+                    <Text style={styles.errorText}>{errorMsg}</Text>
+                  </View>
+                ) : null}
+                <TextInput
+                  style={[styles.input, errors.email && styles.inputError]}
+                  placeholder="Email"
+                  placeholderTextColor="#999"
+                  value={email}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    if (errors.email) setErrors({ ...errors, email: undefined });
+                    setErrorMsg(null);
+                  }}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                <TextInput
+                  style={[styles.input, errors.password && styles.inputError]}
+                  placeholder="Contraseña"
+                  placeholderTextColor="#999"
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    if (errors.password) setErrors({ ...errors, password: undefined });
+                    setErrorMsg(null);
+                  }}
+                  secureTextEntry
+                />
+                <View style={styles.termsContainer}>
+                  <TouchableOpacity
+                    style={styles.checkbox}
+                    onPress={() => setTermsAccepted(!termsAccepted)}
+                  >
+                    <View style={[styles.checkboxInner, termsAccepted && styles.checkboxChecked]}>
+                      {termsAccepted && <Text style={styles.checkmark}>✓</Text>}
+                    </View>
+                  </TouchableOpacity>
+                  <View style={styles.termsText}>
+                    <Text style={styles.termsLabel}>He leído y acepto los </Text>
+                    {/* @ts-ignore */}
+                    <Link href="/auth/terms-of-service" asChild>
+                      <TouchableOpacity>
+                        <Text style={styles.termsLink}>Términos de Servicio</Text>
+                      </TouchableOpacity>
+                    </Link>
+                  </View>
+                </View>
+                <TouchableOpacity 
+                  style={[styles.button, loading && styles.buttonDisabled]} 
+                  onPress={handleLogin}
+                  disabled={loading}
+                >
+                  <Text style={styles.buttonText}>
+                    {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.forgotPassword}
+                  onPress={() => router.push('/auth/forgot-password')}
+                >
+                  <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
+                </TouchableOpacity>
+                <View style={styles.footer}>
+                  <Text style={styles.footerText}>¿No tenés cuenta? </Text>
+                  {/* @ts-ignore */}
+                  <Link href="/auth/register" asChild>
+                    <TouchableOpacity>
+                      <Text style={styles.link}>Registrate</Text>
+                    </TouchableOpacity>
+                  </Link>
+                </View>
+              </View>
             </View>
-            
-            <Text style={styles.title}>WorkingGo</Text>
-            <Text style={styles.subtitle}>Iniciá sesión en tu cuenta</Text>
-
-      {errorMsg ? (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorText}>{errorMsg}</Text>
-        </View>
-      ) : null}
-
-      <TextInput
-        style={[styles.input, errors.email && styles.inputError]}
-        placeholder="Email"
-        placeholderTextColor="#999"
-        value={email}
-        onChangeText={(text) => {
-          setEmail(text);
-          if (errors.email) setErrors({ ...errors, email: undefined });
-          setErrorMsg(null);
-        }}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        />
-
-      <TextInput
-        style={[styles.input, errors.password && styles.inputError]}
-        placeholder="Contraseña"
-        placeholderTextColor="#999"
-        value={password}
-        onChangeText={(text) => {
-          setPassword(text);
-          if (errors.password) setErrors({ ...errors, password: undefined });
-          setErrorMsg(null);
-        }}
-        secureTextEntry
-      />
-
-      <View style={styles.termsContainer}>
-        <TouchableOpacity
-          style={styles.checkbox}
-          onPress={() => setTermsAccepted(!termsAccepted)}
-        >
-          <View style={[styles.checkboxInner, termsAccepted && styles.checkboxChecked]}>
-            {termsAccepted && <Text style={styles.checkmark}>✓</Text>}
-          </View>
-        </TouchableOpacity>
-        <View style={styles.termsText}>
-          <Text style={styles.termsLabel}>He leído y acepto los </Text>
-          {/* @ts-ignore */}
-          <Link href="/auth/terms-of-service" asChild>
-            <TouchableOpacity>
-              <Text style={styles.termsLink}>Términos de Servicio</Text>
-            </TouchableOpacity>
-          </Link>
-        </View>
-      </View>
-
-      <TouchableOpacity 
-        style={[styles.button, loading && styles.buttonDisabled]} 
-        onPress={handleLogin}
-        disabled={loading}
-      >
-        <Text style={styles.buttonText}>
-          {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity 
-        style={styles.forgotPassword}
-        onPress={() => router.push('/auth/forgot-password')}
-      >
-        <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
-      </TouchableOpacity>
-
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>¿No tenés cuenta? </Text>
-        {/* @ts-ignore */}
-        <Link href="/auth/register" asChild>
-          <TouchableOpacity>
-            <Text style={styles.link}>Registrate</Text>
-          </TouchableOpacity>
-          </Link>
-        </View>
-      </View>
-    </ScrollView>
-  </KeyboardAvoidingView>
-</SafeAreaView>
+          ) : (
+            <View style={styles.container}>
+              <View style={styles.logoContainer}>
+                <Image 
+                  source={require('../../assets/images/icon.png')} 
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
+              </View>
+              <Text style={styles.title}>WorkingGo</Text>
+              <Text style={styles.subtitle}>Iniciá sesión en tu cuenta</Text>
+              {errorMsg ? (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>{errorMsg}</Text>
+                </View>
+              ) : null}
+              <TextInput
+                style={[styles.input, errors.email && styles.inputError]}
+                placeholder="Email"
+                placeholderTextColor="#999"
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (errors.email) setErrors({ ...errors, email: undefined });
+                  setErrorMsg(null);
+                }}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              <TextInput
+                style={[styles.input, errors.password && styles.inputError]}
+                placeholder="Contraseña"
+                placeholderTextColor="#999"
+                value={password}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  if (errors.password) setErrors({ ...errors, password: undefined });
+                  setErrorMsg(null);
+                }}
+                secureTextEntry
+              />
+              <View style={styles.termsContainer}>
+                <TouchableOpacity
+                  style={styles.checkbox}
+                  onPress={() => setTermsAccepted(!termsAccepted)}
+                >
+                  <View style={[styles.checkboxInner, termsAccepted && styles.checkboxChecked]}>
+                    {termsAccepted && <Text style={styles.checkmark}>✓</Text>}
+                  </View>
+                </TouchableOpacity>
+                <View style={styles.termsText}>
+                  <Text style={styles.termsLabel}>He leído y acepto los </Text>
+                  {/* @ts-ignore */}
+                  <Link href="/auth/terms-of-service" asChild>
+                    <TouchableOpacity>
+                      <Text style={styles.termsLink}>Términos de Servicio</Text>
+                    </TouchableOpacity>
+                  </Link>
+                </View>
+              </View>
+              <TouchableOpacity 
+                style={[styles.button, loading && styles.buttonDisabled]} 
+                onPress={handleLogin}
+                disabled={loading}
+              >
+                <Text style={styles.buttonText}>
+                  {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.forgotPassword}
+                onPress={() => router.push('/auth/forgot-password')}
+              >
+                <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
+              </TouchableOpacity>
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>¿No tenés cuenta? </Text>
+                {/* @ts-ignore */}
+                <Link href="/auth/register" asChild>
+                  <TouchableOpacity>
+                    <Text style={styles.link}>Registrate</Text>
+                  </TouchableOpacity>
+                </Link>
+              </View>
+            </View>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 

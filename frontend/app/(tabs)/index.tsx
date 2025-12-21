@@ -1005,7 +1005,8 @@ const styles = StyleSheet.create<Styles>({
     flex: 1,
     fontSize: 15,
     color: '#0f172a',
-    paddingVertical: Platform.OS === 'web' ? 6 : 4,
+    paddingTop: Platform.OS === 'web' ? 8 : 4,
+    paddingVertical: Platform.OS === 'web' ? 8 : 4,
   },
   webFiltersShell: {
     paddingHorizontal: 16,
