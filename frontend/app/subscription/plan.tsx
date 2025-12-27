@@ -9,7 +9,11 @@ import WebView from 'react-native-webview';
 // Usar variable de entorno y fallback solo en desarrollo
 
 // URL de la Edge Function de Supabase para crear preferencia de Mercado Pago
-const SUPABASE_FUNCTION_URL = 'https://oeabhlewxekejmgrucrz.functions.supabase.co/create-preference';
+// URL de la Edge Function de Supabase para crear preferencia de Mercado Pago
+const SUPABASE_FUNCTION_URL = 'https://oeabhlewxekejmgrucrz.supabase.co/functions/v1/smart-endpoint';
+
+// URL de la Edge Function de Supabase para el webhook de Mercado Pago (si se necesita en el frontend)
+const SUPABASE_WEBHOOK_URL = 'https://oeabhlewxekejmgrucrz.supabase.co/functions/v1/mp-webhook';
 
 export default function SubscriptionPlan() {
   const router = useRouter();
