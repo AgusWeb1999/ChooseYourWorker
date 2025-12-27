@@ -1,11 +1,13 @@
 import { useEffect } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
+import { useLoadAppFonts } from '../hooks/useLoadAppFonts';
 import { Stack, router, useSegments } from 'expo-router';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { ToastProvider, useToast } from '../contexts/ToastContext';
 import { ToastContainer } from '../components/Toast';
 
 function RootLayoutNav() {
+  const fontsLoaded = useLoadAppFonts();
   const { session, loading, needsProfileCompletion, userProfile } = useAuth();
   const { toasts, dismissToast } = useToast();
   const segments = useSegments();
@@ -61,7 +63,8 @@ function RootLayoutNav() {
     }
   }, [session, loading, segments, needsProfileCompletion, userProfile]);
 
-  if (loading) {
+
+  if (loading || (Platform.OS === 'web' && !fontsLoaded)) {
     return null;
   }
 
