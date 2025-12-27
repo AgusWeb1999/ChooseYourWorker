@@ -1,3 +1,22 @@
+## Fuentes de iconos para web
+
+Si los iconos (MaterialIcons, Ionicons) no se ven en producción web, asegúrate de copiar los archivos `.ttf` desde:
+
+```
+./node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.ttf
+./node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf
+```
+a:
+```
+./assets/fonts/
+```
+Y confirma que `app.json` incluya:
+```json
+   "assetBundlePatterns": [
+      "assets/fonts/*"
+   ]
+```
+Esto es necesario para que el build web sirva correctamente los iconos.
 Este proyecto integra pagos solo con Mercado Pago para la suscripción Premium. El estado de pago de los clientes se actualiza desde el backend.
 
 

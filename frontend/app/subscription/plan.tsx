@@ -7,14 +7,9 @@ import { theme } from '../../constants/theme';
 import WebView from 'react-native-webview';
 
 // Usar variable de entorno y fallback solo en desarrollo
-let BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://192.168.1.3:3000';
-if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-  // Si estamos en producción web, usar el dominio actual
-  BACKEND_URL = `${window.location.origin}`;
-}
-// PayPal server may run on a different port (3001 in dev)
-const PAYPAL_BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_PAYPAL_URL
-  || (BACKEND_URL.includes(':3000') ? BACKEND_URL.replace(':3000', ':3001') : BACKEND_URL);
+
+// URL de la Edge Function de Supabase para crear preferencia de Mercado Pago
+const SUPABASE_FUNCTION_URL = 'https://oeabhlewxekejmgrucrz.functions.supabase.co/create-preference';
 
 export default function SubscriptionPlan() {
   const router = useRouter();
@@ -44,7 +39,7 @@ export default function SubscriptionPlan() {
       setLoading(true);
       setSelectedProvider('mercadopago');
 
-      const response = await fetch(`${BACKEND_URL}/api/mercadopago/create-preference`, {
+      const response = await fetch(SUPABASE_FUNCTION_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -73,40 +68,7 @@ export default function SubscriptionPlan() {
   };
 
   const handlePayWithPayPal = async () => {
-    try {
-      setLoading(true);
-      setSelectedProvider('paypal');
-
-      const response = await fetch(`${PAYPAL_BACKEND_URL}/api/paypal/create-order`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: userProfile?.id,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.orderId) {
-        // Crear URL de PayPal (sandbox o producción)
-        const paypalUrl = process.env.NODE_ENV === 'production'
-          ? `https://www.paypal.com/checkoutnow?token=${data.orderId}`
-          : `https://www.sandbox.paypal.com/checkoutnow?token=${data.orderId}`;
-
-        // Usar modal con WebView en todas las plataformas
-        setPaymentUrl(paypalUrl);
-        setShowPaymentModal(true);
-      } else {
-        Alert.alert('Error', 'No se pudo crear la orden de PayPal');
-      }
-    } catch (error) {
-      console.error('Error al crear orden de PayPal:', error);
-      Alert.alert('Error', 'No se pudo iniciar el pago con PayPal');
-    } finally {
-      setLoading(false);
-    }
+    throw new Error('PayPal solo disponible con backend propio o migrar a Edge Function');
   };
 
   const handleViewTerms = (provider: 'mercadopago' | 'paypal') => {
