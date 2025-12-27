@@ -56,8 +56,18 @@ export default function AvatarUpload({
     try {
       setUploading(true);
 
+
       // Crear nombre único para el archivo
-      const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
+      const validExts = ['jpg', 'jpeg', 'png', 'webp'];
+      let fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
+      if (!validExts.includes(fileExt)) fileExt = 'jpg';
+      const mimeMap: Record<string, string> = {
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        png: 'image/png',
+        webp: 'image/webp',
+      };
+      const contentType = mimeMap[fileExt] || 'image/jpeg';
       const fileName = `avatar-${Date.now()}.${fileExt}`;
       const filePath = `${userId}/${fileName}`;
 
@@ -74,7 +84,7 @@ export default function AvatarUpload({
         .upload(filePath, fileData, { 
           cacheControl: '3600',
           upsert: false,
-          contentType: `image/${fileExt}`
+          contentType
         });
 
       if (uploadError) {

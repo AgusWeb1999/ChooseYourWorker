@@ -6,7 +6,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 import WebView from 'react-native-webview';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://192.168.1.3:3000';
+// Usar variable de entorno y fallback solo en desarrollo
+let BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://192.168.1.3:3000';
+if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+  // Si estamos en producción web, usar el dominio actual
+  BACKEND_URL = `${window.location.origin}`;
+}
 // PayPal server may run on a different port (3001 in dev)
 const PAYPAL_BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_PAYPAL_URL
   || (BACKEND_URL.includes(':3000') ? BACKEND_URL.replace(':3000', ':3001') : BACKEND_URL);
