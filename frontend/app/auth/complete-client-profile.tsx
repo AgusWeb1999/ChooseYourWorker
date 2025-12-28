@@ -158,7 +158,7 @@ export default function CompleteClientProfileScreen() {
     </SafeAreaView>
   );
 }
-
+// Pantalla eliminada intencionalmente. El perfil se completa solo al registrarse.
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,

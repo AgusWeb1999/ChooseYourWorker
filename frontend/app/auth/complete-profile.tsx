@@ -1,3 +1,4 @@
+// ...otros imports y código...
 import { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, ActivityIndicator, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
 import { router } from 'expo-router';
@@ -20,8 +21,7 @@ export default function CompleteProfileScreen() {
   const [customProfession, setCustomProfession] = useState('');
   const [bio, setBio] = useState('');
   const [zipCode, setZipCode] = useState(''); // Se mantienen variables para evitar errores de referencia
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
+  // ...ubicación eliminada...
   const [hourlyRate, setHourlyRate] = useState('');
   const [yearsExperience, setYearsExperience] = useState('');
   const [loading, setLoading] = useState(false);
@@ -43,6 +43,8 @@ export default function CompleteProfileScreen() {
       </View>
     );
   }
+
+  // ...ubicación eliminada...
 
   async function handleSubmit() {
     const finalProfession = profession === 'Otro' ? customProfession : profession;
@@ -75,14 +77,14 @@ export default function CompleteProfileScreen() {
         return;
       }
       
-      // 2. Insertar perfil profesional
+      // 2. Insertar perfil profesional (sin ubicación)
       const { error: insertError } = await supabase.from('professionals').insert({
         user_id: userProfile?.id,
         display_name: displayName,
         profession: finalProfession.charAt(0).toUpperCase() + finalProfession.slice(1).toLowerCase(),
         bio,
         hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
-        years_experience: yearsExperience ? parseInt(yearsExperience) : null,
+        years_experience: yearsExperience ? parseInt(yearsExperience) : null
       });
 
       if (insertError) throw insertError;
@@ -157,6 +159,9 @@ export default function CompleteProfileScreen() {
               </>
             )}
 
+
+
+
             <Text style={styles.label}>Bio</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
@@ -207,6 +212,7 @@ export default function CompleteProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+    pickerArrow: { color: '#9ca3af', fontSize: 12, marginLeft: 8 },
   safeArea: { flex: 1, backgroundColor: '#fff' },
   container: { flex: 1, backgroundColor: '#fff' },
   scrollView: { flex: 1 },

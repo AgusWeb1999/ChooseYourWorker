@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, Modal, Platform } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, Modal, Platform, ActivityIndicator } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { supabase } from '../src/lib/supabase';
 import { getCountriesList, CountryCode, COUNTRIES } from '../utils/countryValidation';
@@ -20,68 +20,83 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
   document.head.append(style);
 }
 
-// --- FUNCIONES DE FETCH (Base de datos completa) ---
+// --- FUNCIONES DE FETCH ---
 const fetchProvinces = async (country: string) => {
-  if (country === 'AR') {
-    const res = await fetch('https://apis.datos.gob.ar/georef/api/provincias?campos=id,nombre');
-    const data = await res.json();
-    return data.provincias || [];
+  try {
+    if (country === 'AR') {
+      const res = await fetch('https://apis.datos.gob.ar/georef/api/provincias?campos=id,nombre');
+      const data = await res.json();
+      return data.provincias || [];
+    }
+    if (country === 'UY') {
+      return [
+        { id: 'AR', nombre: 'Artigas' }, { id: 'CA', nombre: 'Canelones' }, { id: 'CL', nombre: 'Cerro Largo' },
+        { id: 'CO', nombre: 'Colonia' }, { id: 'DU', nombre: 'Durazno' }, { id: 'FS', nombre: 'Flores' },
+        { id: 'FD', nombre: 'Florida' }, { id: 'LA', nombre: 'Lavalleja' }, { id: 'MA', nombre: 'Maldonado' },
+        { id: 'MO', nombre: 'Montevideo' }, { id: 'PA', nombre: 'Paysandú' }, { id: 'RN', nombre: 'Río Negro' },
+        { id: 'RV', nombre: 'Rivera' }, { id: 'RO', nombre: 'Rocha' }, { id: 'SA', nombre: 'Salto' },
+        { id: 'SJ', nombre: 'San José' }, { id: 'SO', nombre: 'Soriano' }, { id: 'TA', nombre: 'Tacuarembó' },
+        { id: 'TT', nombre: 'Treinta y Tres' }
+      ];
+    }
+    return [];
+  } catch (e) {
+    console.error("Error fetching provinces", e);
+    return [];
   }
-  if (country === 'UY') {
-    return [
-      { id: 'AR', nombre: 'Artigas' }, { id: 'CA', nombre: 'Canelones' }, { id: 'CL', nombre: 'Cerro Largo' },
-      { id: 'CO', nombre: 'Colonia' }, { id: 'DU', nombre: 'Durazno' }, { id: 'FS', nombre: 'Flores' },
-      { id: 'FD', nombre: 'Florida' }, { id: 'LA', nombre: 'Lavalleja' }, { id: 'MA', nombre: 'Maldonado' },
-      { id: 'MO', nombre: 'Montevideo' }, { id: 'PA', nombre: 'Paysandú' }, { id: 'RN', nombre: 'Río Negro' },
-      { id: 'RV', nombre: 'Rivera' }, { id: 'RO', nombre: 'Rocha' }, { id: 'SA', nombre: 'Salto' },
-      { id: 'SJ', nombre: 'San José' }, { id: 'SO', nombre: 'Soriano' }, { id: 'TA', nombre: 'Tacuarembó' },
-      { id: 'TT', nombre: 'Treinta y Tres' }
-    ];
-  }
-  return [];
 };
 
 const fetchDepartments = async (country: string, provinceId: string) => {
-  if (country === 'AR') {
-    const res = await fetch(`https://apis.datos.gob.ar/georef/api/departamentos?provincia=${provinceId}&campos=id,nombre&max=1000`);
-    const data = await res.json();
-    return data.departamentos || [];
+  try {
+    if (country === 'AR' && provinceId) {
+      const res = await fetch(`https://apis.datos.gob.ar/georef/api/departamentos?provincia=${provinceId}&campos=id,nombre&max=1000`);
+      const data = await res.json();
+      return data.departamentos || [];
+    }
+    return [];
+  } catch (e) {
+    console.error("Error fetching departments", e);
+    return [];
   }
-  return [];
 };
 
 const fetchCities = async (country: string, provinceId: string, departmentId: string) => {
-  if (country === 'AR') {
-    const res = await fetch(`https://apis.datos.gob.ar/georef/api/localidades?provincia=${provinceId}&departamento=${departmentId}&campos=id,nombre&max=1000`);
-    const data = await res.json();
-    return data.localidades || [];
+  try {
+    if (country === 'AR' && provinceId && departmentId) {
+      const res = await fetch(`https://apis.datos.gob.ar/georef/api/localidades?provincia=${provinceId}&departamento=${departmentId}&campos=id,nombre&max=1000`);
+      const data = await res.json();
+      return data.localidades || [];
+    }
+    
+    if (country === 'UY') {
+      const ciudadesUY: Record<string, {id:string, nombre:string}[]> = {
+        AR: [ {id:'artigas', nombre:'Artigas'}, {id:'bella_union', nombre:'Bella Unión'}, {id:'tomas_gomensoro', nombre:'Tomás Gomensoro'}, {id:'baltasar_brum', nombre:'Baltasar Brum'} ],
+        CA: [ {id:'canelones', nombre:'Canelones'}, {id:'ciudad_de_la_costa', nombre:'Ciudad de la Costa'}, {id:'las_piedras', nombre:'Las Piedras'}, {id:'pando', nombre:'Pando'}, {id:'la_paz', nombre:'La Paz'}, {id:'santa_lucia', nombre:'Santa Lucía'}, {id:'progreso', nombre:'Progreso'}, {id:'sauce', nombre:'Sauce'}, {id:'atlantida', nombre:'Atlántida'} ],
+        CL: [ {id:'melo', nombre:'Melo'}, {id:'rio_branco', nombre:'Río Branco'}, {id:'fraile_muerto', nombre:'Fraile Muerto'} ],
+        CO: [ {id:'colonia_del_sacramento', nombre:'Colonia del Sacramento'}, {id:'carmelo', nombre:'Carmelo'}, {id:'juan_lacaze', nombre:'Juan Lacaze'}, {id:'nueva_helvecia', nombre:'Nueva Helvecia'}, {id:'rosario', nombre:'Rosario'}, {id:'nueva_palmira', nombre:'Nueva Palmira'}, {id:'tarariras', nombre:'Tarariras'} ],
+        DU: [ {id:'durazno', nombre:'Durazno'}, {id:'sarandi_yi', nombre:'Sarandí del Yí'}, {id:'villa_del_carmen', nombre:'Villa del Carmen'} ],
+        FS: [ {id:'trinidad', nombre:'Trinidad'}, {id:'ismael_cortinas', nombre:'Ismael Cortinas'} ],
+        FD: [ {id:'florida', nombre:'Florida'}, {id:'sarandi_grande', nombre:'Sarandí Grande'}, {id:'casupa', nombre:'Casupá'}, {id:'25_de_mayo', nombre:'25 de Mayo'} ],
+        LA: [ {id:'minas', nombre:'Minas'}, {id:'jose_pedro_varela', nombre:'José Pedro Varela'}, {id:'solis_de_mataojo', nombre:'Solís de Mataojo'} ],
+        MA: [ {id:'maldonado', nombre:'Maldonado'}, {id:'san_carlos', nombre:'San Carlos'}, {id:'punta_del_este', nombre:'Punta del Este'}, {id:'piriapolis', nombre:'Piriápolis'}, {id:'pan_de_azucar', nombre:'Pan de Azúcar'}, {id:'aigua', nombre:'Aiguá'} ],
+        MO: [ {id:'montevideo', nombre:'Montevideo'} ],
+        PA: [ {id:'paysandu', nombre:'Paysandú'}, {id:'guichon', nombre:'Guichón'}, {id:'quebracho', nombre:'Quebracho'} ],
+        RN: [ {id:'fray_bentos', nombre:'Fray Bentos'}, {id:'young', nombre:'Young'}, {id:'nuevo_berlin', nombre:'Nuevo Berlín'} ],
+        RV: [ {id:'rivera', nombre:'Rivera'}, {id:'tranqueras', nombre:'Tranqueras'}, {id:'vichadero', nombre:'Vichadero'}, {id:'minas_de_corrales', nombre:'Minas de Corrales'} ],
+        RO: [ {id:'rocha', nombre:'Rocha'}, {id:'chuy', nombre:'Chuy'}, {id:'castillos', nombre:'Castillos'}, {id:'lascano', nombre:'Lascano'}, {id:'la_paloma', nombre:'La Paloma'}, {id:'punta_del_diablo', nombre:'Punta del Diablo'} ],
+        SA: [ {id:'salto', nombre:'Salto'}, {id:'constitucion', nombre:'Constitución'}, {id:'belen', nombre:'Belén'} ],
+        SJ: [ {id:'san_jose_de_mayo', nombre:'San José de Mayo'}, {id:'ciudad_del_plata', nombre:'Ciudad del Plata'}, {id:'libertad', nombre:'Libertad'}, {id:'rodriguez', nombre:'Rodríguez'} ],
+        SO: [ {id:'mercedes', nombre:'Mercedes'}, {id:'dolores', nombre:'Dolores'}, {id:'cardona', nombre:'Cardona'}, {id:'palmitas', nombre:'Palmitas'} ],
+        TA: [ {id:'tacuarembo', nombre:'Tacuarembó'}, {id:'paso_de_los_toros', nombre:'Paso de los Toros'}, {id:'san_gregorio_de_polanco', nombre:'San Gregorio de Polanco'}, {id:'villa_ansina', nombre:'Villa Ansina'}, {id:'curtina', nombre:'Curtina'} ],
+        TT: [ {id:'treinta_y_tres', nombre:'Treinta y Tres'}, {id:'vergara', nombre:'Vergara'}, {id:'santa_clara_de_olimar', nombre:'Santa Clara de Olimar'} ],
+      };
+      return ciudadesUY[provinceId] || [];
+    }
+    return [];
+  } catch (e) {
+    console.error("Error fetching cities", e);
+    return [];
   }
-  
-  if (country === 'UY') {
-    const ciudadesUY: Record<string, {id:string, nombre:string}[]> = {
-      AR: [ {id:'artigas', nombre:'Artigas'}, {id:'bella_union', nombre:'Bella Unión'}, {id:'tomas_gomensoro', nombre:'Tomás Gomensoro'}, {id:'baltasar_brum', nombre:'Baltasar Brum'} ],
-      CA: [ {id:'canelones', nombre:'Canelones'}, {id:'ciudad_de_la_costa', nombre:'Ciudad de la Costa'}, {id:'las_piedras', nombre:'Las Piedras'}, {id:'pando', nombre:'Pando'}, {id:'la_paz', nombre:'La Paz'}, {id:'santa_lucia', nombre:'Santa Lucía'}, {id:'progreso', nombre:'Progreso'}, {id:'sauce', nombre:'Sauce'}, {id:'atlantida', nombre:'Atlántida'} ],
-      CL: [ {id:'melo', nombre:'Melo'}, {id:'rio_branco', nombre:'Río Branco'}, {id:'fraile_muerto', nombre:'Fraile Muerto'} ],
-      CO: [ {id:'colonia_del_sacramento', nombre:'Colonia del Sacramento'}, {id:'carmelo', nombre:'Carmelo'}, {id:'juan_lacaze', nombre:'Juan Lacaze'}, {id:'nueva_helvecia', nombre:'Nueva Helvecia'}, {id:'rosario', nombre:'Rosario'}, {id:'nueva_palmira', nombre:'Nueva Palmira'}, {id:'tarariras', nombre:'Tarariras'} ],
-      DU: [ {id:'durazno', nombre:'Durazno'}, {id:'sarandi_yi', nombre:'Sarandí del Yí'}, {id:'villa_del_carmen', nombre:'Villa del Carmen'} ],
-      FS: [ {id:'trinidad', nombre:'Trinidad'}, {id:'ismael_cortinas', nombre:'Ismael Cortinas'} ],
-      FD: [ {id:'florida', nombre:'Florida'}, {id:'sarandi_grande', nombre:'Sarandí Grande'}, {id:'casupa', nombre:'Casupá'}, {id:'25_de_mayo', nombre:'25 de Mayo'} ],
-      LA: [ {id:'minas', nombre:'Minas'}, {id:'jose_pedro_varela', nombre:'José Pedro Varela'}, {id:'solis_de_mataojo', nombre:'Solís de Mataojo'} ],
-      MA: [ {id:'maldonado', nombre:'Maldonado'}, {id:'san_carlos', nombre:'San Carlos'}, {id:'punta_del_este', nombre:'Punta del Este'}, {id:'piriapolis', nombre:'Piriápolis'}, {id:'pan_de_azucar', nombre:'Pan de Azúcar'}, {id:'aigua', nombre:'Aiguá'} ],
-      MO: [ {id:'montevideo', nombre:'Montevideo'} ],
-      PA: [ {id:'paysandu', nombre:'Paysandú'}, {id:'guichon', nombre:'Guichón'}, {id:'quebracho', nombre:'Quebracho'} ],
-      RN: [ {id:'fray_bentos', nombre:'Fray Bentos'}, {id:'young', nombre:'Young'}, {id:'nuevo_berlin', nombre:'Nuevo Berlín'} ],
-      RV: [ {id:'rivera', nombre:'Rivera'}, {id:'tranqueras', nombre:'Tranqueras'}, {id:'vichadero', nombre:'Vichadero'}, {id:'minas_de_corrales', nombre:'Minas de Corrales'} ],
-      RO: [ {id:'rocha', nombre:'Rocha'}, {id:'chuy', nombre:'Chuy'}, {id:'castillos', nombre:'Castillos'}, {id:'lascano', nombre:'Lascano'}, {id:'la_paloma', nombre:'La Paloma'}, {id:'punta_del_diablo', nombre:'Punta del Diablo'} ],
-      SA: [ {id:'salto', nombre:'Salto'}, {id:'constitucion', nombre:'Constitución'}, {id:'belen', nombre:'Belén'} ],
-      SJ: [ {id:'san_jose_de_mayo', nombre:'San José de Mayo'}, {id:'ciudad_del_plata', nombre:'Ciudad del Plata'}, {id:'libertad', nombre:'Libertad'}, {id:'rodriguez', nombre:'Rodríguez'} ],
-      SO: [ {id:'mercedes', nombre:'Mercedes'}, {id:'dolores', nombre:'Dolores'}, {id:'cardona', nombre:'Cardona'}, {id:'palmitas', nombre:'Palmitas'} ],
-      TA: [ {id:'tacuarembo', nombre:'Tacuarembó'}, {id:'paso_de_los_toros', nombre:'Paso de los Toros'}, {id:'san_gregorio_de_polanco', nombre:'San Gregorio de Polanco'}, {id:'villa_ansina', nombre:'Villa Ansina'}, {id:'curtina', nombre:'Curtina'} ],
-      TT: [ {id:'treinta_y_tres', nombre:'Treinta y Tres'}, {id:'vergara', nombre:'Vergara'}, {id:'santa_clara_de_olimar', nombre:'Santa Clara de Olimar'} ],
-    };
-    return ciudadesUY[provinceId] || [];
-  }
-  return [];
 };
 
 const PROFESSIONS = [
@@ -101,12 +116,15 @@ export default function EditProfessionalProfile({
   onSave, 
   onCancel 
 }: EditProfessionalProfileProps) {
+  const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+  // Usar any para compatibilidad multiplataforma (web/node)
+  const toastTimeout = useRef<any>(null);
   const [displayName, setDisplayName] = useState(professionalProfile?.display_name || '');
   const [profession, setProfession] = useState(professionalProfile?.profession || '');
   const [customProfession, setCustomProfession] = useState('');
   const [bio, setBio] = useState(professionalProfile?.bio || '');
-  const [zipCode, setZipCode] = useState(professionalProfile?.zip_code || '');
-  const [phone, setPhone] = useState(professionalProfile?.phone || '');
+  // const [zipCode, setZipCode] = useState(professionalProfile?.zip_code || '');
+  // Teléfono eliminado (ya no se edita aquí)
   const [hourlyRate, setHourlyRate] = useState(
     professionalProfile?.hourly_rate ? String(professionalProfile.hourly_rate) : ''
   );
@@ -127,45 +145,78 @@ export default function EditProfessionalProfile({
   const [loading, setLoading] = useState(false);
   const [countryModalVisible, setCountryModalVisible] = useState(false);
 
-  // 1. Cargar Provincias
+  // 1. Cargar Provincias: Resetea hijos si el cambio es manual
   useEffect(() => {
     fetchProvinces(country).then((data) => {
       setProvinceList(data);
-      if (country !== professionalProfile?.country) {
-        setProvince(''); setDepartment(''); setCity('');
+      
+      // Chequeo si estamos cargando el dato guardado del perfil
+      const isSavedCountry = professionalProfile?.country === country;
+      
+      if (isSavedCountry && professionalProfile?.province && data.some((p:any) => String(p.id) === String(professionalProfile.province))) {
+        setProvince(professionalProfile.province);
+      } else {
+        // Si el usuario cambió de país manualmente, reseteamos la provincia
+        setProvince('');
+        setDepartment('');
+        setCity('');
       }
     });
   }, [country]);
 
   // 2. Cargar Deptos/Ciudades al cambiar Provincia
   useEffect(() => {
-    setDepartmentList([]); setCityList([]);
+    setDepartmentList([]);
+    setCityList([]);
+    
     if (province) {
       if (country === 'UY') {
         fetchCities(country, province, '').then((data) => {
-            setCityList(data);
-            if (country !== professionalProfile?.country || province !== professionalProfile?.province) {
-                setCity('');
-            }
+          setCityList(data);
+          // Verificar si restauramos valor o reseteamos
+          const isSavedProvince = professionalProfile?.province === province;
+          if (isSavedProvince && professionalProfile?.city && data.some((c:any) => String(c.id) === String(professionalProfile.city))) {
+            setCity(professionalProfile.city);
+          } else {
+            setCity('');
+          }
         });
       } else {
         fetchDepartments(country, province).then((data) => {
-            setDepartmentList(data);
-             if (country !== professionalProfile?.country || province !== professionalProfile?.province) {
-                setDepartment('');
-            }
+          setDepartmentList(data);
+          const isSavedProvince = professionalProfile?.province === province;
+          if (isSavedProvince && professionalProfile?.department && data.some((d:any) => String(d.id) === String(professionalProfile.department))) {
+            setDepartment(professionalProfile.department);
+          } else {
+            setDepartment('');
+            setCity('');
+          }
         });
       }
+    } else {
+      // Si se deselecciona provincia
+      setDepartmentList([]);
+      setCityList([]);
+      setCity('');
+      setDepartment('');
     }
   }, [province, country]);
 
   // 3. Cargar Ciudades al cambiar Departamento (AR)
   useEffect(() => {
-    if (country !== 'UY' && department) {
+    if (country !== 'UY' && department && province) {
       fetchCities(country, province, department).then((data) => {
-          setCityList(data);
-          if (department !== professionalProfile?.department) setCity('');
+        setCityList(data);
+        const isSavedDepartment = professionalProfile?.department === department;
+        if (isSavedDepartment && professionalProfile?.city && data.some((c:any) => String(c.id) === String(professionalProfile.city))) {
+          setCity(professionalProfile.city);
+        } else {
+          setCity('');
+        }
       });
+    } else if (country !== 'UY') {
+        setCityList([]);
+        setCity('');
     }
   }, [department, province, country]);
 
@@ -181,16 +232,19 @@ export default function EditProfessionalProfile({
     const finalProfession = profession === 'Otro' ? customProfession : profession;
 
     if (!displayName || !finalProfession || !city || !province || (country !== 'UY' && !department)) {
-      Alert.alert('Error', 'Por favor completa todos los campos obligatorios de ubicación y profesión');
+      setToast({ message: 'Por favor completa campos obligatorios', type: 'error' });
+      if (toastTimeout.current) clearTimeout(toastTimeout.current);
+      toastTimeout.current = setTimeout(() => setToast(null), 3000);
       return;
     }
     if (profession === 'Otro' && !customProfession.trim()) {
-      Alert.alert('Error', 'Por favor ingresa tu profesión');
+      setToast({ message: 'Especifica tu profesión', type: 'error' });
+      if (toastTimeout.current) clearTimeout(toastTimeout.current);
+      toastTimeout.current = setTimeout(() => setToast(null), 3000);
       return;
     }
 
     setLoading(true);
-    
     try {
       const { error } = await supabase
         .from('professionals')
@@ -198,11 +252,8 @@ export default function EditProfessionalProfile({
           display_name: displayName,
           profession: finalProfession.charAt(0).toUpperCase() + finalProfession.slice(1).toLowerCase(),
           bio,
-          zip_code: zipCode,
           hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
           years_experience: yearsExperience ? parseInt(yearsExperience) : null,
-          phone,
-          // Datos de Ubicación
           country,
           province,
           city,
@@ -211,202 +262,205 @@ export default function EditProfessionalProfile({
         .eq('id', professionalProfile.id);
 
       if (error) {
-        Alert.alert('Error', error.message);
+        setToast({ message: error.message, type: 'error' });
       } else {
-        Alert.alert('Éxito', '¡Perfil actualizado exitosamente!', [
-          { text: 'OK', onPress: onSave }
-        ]);
+        setToast({ message: '¡Perfil actualizado exitosamente!', type: 'success' });
+        setTimeout(() => {
+          onSave();
+        }, 1200);
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Ocurrió un error al actualizar el perfil');
+      setToast({ message: error.message || 'Error desconocido', type: 'error' });
     } finally {
       setLoading(false);
+      if (toastTimeout.current) clearTimeout(toastTimeout.current);
+      toastTimeout.current = setTimeout(() => setToast(null), 3000);
     }
   }
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentWrapper}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Editar Perfil Profesional</Text>
-
-        <Text style={styles.label}>Nombre para Mostrar *</Text>
-        <TextInput
-          style={styles.inputUnified}
-          placeholder="Como te verán los clientes"
-          value={displayName}
-          onChangeText={setDisplayName}
-        />
-
-        <Text style={styles.label}>Profesión *</Text>
-        <View style={styles.professionContainer}>
-          {PROFESSIONS.map((p) => (
-            <TouchableOpacity
-              key={p}
-              style={[
-                styles.professionChip,
-                profession === p && styles.professionChipActive,
-              ]}
-              onPress={() => setProfession(p)}
-            >
-              <Text style={[
-                styles.professionText,
-                profession === p && styles.professionTextActive,
-              ]}>
-                {p}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {profession === 'Otro' && (
-          <>
-            <Text style={styles.label}>Especifica tu profesión *</Text>
-            <TextInput
-              style={styles.inputUnified}
-              placeholder="Ingresa tu profesión"
-              value={customProfession}
-              onChangeText={setCustomProfession}
-            />
-          </>
-        )}
-
-        {/* --- SECCIÓN DE UBICACIÓN --- */}
-        <Text style={styles.sectionTitle}>Ubicación</Text>
-        
-        <Text style={styles.label}>País *</Text>
-        <TouchableOpacity style={styles.customPickerTrigger} onPress={() => setCountryModalVisible(true)}>
-          <Text style={styles.pickerTriggerText}>
-            {getCountriesList().find(c => c.code === country)?.flag} {COUNTRIES[country]?.name || 'Selecciona un país'}
-          </Text>
-          <Text style={styles.pickerArrow}>▼</Text>
-        </TouchableOpacity>
-
-        {/* Provincia / Departamento */}
-        {provinceList.length > 0 && (
-          <>
-            <Text style={styles.label}>{country === 'UY' ? 'Departamento *' : 'Provincia/Estado *'}</Text>
-            <View style={styles.pickerWrapper}>
-              <Picker
-                selectedValue={province}
-                onValueChange={setProvince}
-                style={styles.pickerNative}
-              >
-                <Picker.Item label="Selecciona una opción" value="" color="#999" />
-                {provinceList.map(p => (
-                  <Picker.Item key={p.id} label={p.nombre} value={p.id} />
-                ))}
-              </Picker>
-            </View>
-          </>
-        )}
-
-        {/* Municipio (AR) */}
-        {departmentList.length > 0 && (
-          <>
-            <Text style={styles.label}>Municipio/Localidad *</Text>
-            <View style={styles.pickerWrapper}>
-              <Picker
-                selectedValue={department}
-                onValueChange={setDepartment}
-                style={styles.pickerNative}
-              >
-                <Picker.Item label="Selecciona una opción" value="" color="#999" />
-                {departmentList.map(d => (
-                  <Picker.Item key={d.id} label={d.nombre} value={d.id} />
-                ))}
-              </Picker>
-            </View>
-          </>
-        )}
-
-        {/* Ciudad */}
-        {cityList.length > 0 && (
-          <>
-            <Text style={styles.label}>Ciudad *</Text>
-            <View style={styles.pickerWrapper}>
-              <Picker
-                selectedValue={city}
-                onValueChange={setCity}
-                style={styles.pickerNative}
-              >
-                <Picker.Item label="Selecciona una ciudad" value="" color="#999" />
-                {cityList.map(c => (
-                  <Picker.Item key={c.id} label={c.nombre} value={c.id} />
-                ))}
-              </Picker>
-            </View>
-          </>
-        )}
-        
-        <Text style={styles.label}>Código Postal</Text>
-        <TextInput
-          style={[styles.inputUnified, { maxWidth: 150 }]}
-          placeholder="CP"
-          value={zipCode}
-          onChangeText={setZipCode}
-          keyboardType="number-pad"
-        />
-        {/* --------------------------- */}
-
-        <Text style={styles.sectionTitle}>Detalles</Text>
-
-        <Text style={styles.label}>Biografía</Text>
-        <TextInput
-          style={[styles.inputUnified, { height: 100, textAlignVertical: 'top' }]}
-          placeholder="Describe tu experiencia y servicios..."
-          value={bio}
-          onChangeText={setBio}
-          multiline
-          numberOfLines={4}
-        />
-
-        <Text style={styles.label}>Teléfono de Contacto</Text>
-        <TextInput
-          style={styles.inputUnified}
-          placeholder="Tu número de contacto"
-          value={phone}
-          onChangeText={setPhone}
-          keyboardType="phone-pad"
-        />
-
-        <View style={styles.row}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Tarifa por Hora ($)</Text>
-            <TextInput
-              style={styles.inputUnified}
-              placeholder="1500"
-              value={hourlyRate}
-              onChangeText={setHourlyRate}
-              keyboardType="numeric"
-            />
-          </View>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Años de Experiencia</Text>
-            <TextInput
-              style={styles.inputUnified}
-              placeholder="5"
-              value={yearsExperience}
-              onChangeText={setYearsExperience}
-              keyboardType="numeric"
-            />
-          </View>
-        </View>
-
-        <View style={styles.buttonRow}>
-          {onCancel && (
-            <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onCancel}>
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={[styles.button, styles.saveButton, loading && styles.buttonDisabled]}
-            onPress={handleSave}
-            disabled={loading}
-          >
-            <Text style={styles.buttonText}>{loading ? 'Guardando...' : 'Guardar Cambios'}</Text>
-          </TouchableOpacity>
-        </View>
+  // Helper para renderizar Toast
+  const renderToast = () => {
+    if (!toast) return null;
+    return (
+      <View style={[styles.toast, toast.type === 'success' ? styles.toastSuccess : styles.toastError]}>
+        <Text style={styles.toastText}>{toast.message}</Text>
       </View>
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.contentWrapper}>
+        <View style={styles.content}>
+          <Text style={styles.title}>Editar Perfil Profesional</Text>
+
+          <Text style={styles.label}>Nombre para Mostrar *</Text>
+          <TextInput
+            style={styles.inputUnified}
+            placeholder="Como te verán los clientes"
+            value={displayName}
+            onChangeText={setDisplayName}
+          />
+
+          <Text style={styles.label}>Profesión *</Text>
+          <View style={styles.professionContainer}>
+            {PROFESSIONS.map((p) => (
+              <TouchableOpacity
+                key={p}
+                style={[
+                  styles.professionChip,
+                  profession === p && styles.professionChipActive,
+                ]}
+                onPress={() => setProfession(p)}
+              >
+                <Text style={[
+                  styles.professionText,
+                  profession === p && styles.professionTextActive,
+                ]}>
+                  {p}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {profession === 'Otro' && (
+            <>
+              <Text style={styles.label}>Especifica tu profesión *</Text>
+              <TextInput
+                style={styles.inputUnified}
+                placeholder="Ingresa tu profesión"
+                value={customProfession}
+                onChangeText={setCustomProfession}
+              />
+            </>
+          )}
+
+          {/* --- SECCIÓN DE UBICACIÓN --- */}
+          <Text style={styles.sectionTitle}>Ubicación</Text>
+          
+          <Text style={styles.label}>País *</Text>
+          <TouchableOpacity style={styles.customPickerTrigger} onPress={() => setCountryModalVisible(true)}>
+            <Text style={styles.pickerTriggerText}>
+              {getCountriesList().find(c => c.code === country)?.flag} {COUNTRIES[country]?.name || 'Selecciona un país'}
+            </Text>
+            <Text style={styles.pickerArrow}>▼</Text>
+          </TouchableOpacity>
+
+          {/* Provincia / Departamento */}
+          {provinceList.length > 0 && (
+            <>
+              <Text style={styles.label}>{country === 'UY' ? 'Departamento *' : 'Provincia/Estado *'}</Text>
+              <View style={styles.pickerWrapper}>
+                <Picker
+                  selectedValue={province}
+                  onValueChange={setProvince}
+                  style={styles.pickerNative}
+                >
+                  <Picker.Item label="Selecciona una opción" value="" color="#999" />
+                  {provinceList.map(p => (
+                    <Picker.Item key={String(p.id)} label={p.nombre} value={String(p.id)} />
+                  ))}
+                </Picker>
+              </View>
+            </>
+          )}
+
+          {/* Municipio (AR) */}
+          {departmentList.length > 0 && (
+            <>
+              <Text style={styles.label}>Municipio/Localidad *</Text>
+              <View style={styles.pickerWrapper}>
+                <Picker
+                  selectedValue={department}
+                  onValueChange={setDepartment}
+                  style={styles.pickerNative}
+                >
+                  <Picker.Item label="Selecciona una opción" value="" color="#999" />
+                  {departmentList.map(d => (
+                    <Picker.Item key={String(d.id)} label={d.nombre} value={String(d.id)} />
+                  ))}
+                </Picker>
+              </View>
+            </>
+          )}
+
+          {/* Ciudad */}
+          {cityList.length > 0 && (
+            <>
+              <Text style={styles.label}>Ciudad *</Text>
+              <View style={styles.pickerWrapper}>
+                <Picker
+                  selectedValue={city}
+                  onValueChange={setCity}
+                  style={styles.pickerNative}
+                >
+                  <Picker.Item label="Selecciona una ciudad" value="" color="#999" />
+                  {cityList.map(c => (
+                    <Picker.Item key={String(c.id)} label={c.nombre} value={String(c.id)} />
+                  ))}
+                </Picker>
+              </View>
+            </>
+          )}
+          
+
+
+          <Text style={styles.sectionTitle}>Detalles</Text>
+
+          <Text style={styles.label}>Biografía</Text>
+          <TextInput
+            style={[styles.inputUnified, { height: 100, textAlignVertical: 'top' }]}
+            placeholder="Describe tu experiencia y servicios..."
+            value={bio}
+            onChangeText={setBio}
+            multiline
+            numberOfLines={4}
+          />
+
+
+          <View style={styles.row}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Tarifa por Hora ($)</Text>
+              <TextInput
+                style={styles.inputUnified}
+                placeholder="1500"
+                value={hourlyRate}
+                onChangeText={setHourlyRate}
+                keyboardType="numeric"
+              />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Años de Experiencia</Text>
+              <TextInput
+                style={styles.inputUnified}
+                placeholder="5"
+                value={yearsExperience}
+                onChangeText={setYearsExperience}
+                keyboardType="numeric"
+              />
+            </View>
+          </View>
+
+          <View style={styles.buttonRow}>
+            {onCancel && (
+              <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onCancel}>
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[styles.button, styles.saveButton, loading && styles.buttonDisabled]}
+              onPress={handleSave}
+              disabled={loading}
+            >
+              {loading ? (
+                 <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Guardar Cambios</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
 
       {/* Modal País */}
       <Modal visible={countryModalVisible} transparent animationType="fade" onRequestClose={() => setCountryModalVisible(false)}>
@@ -434,12 +488,15 @@ export default function EditProfessionalProfile({
           </View>
         </TouchableOpacity>
       </Modal>
-    </ScrollView>
+
+      {/* Render Toast (Position Absolute para que flote) */}
+      {renderToast()}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: '#fff', position: 'relative' },
   contentWrapper: { alignItems: 'center', paddingHorizontal: 16, paddingBottom: 24 },
   content: { width: '100%', maxWidth: 900, padding: 20 },
   
@@ -487,7 +544,7 @@ const styles = StyleSheet.create({
 
   // Botones
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 32, marginBottom: 40 },
-  button: { flex: 1, padding: 16, borderRadius: 8, alignItems: 'center' },
+  button: { flex: 1, padding: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   saveButton: { backgroundColor: '#1e3a5f' },
   cancelButton: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ddd' },
   buttonDisabled: { opacity: 0.6 },
@@ -505,5 +562,34 @@ const styles = StyleSheet.create({
   modalOptionTextSelected: { color: '#6366f1', fontWeight: '600' },
   checkmark: { fontSize: 18, color: '#6366f1', fontWeight: 'bold' },
   modalCloseBtn: { marginTop: 16, padding: 12 },
-  modalCloseBtnText: { textAlign: 'center', color: '#6b7280', fontWeight: '600' }
+  modalCloseBtnText: { textAlign: 'center', color: '#6b7280', fontWeight: '600' },
+
+  // --- ESTILOS AGREGADOS PARA TOAST ---
+  toast: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    right: 20,
+    padding: 16,
+    borderRadius: 8,
+    zIndex: 1000, // Importante para que aparezca sobre todo
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  toastSuccess: {
+    backgroundColor: '#10B981', // Verde
+  },
+  toastError: {
+    backgroundColor: '#EF4444', // Rojo
+  },
+  toastText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
+    textAlign: 'center'
+  }
 });

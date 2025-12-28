@@ -7,10 +7,18 @@ export function useLoadAppFonts() {
 
   useEffect(() => {
     async function loadFonts() {
-      await Font.loadAsync({
-        ...MaterialIcons.font,
-        ...Ionicons.font,
-      });
+      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+        // Forzar ruta local en web para evitar error 404
+        await Font.loadAsync({
+          ...MaterialIcons.font,
+          Ionicons: require('../assets/fonts/Ionicons.ttf'),
+        });
+      } else {
+        await Font.loadAsync({
+          ...MaterialIcons.font,
+          ...Ionicons.font,
+        });
+      }
       setFontsLoaded(true);
     }
     loadFonts();

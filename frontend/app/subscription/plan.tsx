@@ -39,19 +39,27 @@ export default function SubscriptionPlan() {
   const isLocalUrl = (url: string) => url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1');
 
   const handlePayWithMercadoPago = async () => {
-    try {
+      try {
       setLoading(true);
       setSelectedProvider('mercadopago');
+
+      // 1. Obtener la KEY
+      const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+      if (!anonKey) {
+        throw new Error("Falta la variable de entorno EXPO_PUBLIC_SUPABASE_ANON_KEY");
+      }
 
       const response = await fetch(SUPABASE_FUNCTION_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`
+          'apikey': anonKey, 
+          'Authorization': `Bearer ${anonKey}` 
         },
         body: JSON.stringify({
           userId: userProfile?.id,
-          currency: 'USD',
+          currency: 'USD', 
         }),
       });
 
