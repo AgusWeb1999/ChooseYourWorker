@@ -275,6 +275,8 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+    versionInfo: { alignItems: 'center', marginTop: 30, marginBottom: 10 },
+    versionText: { color: '#64748b', fontSize: 14, fontWeight: '600' },
   modalContentLimiter: { width: '100%', maxWidth: 420, alignSelf: 'center', flex: 1 },
   safeArea: { flex: 1, backgroundColor: '#f8fafc' },
   container: { flex: 1 },
