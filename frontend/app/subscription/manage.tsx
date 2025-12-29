@@ -302,9 +302,9 @@ export default function ManageSubscription() {
           <Text style={styles.sectionTitle}>🎁 Tus Beneficios Premium</Text>
           <View style={styles.benefitsList}>
             {[
-              '💬 Mensajes ilimitados',
-              '🌟 Perfil destacado en búsquedas',
-              '🏅 Insignia de cuenta Premium',
+              'Mensajes ilimitados',
+              'Perfil destacado en búsquedas',
+              'Insignia de cuenta Premium',
             ].map((benefit, index) => (
               <View key={index} style={styles.benefitItem}>
                 <Text style={{fontSize: 20, marginRight: 8}}>✅</Text>

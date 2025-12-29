@@ -261,11 +261,6 @@ export default function MessagesScreen() {
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyEmoji}>💭</Text>
             <Text style={styles.emptyTitle}>No hay conversaciones</Text>
-            <View style={styles.chatWarningBox}>
-              <Text style={styles.chatWarningText}>
-                Busca un trabajador y envíale un mensaje para comenzar
-              </Text>
-            </View>
           </View>
       ) : (
         <FlatList

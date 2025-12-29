@@ -23,6 +23,14 @@ export default function SubscriptionPlan() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [cotizacion, setCotizacion] = useState<number | null>(null);
   const [cotizacionLoading, setCotizacionLoading] = useState(false);
+
+  // Solo profesionales pueden ver planes de suscripción
+  React.useEffect(() => {
+    if (userProfile && userProfile.is_professional !== true) {
+      router.replace('/');
+    }
+  }, [userProfile]);
+
   // Consultar cotización si el usuario es de Uruguay
   React.useEffect(() => {
     const fetchCotizacion = async () => {
@@ -60,10 +68,10 @@ export default function SubscriptionPlan() {
   }, [userProfile?.country_code]);
 
   const features = [
-    {text: '💬 Mensajes ilimitados', free: false, premium: true },
-    {text: '🔍 Búsqueda básica', free: true, premium: true },
-    {text: '🌟 Perfil destacado en búsquedas', free: false, premium: true },
-    {text: '🏅 Insignia de cuenta Premium', free: false, premium: true },
+    {emoji: '💬', text: 'Mensajes ilimitados', free: false, premium: true },
+    {emoji: '🔍', text: 'Búsqueda básica', free: true, premium: true },
+    {emoji: '🌟', text: 'Perfil destacado en búsquedas', free: false, premium: true },
+    {emoji: '🏅', text: 'Insignia de cuenta Premium', free: false, premium: true },
   ];
 
   const closePaymentModal = () => {
@@ -137,7 +145,7 @@ export default function SubscriptionPlan() {
     throw new Error('PayPal solo disponible con backend propio o migrar a Edge Function');
   };
 
-  const handleViewTerms = (provider: 'mercadopago' | 'paypal') => {
+  const handleViewTerms = (provider: 'mercadopago') => {
     router.push({
       pathname: '/subscription/terms',
       params: { provider },
@@ -173,7 +181,7 @@ export default function SubscriptionPlan() {
             <View style={styles.subscriptionInfo}>
               <Text style={styles.infoLabel}>Método de pago:</Text>
               <Text style={styles.infoValue}>
-                {userProfile?.payment_provider === 'mercadopago' ? 'Mercado Pago' : 'PayPal'}
+                {userProfile?.payment_provider === 'mercadopago' ? 'Mercado Pago' : 'Mercado Pago'}
               </Text>
             </View>
           </View>
@@ -237,9 +245,7 @@ export default function SubscriptionPlan() {
         <View style={styles.featuresList}>
           {features.map((feature, index) => (
             <View key={index} style={styles.featureRow}>
-              <Text style={{fontSize: 18, marginRight: 8}}>
-                {feature.text.match(/^[^ ]+/)?.[0] || '🔹'}
-              </Text>
+              <Text style={{fontSize: 18, marginRight: 8}}>{feature.emoji}</Text>
               <Text style={[
                 styles.featureText,
                 !feature.free && styles.featureDisabled
@@ -281,6 +287,7 @@ export default function SubscriptionPlan() {
         <View style={styles.featuresList}>
           {features.filter(f => f.premium).map((feature, index) => (
             <View key={index} style={styles.featureRow}>
+              <Text style={{fontSize: 18, marginRight: 8}}>{feature.emoji}</Text>
               <Text style={styles.featureText}>{feature.text}</Text>
               <Text style={{fontSize: 20, marginLeft: 8}}>✅</Text>
             </View>
@@ -335,7 +342,7 @@ export default function SubscriptionPlan() {
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
-              {selectedProvider === 'mercadopago' ? 'Mercado Pago' : 'PayPal'}
+              {selectedProvider === 'mercadopago' ? 'Mercado Pago' : 'Mercado Pago'}
             </Text>
             <TouchableOpacity onPress={closePaymentModal}>
               <Text style={{fontSize: 24, color: theme.colors.text}}>✖️</Text>
