@@ -4,6 +4,7 @@ import { Link, router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { validatePhone, validateId, normalizePhone, normalizeId, getCountriesList, CountryCode } from '../../utils/countryValidation';
 import { Picker } from '@react-native-picker/picker';
+import { useAuth } from '../../src/contexts/AuthContext';
 
 // --- INYECCIÓN DE CSS PARA WEB (Quita bordes nativos) ---
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -185,6 +186,7 @@ const fetchCities = async (country: string, provinceId: string, departmentId: st
 };
 
 export default function RegisterScreen() {
+  const { refreshProfiles } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -298,6 +300,8 @@ export default function RegisterScreen() {
             completed_hires_count: 0
           });
         }
+        // REFRESH PROFILE after registration and data update
+        await refreshProfiles();
       }
       Alert.alert('Éxito', 'Registro completado');
     } catch (err: any) {

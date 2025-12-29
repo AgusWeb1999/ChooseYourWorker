@@ -22,15 +22,6 @@ interface Professional {
 
 export default function HomeScreen() {
   const { user, userProfile } = useAuth();
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  useEffect(() => {
-    // Mostrar onboarding si el usuario es nuevo (puedes ajustar la lógica según tu flag)
-    if (userProfile && userProfile.show_onboarding !== false) {
-      setShowOnboarding(true);
-      // Opcional: marcar que ya lo vio para no mostrarlo de nuevo
-      // supabase.from('users').update({ show_onboarding: false }).eq('id', userProfile.id);
-    }
-  }, [userProfile]);
   const { width } = useWindowDimensions();
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [premiumUsersMap, setPremiumUsersMap] = useState<Record<string, boolean>>({});
@@ -252,12 +243,6 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* Onboarding Modal en Home */}
-        <OnboardingModal
-          visible={showOnboarding}
-          onClose={() => setShowOnboarding(false)}
-          isProfessional={!!userProfile?.is_professional}
-        />
         {/* Nav Bar Superior */}
         <View style={styles.topNav}>
           <Text style={styles.logo}>WorkingGo</Text>

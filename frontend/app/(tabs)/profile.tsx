@@ -27,6 +27,7 @@ export default function ProfileScreen() {
 
   // Modales Visibility State
   const [onboardingVisible, setOnboardingVisible] = useState(false);
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editClientModalVisible, setEditClientModalVisible] = useState(false);
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
@@ -54,14 +55,12 @@ export default function ProfileScreen() {
 
   // Handlers
   const handleLogout = () => {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      if (window.confirm('¿Estás seguro que deseas cerrar sesión?')) signOut();
-    } else {
-      Alert.alert('Cerrar Sesión', '¿Estás seguro que deseas cerrar sesión?', [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Cerrar Sesión', style: 'destructive', onPress: signOut },
-      ]);
-    }
+    setLogoutModalVisible(true);
+  };
+
+  const confirmLogout = () => {
+    setLogoutModalVisible(false);
+    signOut();
   };
 
   const handleProfileSaved = async () => {
@@ -94,7 +93,29 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.profileLimiter}>
+              {/* Modal personalizado para cerrar sesión */}
+              <Modal
+                visible={logoutModalVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setLogoutModalVisible(false)}
+              >
+                <View style={styles.modalOverlay}>
+                  <View style={styles.customModalContent}>
+                    <Text style={styles.modalTitle}>Cerrar Sesión</Text>
+                    <Text style={{marginVertical: 16}}>¿Estás seguro que deseas cerrar sesión?</Text>
+                    <View style={{flexDirection: 'row', justifyContent: 'flex-end'}}>
+                      <TouchableOpacity onPress={() => setLogoutModalVisible(false)} style={[styles.modalButton, {backgroundColor:'#e5e7eb'}]}>
+                        <Text style={{color:'#374151'}}>Cancelar</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={confirmLogout} style={[styles.modalButton, {backgroundColor:'#ef4444', marginLeft: 10}]}> 
+                        <Text style={{color:'#fff', fontWeight:'bold'}}>Cerrar Sesión</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              </Modal>
         
         {/* Header de Perfil */}
         <View style={styles.mobileProfileHeader}>
@@ -212,7 +233,13 @@ export default function ProfileScreen() {
               <TouchableOpacity style={styles.contactButton} onPress={handleSendEmail}>
                 <Text style={styles.contactButtonText}>📧 Contactar por Email</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.contactButton} onPress={() => setOnboardingVisible(true)}>
+              <TouchableOpacity
+                style={styles.contactButton}
+                onPress={() => {
+                  setHelpModalVisible(false);
+                  setTimeout(() => setOnboardingVisible(true), 350);
+                }}
+              >
                 <Text style={styles.contactButtonText}>👀 Ver Guía Rápida</Text>
               </TouchableOpacity>
               <View style={styles.versionInfo}>
@@ -272,17 +299,21 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  profileLimiter: { flexGrow: 1, alignItems: 'center', paddingVertical: 24, maxWidth: 1100, width: '100%', alignSelf: 'center' },
+  customModalContent: { backgroundColor: '#fff', borderRadius: 16, padding: 24, width: 820, alignSelf: 'center', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 10, elevation: 5 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', justifyContent: 'center', alignItems: 'center' },
+  modalButton: { paddingVertical: 10, paddingHorizontal: 18, borderRadius: 8 },
     versionInfo: { alignItems: 'center', marginTop: 30, marginBottom: 10 },
     versionText: { color: '#64748b', fontSize: 14, fontWeight: '600' },
-  modalContentLimiter: { width: '100%', maxWidth: 420, alignSelf: 'center', flex: 1 },
+  modalContentLimiter: { width: '100%', maxWidth: 820, alignSelf: 'center', flex: 1 },
   safeArea: { flex: 1, backgroundColor: '#f8fafc' },
   container: { flex: 1 },
-  mobileProfileHeader: { alignItems: 'center', padding: 30, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eee' },
+  mobileProfileHeader: { alignItems: 'center', padding: 30, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eee', width: '100%', maxWidth: 600, alignSelf: 'center', borderRadius: 18, marginTop: 24, marginBottom: 24 },
   mobileProfileName: { fontSize: 22, fontWeight: 'bold', marginTop: 10 },
   mobileProfileEmail: { color: '#666', marginBottom: 10 },
   mobileProfileBadge: { backgroundColor: '#6366f1', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
   mobileProfileBadgeText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  section: { padding: 20 },
+  section: { padding: 20, width: '100%', maxWidth: 600, alignSelf: 'center' },
   menuItem: { padding: 16, backgroundColor: '#fff', borderRadius: 12, marginBottom: 10, borderBottomWidth: 1, borderColor: '#f0f0f0' },
   menuItemHighlight: { backgroundColor: '#eef2ff', borderColor: '#6366f1' },
   menuItemPortfolio: { backgroundColor: '#fdf2f8', borderColor: '#ec4899' },

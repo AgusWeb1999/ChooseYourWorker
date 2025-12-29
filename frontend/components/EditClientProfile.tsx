@@ -327,8 +327,8 @@ export default function EditUserProfile({ userProfile, userEmail, onSave, onCanc
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8fafc' },
-  contentWrapper: { alignItems: 'center', paddingBottom: 40 },
-  content: { width: '100%', maxWidth: 600, padding: 20 },
+  contentWrapper: { alignItems: 'center', paddingBottom: 40, flexGrow: 1, justifyContent: 'center' },
+  content: { width: '100%', maxWidth: 820, padding: 20, alignSelf: 'center', backgroundColor: '#fff', borderRadius: 18, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
   title: { fontSize: 24, fontWeight: '800', color: '#1e3a8a', marginBottom: 4 },
   subtitle: { fontSize: 14, color: '#64748b', marginBottom: 24 },
   sectionTitle: { fontSize: 18, fontWeight: '700', marginTop: 20, marginBottom: 12, color: '#1e3a8a', borderBottomWidth: 1, borderBottomColor: '#e2e8f0', paddingBottom: 8 },
