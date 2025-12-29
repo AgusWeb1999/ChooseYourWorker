@@ -127,6 +127,9 @@ export default function EditUserProfile({ userProfile, userEmail, onSave, onCanc
 
   const [loading, setLoading] = useState(false);
   const [countryModalVisible, setCountryModalVisible] = useState(false);
+  const [provinceModalVisible, setProvinceModalVisible] = useState(false);
+  const [departmentModalVisible, setDepartmentModalVisible] = useState(false);
+  const [cityModalVisible, setCityModalVisible] = useState(false);
 
   // 1. Cargar provincias
   useEffect(() => {
@@ -233,36 +236,123 @@ export default function EditUserProfile({ userProfile, userEmail, onSave, onCanc
           {provinceList.length > 0 && (
             <>
               <Text style={styles.label}>{country === 'UY' ? 'Departamento *' : 'Provincia *'}</Text>
-              <View style={styles.pickerWrapper}>
-                <Picker selectedValue={province} onValueChange={setProvince} style={styles.pickerNative}>
-                  <Picker.Item label="Seleccionar..." value="" color="#999" />
-                  {provinceList.map(p => <Picker.Item key={String(p.id)} label={p.nombre} value={String(p.id)} />)}
-                </Picker>
-              </View>
+              <TouchableOpacity style={styles.customPickerTrigger} onPress={() => setProvinceModalVisible(true)}>
+                <Text style={styles.pickerTriggerText}>
+                  {provinceList.find(p => String(p.id) === String(province))?.nombre || 'Seleccionar...'}
+                </Text>
+                <Text style={styles.pickerArrow}>▼</Text>
+              </TouchableOpacity>
+              <Modal visible={provinceModalVisible} transparent animationType="fade" onRequestClose={() => setProvinceModalVisible(false)}>
+                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setProvinceModalVisible(false)}>
+                  <View style={styles.modalContent}>
+                    <Text style={styles.modalTitle}>{country === 'UY' ? 'Selecciona un departamento' : 'Selecciona una provincia'}</Text>
+                    <ScrollView style={styles.modalScroll}>
+                      {provinceList.map((p) => {
+                        const selected = String(p.id) === String(province);
+                        return (
+                          <TouchableOpacity
+                            key={String(p.id)}
+                            style={[styles.modalOption, selected && styles.modalOptionSelected]}
+                            onPress={() => {
+                              setProvince(String(p.id));
+                              setDepartment('');
+                              setCity('');
+                              setProvinceModalVisible(false);
+                            }}
+                          >
+                            <Text style={[styles.modalOptionText, selected && styles.modalOptionTextSelected]}>{p.nombre}</Text>
+                            {selected && <Text style={styles.checkmark}>✓</Text>}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                    <TouchableOpacity onPress={() => setProvinceModalVisible(false)} style={styles.modalCloseBtn}>
+                      <Text style={styles.modalCloseBtnText}>Cerrar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              </Modal>
             </>
           )}
 
           {departmentList.length > 0 && (
             <>
               <Text style={styles.label}>Municipio/Partido *</Text>
-              <View style={styles.pickerWrapper}>
-                <Picker selectedValue={department} onValueChange={setDepartment} style={styles.pickerNative}>
-                  <Picker.Item label="Seleccionar..." value="" color="#999" />
-                  {departmentList.map(d => <Picker.Item key={String(d.id)} label={d.nombre} value={String(d.id)} />)}
-                </Picker>
-              </View>
+              <TouchableOpacity style={styles.customPickerTrigger} onPress={() => setDepartmentModalVisible(true)}>
+                <Text style={styles.pickerTriggerText}>
+                  {departmentList.find(d => String(d.id) === String(department))?.nombre || 'Seleccionar...'}
+                </Text>
+                <Text style={styles.pickerArrow}>▼</Text>
+              </TouchableOpacity>
+              <Modal visible={departmentModalVisible} transparent animationType="fade" onRequestClose={() => setDepartmentModalVisible(false)}>
+                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setDepartmentModalVisible(false)}>
+                  <View style={styles.modalContent}>
+                    <Text style={styles.modalTitle}>Selecciona un municipio/partido</Text>
+                    <ScrollView style={styles.modalScroll}>
+                      {departmentList.map((d) => {
+                        const selected = String(d.id) === String(department);
+                        return (
+                          <TouchableOpacity
+                            key={String(d.id)}
+                            style={[styles.modalOption, selected && styles.modalOptionSelected]}
+                            onPress={() => {
+                              setDepartment(String(d.id));
+                              setCity('');
+                              setDepartmentModalVisible(false);
+                            }}
+                          >
+                            <Text style={[styles.modalOptionText, selected && styles.modalOptionTextSelected]}>{d.nombre}</Text>
+                            {selected && <Text style={styles.checkmark}>✓</Text>}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                    <TouchableOpacity onPress={() => setDepartmentModalVisible(false)} style={styles.modalCloseBtn}>
+                      <Text style={styles.modalCloseBtnText}>Cerrar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              </Modal>
             </>
           )}
 
           {cityList.length > 0 && (
             <>
               <Text style={styles.label}>Ciudad/Localidad *</Text>
-              <View style={styles.pickerWrapper}>
-                <Picker selectedValue={city} onValueChange={setCity} style={styles.pickerNative}>
-                  <Picker.Item label="Seleccionar..." value="" color="#999" />
-                  {cityList.map(c => <Picker.Item key={String(c.id)} label={c.nombre} value={String(c.id)} />)}
-                </Picker>
-              </View>
+              <TouchableOpacity style={styles.customPickerTrigger} onPress={() => setCityModalVisible(true)}>
+                <Text style={styles.pickerTriggerText}>
+                  {cityList.find(c => String(c.id) === String(city))?.nombre || 'Seleccionar...'}
+                </Text>
+                <Text style={styles.pickerArrow}>▼</Text>
+              </TouchableOpacity>
+              <Modal visible={cityModalVisible} transparent animationType="fade" onRequestClose={() => setCityModalVisible(false)}>
+                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setCityModalVisible(false)}>
+                  <View style={styles.modalContent}>
+                    <Text style={styles.modalTitle}>Selecciona una ciudad/localidad</Text>
+                    <ScrollView style={styles.modalScroll}>
+                      {cityList.map((c) => {
+                        const selected = String(c.id) === String(city);
+                        return (
+                          <TouchableOpacity
+                            key={String(c.id)}
+                            style={[styles.modalOption, selected && styles.modalOptionSelected]}
+                            onPress={() => {
+                              setCity(String(c.id));
+                              setCityModalVisible(false);
+                            }}
+                          >
+                            <Text style={[styles.modalOptionText, selected && styles.modalOptionTextSelected]}>{c.nombre}</Text>
+                            {selected && <Text style={styles.checkmark}>✓</Text>}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                    <TouchableOpacity onPress={() => setCityModalVisible(false)} style={styles.modalCloseBtn}>
+                      <Text style={styles.modalCloseBtnText}>Cerrar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              </Modal>
             </>
           )}
 
@@ -376,8 +466,14 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.5)', justifyContent: 'center', alignItems: 'center' },
   modalContent: { width: '85%', maxWidth: 400, backgroundColor: '#fff', borderRadius: 20, padding: 20, maxHeight: '70%' },
   modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 15, textAlign: 'center' },
-  modalOption: { padding: 16, borderRadius: 12, marginBottom: 8, borderWidth: 1, borderColor: '#f1f5f9' },
-  modalOptionText: { fontSize: 16, color: '#1e293b' },
+  modalScroll: { maxHeight: 400 },
+  modalOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16, borderRadius: 10, marginBottom: 8, backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb' },
+  modalOptionSelected: { backgroundColor: '#e0e7ff', borderColor: '#6366f1' },
+  modalOptionText: { fontSize: 15, color: '#374151', fontWeight: '500' },
+  modalOptionTextSelected: { color: '#6366f1', fontWeight: '600' },
+  checkmark: { fontSize: 18, color: '#6366f1', fontWeight: 'bold' },
+  modalCloseBtn: { marginTop: 16, padding: 12 },
+  modalCloseBtnText: { textAlign: 'center', color: '#6b7280', fontWeight: '600' },
   toast: { position: 'absolute', bottom: 40, left: 20, right: 20, padding: 16, borderRadius: 12, zIndex: 1000, elevation: 5 },
   toastSuccess: { backgroundColor: '#10b981' },
   toastError: { backgroundColor: '#ef4444' },

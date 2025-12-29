@@ -8,7 +8,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
 
 // Components
-// import OnboardingModal from '../../components/OnboardingModal';
+import OnboardingModal from '../../components/OnboardingModal';
 import EditProfessionalProfile from '../../components/EditProfessionalProfile';
 import EditClientProfile from '../../components/EditClientProfile';
 import ClientHirings from '../../components/ClientHirings';
@@ -28,7 +28,7 @@ export default function ProfileScreen() {
   const router = useRouter();
 
   // Modales Visibility State
-  // const [onboardingVisible, setOnboardingVisible] = useState(false);
+  const [onboardingVisible, setOnboardingVisible] = useState(false);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editClientModalVisible, setEditClientModalVisible] = useState(false);
@@ -87,50 +87,50 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container} contentContainerStyle={styles.profileLimiter}>
-              {/* Modal personalizado para cerrar sesión */}
-              <Modal
-                visible={logoutModalVisible}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setLogoutModalVisible(false)}
-              >
-                <View style={styles.modalOverlay}>
-                  <View
-                    style={[
-                      styles.customModalContent,
-                      width < 500
-                        ? { width: width * 0.9, padding: 16 }
-                        : width < 900
-                        ? { width: 400, padding: 24 }
-                        : { width: 420, padding: 32 },
-                    ]}
-                  >
-                    <Text style={styles.modalTitle}>Cerrar Sesión</Text>
-                    <Text style={{ marginVertical: 16, textAlign: 'center' }}>
-                      ¿Estás seguro que deseas cerrar sesión?
-                    </Text>
-                    <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-                      <TouchableOpacity
-                        onPress={() => setLogoutModalVisible(false)}
-                        style={[styles.modalButton, { backgroundColor: '#e5e7eb' }]}
-                      >
-                        <Text style={{ color: '#374151' }}>Cancelar</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={confirmLogout}
-                        style={[
-                          styles.modalButton,
-                          { backgroundColor: '#ef4444', marginLeft: 10 },
-                        ]}
-                      >
-                        <Text style={{ color: '#fff', fontWeight: 'bold' }}>
-                          Cerrar Sesión
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-              </Modal>
+        {/* Modal personalizado para cerrar sesión */}
+        <Modal
+          visible={logoutModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setLogoutModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View
+              style={[
+                styles.customModalContent,
+                width < 500
+                  ? { width: width * 0.9, padding: 16 }
+                  : width < 900
+                  ? { width: 400, padding: 24 }
+                  : { width: 420, padding: 32 },
+              ]}
+            >
+              <Text style={styles.modalTitle}>Cerrar Sesión</Text>
+              <Text style={{ marginVertical: 16, textAlign: 'center' }}>
+                ¿Estás seguro que deseas cerrar sesión?
+              </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                <TouchableOpacity
+                  onPress={() => setLogoutModalVisible(false)}
+                  style={[styles.modalButton, { backgroundColor: '#e5e7eb' }]}
+                >
+                  <Text style={{ color: '#374151' }}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={confirmLogout}
+                  style={[
+                    styles.modalButton,
+                    { backgroundColor: '#ef4444', marginLeft: 10 },
+                  ]}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>
+                    Cerrar Sesión
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
         
         {/* Header de Perfil */}
         <View style={styles.mobileProfileHeader}>
@@ -198,8 +198,12 @@ export default function ProfileScreen() {
       </ScrollView>
 
       {/* --- MODALES --- */}
-
-      {/* OnboardingModal eliminado de profile, ahora solo se muestra en Home */}
+      {/* OnboardingModal: Guía rápida */}
+      <OnboardingModal
+        visible={onboardingVisible}
+        onClose={() => setOnboardingVisible(false)}
+        isProfessional={!!professionalProfile}
+      />
 
       {/* Modal Editar Profesional */}
       <Modal visible={editModalVisible} animationType="slide" presentationStyle="pageSheet">
@@ -248,7 +252,7 @@ export default function ProfileScreen() {
                 style={styles.contactButton}
                 onPress={() => {
                   setHelpModalVisible(false);
-                  // setTimeout(() => setOnboardingVisible(true), 350);
+                  setTimeout(() => setOnboardingVisible(true), 350);
                 }}
               >
                 <Text style={styles.contactButtonText}>👀 Ver Guía Rápida</Text>
@@ -268,31 +272,31 @@ export default function ProfileScreen() {
             <Text style={styles.modalTitle}>Nosotros</Text>
             <TouchableOpacity onPress={() => setAboutModalVisible(false)}><Text style={styles.closeButton}>✕</Text></TouchableOpacity>
           </View>
-          <ScrollView style={styles.modalContent}>
-            <Text style={styles.aboutText}>
-              Bienvenido a WorkingGo 🚀
-              {'\n'}
+          <ScrollView contentContainerStyle={styles.aboutContainer} style={styles.modalContent}>
+            <Text style={styles.aboutTitle}>Bienvenido a WorkingGo 🚀</Text>
+            <Text style={styles.aboutParagraph}>
               Somos una plataforma creada por estudiantes de ingeniería con una misión clara: conectar el talento local con quienes lo necesitan, de forma fácil, segura y divertida.
-              {'\n'}
-              ¿Por qué existimos?
-              Porque creemos que todos merecen la oportunidad de encontrar trabajo digno y que cada cliente merece encontrar a la persona ideal para su proyecto, desde arreglar una canilla hasta crear una app.
-              {'\n'}
-              • Profesionales y clientes pueden chatear, dejar reseñas y construir confianza real.
-              • Aquí no hay robots (bueno, salvo este texto), solo personas reales ayudando a personas reales.
-              • ¡Nos encanta la diversidad! Hay espacio para electricistas, diseñadores, paseadores de perros, programadores y más.
-              {'\n'}
-              Nuestra visión:
-              Ser la comunidad de trabajo local más confiable y divertida de Latinoamérica. Queremos que cada contratación sea una experiencia positiva, transparente y segura.
-              {'\n'}
-              ¿Sabías que...?
-              - Puedes armar tu portafolio con fotos y logros.
-              - Hay sistema de calificaciones y comentarios para que elijas con confianza.
-              - ¡Tenemos versión web y móvil, para que nunca pierdas una oportunidad!
-              {'\n'}
-              ¿Tienes una idea loca para mejorar la app? ¡Escríbenos! Nos encanta escuchar a la comunidad.
-              {'\n'}
-              WorkingGo: Donde el trabajo y la buena onda se encuentran. 💪✨
             </Text>
+            <Text style={styles.aboutSubtitle}>¿Por qué existimos?</Text>
+            <Text style={styles.aboutParagraph}>
+              Creemos que todos merecen la oportunidad de encontrar trabajo digno y que cada cliente merece encontrar a la persona ideal para su proyecto, desde arreglar una canilla hasta crear una app.
+            </Text>
+            <Text style={styles.aboutListTitle}>¿Qué nos hace únicos?</Text>
+            <Text style={styles.aboutList}>• Profesionales y clientes pueden chatear, dejar reseñas y construir confianza real.</Text>
+            <Text style={styles.aboutList}>• Aquí no hay robots (bueno, salvo este texto), solo personas reales ayudando a personas reales.</Text>
+            <Text style={styles.aboutList}>• ¡Nos encanta la diversidad! Hay espacio para electricistas, diseñadores, paseadores de perros, programadores y más.</Text>
+            <Text style={styles.aboutSubtitle}>Nuestra visión</Text>
+            <Text style={styles.aboutParagraph}>
+              Ser la comunidad de trabajo local más confiable y divertida de Latinoamérica. Queremos que cada contratación sea una experiencia positiva, transparente y segura.
+            </Text>
+            <Text style={styles.aboutSubtitle}>¿Sabías que...?</Text>
+            <Text style={styles.aboutList}>- Puedes armar tu portafolio con fotos y logros.</Text>
+            <Text style={styles.aboutList}>- Hay sistema de calificaciones y comentarios para que elijas con confianza.</Text>
+            <Text style={styles.aboutList}>- ¡Tenemos versión web y móvil, para que nunca pierdas una oportunidad!</Text>
+            <Text style={styles.aboutParagraph}>
+              ¿Tienes una idea loca para mejorar la app? ¡Escríbenos! Nos encanta escuchar a la comunidad.
+            </Text>
+            <Text style={styles.aboutFooter}>WorkingGo: Donde el trabajo y la buena onda se encuentran. 💪✨</Text>
           </ScrollView>
         </SafeAreaView>
       </Modal>
@@ -376,5 +380,60 @@ const styles = StyleSheet.create({
   helpAnswer: { color: '#444', marginBottom: 10 },
   contactButton: { backgroundColor: '#1e3a5f', padding: 15, borderRadius: 10, marginTop: 20, alignItems: 'center' },
   contactButtonText: { color: '#fff', fontWeight: 'bold' },
-  aboutText: { fontSize: 16, lineHeight: 24, color: '#333' }
+  aboutContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
+    paddingHorizontal: 12,
+    maxWidth: 520,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  aboutTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1e3a5f',
+    marginBottom: 18,
+    textAlign: 'center',
+  },
+  aboutSubtitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#374151',
+    marginTop: 22,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  aboutParagraph: {
+    fontSize: 16,
+    color: '#333',
+    lineHeight: 26,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  aboutListTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#1e3a5f',
+    marginTop: 18,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  aboutList: {
+    fontSize: 16,
+    color: '#444',
+    lineHeight: 26,
+    marginBottom: 6,
+    textAlign: 'left',
+    alignSelf: 'stretch',
+    maxWidth: 480,
+  },
+  aboutFooter: {
+    fontSize: 17,
+    color: '#6366f1',
+    fontWeight: 'bold',
+    marginTop: 28,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
 });

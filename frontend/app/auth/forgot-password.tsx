@@ -32,12 +32,7 @@ export default function ForgotPasswordScreen() {
       return;
     }
     // Construir redirectTo dinámicamente
-    let redirectTo = '';
-    if (typeof window !== 'undefined') {
-      redirectTo = window.location.origin + '/auth/reset-password';
-    } else {
-      redirectTo = 'https://working-go.com/auth/reset-password';
-    }
+    let redirectTo = 'https://working-go.com/auth/reset-password';
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo,
     });

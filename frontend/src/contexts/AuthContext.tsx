@@ -13,6 +13,7 @@ type AuthContextType = {
   isSubscriptionActive: boolean;
   signOut: () => Promise<void>;
   refreshProfiles: () => Promise<void>;
+  resetAppState: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -26,6 +27,7 @@ const AuthContext = createContext<AuthContextType>({
   isSubscriptionActive: false,
   signOut: async () => {},
   refreshProfiles: async () => {},
+  resetAppState: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -75,15 +77,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       }
     });
-
-    // Fallback: si loading dura más de 8 segundos, mostrar error pero NO limpiar sesión ni forzar logout
-    timeoutId = setTimeout(() => {
-      if (loading) {
-        console.error('⏳ Loading timeout: mostrando error pero manteniendo sesión');
-        // Opcional: podrías mostrar un toast o mensaje de error global aquí
-        // Solo mostrar error, no limpiar sesión
-      }
-    }, 8000);
 
     return () => {
       subscription.unsubscribe();

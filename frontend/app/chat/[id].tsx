@@ -398,53 +398,54 @@ export default function ChatScreen() {
         {userProfile?.is_professional === false ? (
           // Mensaje para clientes sobre el estado del trabajador
           otherUserIsPremium ? (
-            <View style={[styles.limitWarning, { backgroundColor: '#f0fdf4' }]}>
+            <View style={styles.premiumAlertBox}>
               <Ionicons 
                 name="checkmark-circle" 
-                size={16} 
+                size={20} 
                 color="#16a34a" 
+                style={{ marginRight: 8 }}
               />
-              <Text style={[styles.limitWarningText, { color: '#15803d' }]}>
+              <Text style={styles.premiumAlertText}> 
                 ✨ Trabajador Premium - Chats ilimitados disponibles
               </Text>
             </View>
           ) : (
-            <View style={styles.limitWarning}>
+            <View style={styles.premiumAlertBox}>
               <Ionicons 
                 name="information-circle" 
-                size={16} 
+                size={20} 
                 color="#f59e0b" 
+                style={{ marginRight: 8 }}
               />
-              <Text style={styles.limitWarningText}>
+              <Text style={styles.premiumAlertText}> 
                 Este trabajador no es premium, por lo que los chats ilimitados no están disponibles
               </Text>
             </View>
           )
         ) : (
-          // Mensaje para trabajadores sobre su propio límite
-          !isPremium && (
-            <View style={[styles.limitWarning, hasReachedLimit && styles.limitWarningDanger]}>
-              <Ionicons 
-                name={hasReachedLimit ? "alert-circle" : "information-circle"} 
-                size={16} 
-                color={hasReachedLimit ? "#ef4444" : "#f59e0b"} 
-              />
-              <Text style={[styles.limitWarningText, hasReachedLimit && styles.limitWarningTextDanger]}>
-                {hasReachedLimit 
-                  ? `Límite alcanzado (${messageCount}/${MESSAGE_LIMIT_FREE}). Actualiza a Premium para continuar.`
-                  : `${messageCount}/${MESSAGE_LIMIT_FREE} mensajes usados. Actualiza a Premium para mensajes ilimitados.`
-                }
-              </Text>
-              {hasReachedLimit && (
-                <TouchableOpacity 
-                  style={styles.upgradeButton}
-                  onPress={() => router.push('/subscription/plan')}
-                >
-                  <Text style={styles.upgradeButtonText}>Actualizar</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )
+            !isPremium && (
+              <View style={[styles.limitWarning, hasReachedLimit && styles.limitWarningDanger]}>
+                <Ionicons 
+                  name={hasReachedLimit ? "alert-circle" : "information-circle"} 
+                  size={16} 
+                  color={hasReachedLimit ? "#ef4444" : "#f59e0b"} 
+                />
+                <Text style={[styles.limitWarningText, hasReachedLimit && styles.limitWarningTextDanger]}>
+                  {hasReachedLimit 
+                    ? `Límite alcanzado (${messageCount}/${MESSAGE_LIMIT_FREE}). Actualiza a Premium para continuar.`
+                    : `${messageCount}/${MESSAGE_LIMIT_FREE} mensajes usados. Actualiza a Premium para mensajes ilimitados.`
+                  }
+                </Text>
+                {hasReachedLimit && (
+                  <TouchableOpacity 
+                    style={styles.upgradeButton}
+                    onPress={() => router.push('/subscription/plan')}
+                  >
+                    <Text style={styles.upgradeButtonText}>Actualizar</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )
         )}
 
         <View style={styles.inputContainer}>
@@ -579,8 +580,15 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     padding: 12,
     backgroundColor: '#FFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5EA',
+    borderRadius: 24,
+    marginHorizontal: 12,
+    marginBottom: Platform.OS === 'web' ? 32 : 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    elevation: 6,
+    borderTopWidth: 0,
   },
   limitWarning: {
     flexDirection: 'row',
@@ -617,7 +625,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     backgroundColor: '#F2F2F7',
-    borderRadius: 20,
+    borderRadius: 16,
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 10,
@@ -636,8 +644,35 @@ const styles = StyleSheet.create({
     backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    elevation: 4,
   },
   sendButtonDisabled: {
     opacity: 0.5,
+  },
+  premiumAlertBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF8E1',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    marginHorizontal: 12,
+    marginBottom: Platform.OS === 'web' ? 24 : 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  premiumAlertText: {
+    flex: 1,
+    color: '#8a6d3b',
+    fontSize: 15,
+    fontWeight: '500',
+    textAlign: 'left',
   },
 });

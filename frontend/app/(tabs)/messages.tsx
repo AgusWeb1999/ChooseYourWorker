@@ -14,7 +14,7 @@ import {
 import { router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { IconSymbol } from '../../components/ui/icon-symbol';
+
 
 interface Conversation {
   conversation_id: string;
@@ -33,6 +33,55 @@ export default function MessagesScreen() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  async function fetchConversations() {
+    try {
+      // Primero obtenemos las conversaciones básicas
+      const { data: conversationsData, error: conversationsError } = await supabase
+        .from('conversation_list')
+        .select('*')
+        .order('last_message_at', { ascending: false });
+
+      if (conversationsError) throw conversationsError;
+
+      // Luego obtenemos los avatares desde professionals (que tiene user_id y avatar_url)
+      if (conversationsData && conversationsData.length > 0) {
+        const userIds = conversationsData.map((c: Conversation) => c.other_user_id);
+        // Intentar buscar en professionals primero
+        const { data: professionalsData } = await supabase
+          .from('professionals')
+          .select('user_id, avatar_url')
+          .in('user_id', userIds);
+        // También buscar en users como fallback
+        const { data: usersData } = await supabase
+          .from('users')
+          .select('id, avatar_url')
+          .in('id', userIds);
+        if (professionalsData || usersData) {
+          // Combinar los datos, priorizando professionals
+          const conversationsWithAvatars = conversationsData.map((conv: Conversation) => {
+            const profAvatar = professionalsData?.find((p: any) => p.user_id === conv.other_user_id)?.avatar_url;
+            const userAvatar = usersData?.find((u: any) => u.id === conv.other_user_id)?.avatar_url;
+            const finalAvatar = profAvatar || userAvatar || null;
+            return {
+              ...conv,
+              other_user_avatar: finalAvatar
+            };
+          });
+          setConversations(conversationsWithAvatars);
+        } else {
+          setConversations(conversationsData);
+        }
+      } else {
+        setConversations([]);
+      }
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }
 
   useEffect(() => {
     if (user) {
@@ -59,67 +108,6 @@ export default function MessagesScreen() {
       };
     }
   }, [user]);
-
-  async function fetchConversations() {
-    try {
-      // Primero obtenemos las conversaciones básicas
-      const { data: conversationsData, error: conversationsError } = await supabase
-        .from('conversation_list')
-        .select('*')
-        .order('last_message_at', { ascending: false });
-
-      if (conversationsError) throw conversationsError;
-
-      console.log('📊 Conversaciones básicas:', conversationsData);
-
-      // Luego obtenemos los avatares desde professionals (que tiene user_id y avatar_url)
-      if (conversationsData && conversationsData.length > 0) {
-        const userIds = conversationsData.map(c => c.other_user_id);
-        console.log('👥 User IDs para buscar avatares:', userIds);
-        
-        // Intentar buscar en professionals primero
-        const { data: professionalsData, error: profsError } = await supabase
-          .from('professionals')
-          .select('user_id, avatar_url')
-          .in('user_id', userIds);
-
-        console.log('🖼️ Avatares desde professionals:', professionalsData);
-
-        // También buscar en users como fallback
-        const { data: usersData, error: usersError } = await supabase
-          .from('users')
-          .select('id, avatar_url')
-          .in('id', userIds);
-
-        console.log('🖼️ Avatares desde users:', usersData);
-
-        if (professionalsData || usersData) {
-          // Combinar los datos, priorizando professionals
-          const conversationsWithAvatars = conversationsData.map(conv => {
-            const profAvatar = professionalsData?.find(p => p.user_id === conv.other_user_id)?.avatar_url;
-            const userAvatar = usersData?.find(u => u.id === conv.other_user_id)?.avatar_url;
-            const finalAvatar = profAvatar || userAvatar || null;
-            
-            console.log(`🔗 Usuario ${conv.other_user_name} (${conv.other_user_id}) -> avatar: ${finalAvatar}`);
-            return {
-              ...conv,
-              other_user_avatar: finalAvatar
-            };
-          });
-          setConversations(conversationsWithAvatars);
-        } else {
-          setConversations(conversationsData);
-        }
-      } else {
-        setConversations([]);
-      }
-    } catch (error) {
-      console.error('Error fetching conversations:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }
 
   function onRefresh() {
     setRefreshing(true);
@@ -211,11 +199,7 @@ export default function MessagesScreen() {
           </Text>
         </View>
 
-        <IconSymbol
-          name="chevron.right"
-          size={20}
-          color="#C7C7CC"
-        />
+        <Text style={{fontSize: 20, color: '#C7C7CC', marginLeft: 8}}>➡️</Text>
       </TouchableOpacity>
     );
   }
@@ -273,14 +257,16 @@ export default function MessagesScreen() {
         </View>
 
       <View style={styles.contentLimiter}>
-      {conversations.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyEmoji}>💭</Text>
-          <Text style={styles.emptyTitle}>No hay conversaciones</Text>
-          <Text style={styles.emptySubtitle}>
-            Busca un trabajador y envíale un mensaje para comenzar
-          </Text>
-        </View>
+        {conversations.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyEmoji}>💭</Text>
+            <Text style={styles.emptyTitle}>No hay conversaciones</Text>
+            <View style={styles.chatWarningBox}>
+              <Text style={styles.chatWarningText}>
+                Busca un trabajador y envíale un mensaje para comenzar
+              </Text>
+            </View>
+          </View>
       ) : (
         <FlatList
           data={conversations}
@@ -386,6 +372,28 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
     lineHeight: 22,
+  },
+  chatWarningBox: {
+    backgroundColor: '#FFF8E1',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginTop: 16,
+    marginBottom: Platform.OS === 'web' ? 32 : 24,
+    alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
+    minWidth: 220,
+    maxWidth: 340,
+  },
+  chatWarningText: {
+    color: '#8a6d3b',
+    fontSize: 16,
+    textAlign: 'center',
+    fontWeight: '500',
   },
   listContent: {
     paddingVertical: 16,

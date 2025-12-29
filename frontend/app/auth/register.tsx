@@ -194,6 +194,9 @@ export default function RegisterScreen() {
   const [phone, setPhone] = useState('');
   const [idNumber, setIdNumber] = useState('');
   const [country, setCountry] = useState<CountryCode>('UY');
+  const [provinceModalVisible, setProvinceModalVisible] = useState(false);
+  const [departmentModalVisible, setDepartmentModalVisible] = useState(false);
+  const [cityModalVisible, setCityModalVisible] = useState(false);
   const [userType, setUserType] = useState<'client' | 'worker' | null>(null);
   const [province, setProvince] = useState<string>('');
   const [provinceList, setProvinceList] = useState<any[]>([]);
@@ -396,18 +399,42 @@ export default function RegisterScreen() {
             {provinceList.length > 0 && (
               <>
                 <Text style={styles.label}>{country === 'UY' ? 'Departamento *' : 'Provincia/Estado *'}</Text>
-                <View style={styles.pickerWrapper}>
-                  <Picker
-                    selectedValue={province}
-                    onValueChange={setProvince}
-                    style={styles.pickerNative}
-                  >
-                    <Picker.Item label="Selecciona una opción" value="" color="#9ca3af" />
-                    {provinceList.map(p => (
-                      <Picker.Item key={p.id} label={p.nombre} value={p.id} />
-                    ))}
-                  </Picker>
-                </View>
+                <TouchableOpacity style={styles.customPickerTrigger} onPress={() => setProvinceModalVisible(true)}>
+                  <Text style={styles.pickerTriggerText}>
+                    {provinceList.find(p => String(p.id) === String(province))?.nombre || 'Selecciona una opción'}
+                  </Text>
+                  <Text style={styles.pickerArrow}>▼</Text>
+                </TouchableOpacity>
+                <Modal visible={provinceModalVisible} transparent animationType="fade" onRequestClose={() => setProvinceModalVisible(false)}>
+                  <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setProvinceModalVisible(false)}>
+                    <View style={styles.modalContent}>
+                      <Text style={styles.modalTitle}>{country === 'UY' ? 'Selecciona un departamento' : 'Selecciona una provincia/estado'}</Text>
+                      <ScrollView style={styles.modalScroll}>
+                        {provinceList.map((p) => {
+                          const selected = String(p.id) === String(province);
+                          return (
+                            <TouchableOpacity
+                              key={String(p.id)}
+                              style={[styles.modalOption, selected && styles.modalOptionSelected]}
+                              onPress={() => {
+                                setProvince(String(p.id));
+                                setDepartment('');
+                                setCity('');
+                                setProvinceModalVisible(false);
+                              }}
+                            >
+                              <Text style={[styles.modalOptionText, selected && styles.modalOptionTextSelected]}>{p.nombre}</Text>
+                              {selected && <Text style={styles.checkmark}>✓</Text>}
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </ScrollView>
+                      <TouchableOpacity onPress={() => setProvinceModalVisible(false)} style={styles.modalCloseBtn}>
+                        <Text style={styles.modalCloseBtnText}>Cerrar</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
+                </Modal>
                 {errors.province && <Text style={styles.errorText}>{errors.province}</Text>}
               </>
             )}
@@ -416,18 +443,41 @@ export default function RegisterScreen() {
             {departmentList.length > 0 && (
               <>
                 <Text style={styles.label}>Municipio/Localidad *</Text>
-                <View style={styles.pickerWrapper}>
-                  <Picker
-                    selectedValue={department}
-                    onValueChange={setDepartment}
-                    style={styles.pickerNative}
-                  >
-                    <Picker.Item label="Selecciona una opción" value="" color="#9ca3af" />
-                    {departmentList.map(d => (
-                      <Picker.Item key={d.id} label={d.nombre} value={d.id} />
-                    ))}
-                  </Picker>
-                </View>
+                <TouchableOpacity style={styles.customPickerTrigger} onPress={() => setDepartmentModalVisible(true)}>
+                  <Text style={styles.pickerTriggerText}>
+                    {departmentList.find(d => String(d.id) === String(department))?.nombre || 'Selecciona una opción'}
+                  </Text>
+                  <Text style={styles.pickerArrow}>▼</Text>
+                </TouchableOpacity>
+                <Modal visible={departmentModalVisible} transparent animationType="fade" onRequestClose={() => setDepartmentModalVisible(false)}>
+                  <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setDepartmentModalVisible(false)}>
+                    <View style={styles.modalContent}>
+                      <Text style={styles.modalTitle}>Selecciona un municipio/localidad</Text>
+                      <ScrollView style={styles.modalScroll}>
+                        {departmentList.map((d) => {
+                          const selected = String(d.id) === String(department);
+                          return (
+                            <TouchableOpacity
+                              key={String(d.id)}
+                              style={[styles.modalOption, selected && styles.modalOptionSelected]}
+                              onPress={() => {
+                                setDepartment(String(d.id));
+                                setCity('');
+                                setDepartmentModalVisible(false);
+                              }}
+                            >
+                              <Text style={[styles.modalOptionText, selected && styles.modalOptionTextSelected]}>{d.nombre}</Text>
+                              {selected && <Text style={styles.checkmark}>✓</Text>}
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </ScrollView>
+                      <TouchableOpacity onPress={() => setDepartmentModalVisible(false)} style={styles.modalCloseBtn}>
+                        <Text style={styles.modalCloseBtnText}>Cerrar</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
+                </Modal>
                 {errors.department && <Text style={styles.errorText}>{errors.department}</Text>}
               </>
             )}
@@ -436,18 +486,40 @@ export default function RegisterScreen() {
             {cityList.length > 0 && (
               <>
                 <Text style={styles.label}>Ciudad *</Text>
-                <View style={styles.pickerWrapper}>
-                  <Picker
-                    selectedValue={city}
-                    onValueChange={setCity}
-                    style={styles.pickerNative}
-                  >
-                    <Picker.Item label="Selecciona ciudad" value="" color="#9ca3af" />
-                    {cityList.map(c => (
-                      <Picker.Item key={c.id} label={c.nombre} value={c.id} />
-                    ))}
-                  </Picker>
-                </View>
+                <TouchableOpacity style={styles.customPickerTrigger} onPress={() => setCityModalVisible(true)}>
+                  <Text style={styles.pickerTriggerText}>
+                    {cityList.find(c => String(c.id) === String(city))?.nombre || 'Selecciona ciudad'}
+                  </Text>
+                  <Text style={styles.pickerArrow}>▼</Text>
+                </TouchableOpacity>
+                <Modal visible={cityModalVisible} transparent animationType="fade" onRequestClose={() => setCityModalVisible(false)}>
+                  <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setCityModalVisible(false)}>
+                    <View style={styles.modalContent}>
+                      <Text style={styles.modalTitle}>Selecciona una ciudad</Text>
+                      <ScrollView style={styles.modalScroll}>
+                        {cityList.map((c) => {
+                          const selected = String(c.id) === String(city);
+                          return (
+                            <TouchableOpacity
+                              key={String(c.id)}
+                              style={[styles.modalOption, selected && styles.modalOptionSelected]}
+                              onPress={() => {
+                                setCity(String(c.id));
+                                setCityModalVisible(false);
+                              }}
+                            >
+                              <Text style={[styles.modalOptionText, selected && styles.modalOptionTextSelected]}>{c.nombre}</Text>
+                              {selected && <Text style={styles.checkmark}>✓</Text>}
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </ScrollView>
+                      <TouchableOpacity onPress={() => setCityModalVisible(false)} style={styles.modalCloseBtn}>
+                        <Text style={styles.modalCloseBtnText}>Cerrar</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
+                </Modal>
                 {errors.city && <Text style={styles.errorText}>{errors.city}</Text>}
               </>
             )}
@@ -672,15 +744,20 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   modalContent: { width: '85%', backgroundColor: '#fff', borderRadius: 20, padding: 24, maxHeight: '80%' },
   modalTitle: { fontSize: 22, fontWeight: '800', marginBottom: 20, textAlign: 'center' },
-  modalOption: { paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  modalOptionFlag: { fontSize: 18 },
-  modalCloseBtn: { marginTop: 20, padding: 12 },
-  modalCloseBtnText: { color: '#6b7280', textAlign: 'center', fontWeight: '600' },
+  modalScroll: { maxHeight: 400 },
+  modalOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16, borderRadius: 10, marginBottom: 8, backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb' },
+  modalOptionSelected: { backgroundColor: '#e0e7ff', borderColor: '#6366f1' },
+  modalOptionText: { fontSize: 15, color: '#374151', fontWeight: '500' },
+  modalOptionTextSelected: { color: '#6366f1', fontWeight: '600' },
+  checkmark: { fontSize: 18, color: '#6366f1', fontWeight: 'bold' },
+  modalCloseBtn: { marginTop: 16, padding: 12 },
+  modalCloseBtnText: { textAlign: 'center', color: '#6b7280', fontWeight: '600' },
+  modalOptionFlag: { fontSize: 16, color: '#374151' },
 
   termsContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 12 },
   checkbox: { marginRight: 12 },
   checkboxInner: { width: 24, height: 24, borderWidth: 2, borderColor: '#1e3a5f', borderRadius: 6, justifyContent: 'center', alignItems: 'center' },
   checkboxChecked: { backgroundColor: '#1e3a5f' },
-  checkmark: { color: '#fff', fontSize: 14, fontWeight: '900' },
+  // checkmark duplicado eliminado para evitar conflicto de propiedades
   termsLabel: { color: '#4b5563', fontSize: 14 }
 });

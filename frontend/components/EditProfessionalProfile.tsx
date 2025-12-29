@@ -1,3 +1,10 @@
+// Declarar la interfaz de props antes de usarla
+interface EditProfessionalProfileProps {
+  professionalProfile: any;
+  onSave: () => void;
+  onCancel?: () => void;
+}
+
 import { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, Modal, Platform, ActivityIndicator } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
@@ -100,22 +107,50 @@ const fetchCities = async (country: string, provinceId: string, departmentId: st
 };
 
 const PROFESSIONS = [
-  'Carpintero', 'Electricista', 'Plomero', 'Pintor', 'Técnico HVAC',
-  'Jardinero', 'Limpieza del Hogar', 'Mantenimiento General', 'Mudanzas',
-  'Cerrajero', 'Albañil', 'Gasista', 'Techista', 'Decorador', 'Control de Plagas', 'Otro',
+  'Carpintero', 'Electricista', 'Plomero', 'Pintor', 'Técnico de HVAC',
+  'Jardinero', 'Limpieza del Hogar', 'Mantenimiento General', 'Servicios de Mudanza',
+  'Cerrajero', 'Albañil', 'Gasista', 'Techista', 'Decorador', 'Control de Plagas',
+  'Mecánico', 'Chofer', 'Niñera', 'Cuidador de Adultos', 'Cocinero', 'Panadero',
+  'Peluquero', 'Estilista', 'Manicurista', 'Masajista', 'Fotógrafo', 'Diseñador Gráfico',
+  'Programador', 'Profesor Particular', 'Entrenador Personal', 'Fumigador', 'Mudanzas',
+  'Reparación de Computadoras', 'Reparación de Celulares', 'Reparación de Electrodomésticos',
+  'Tapicero', 'Vidriero', 'Herrero', 'Soldador', 'Montador de Muebles', 'Paseador de Perros',
+  'Veterinario', 'Animador de Eventos', 'DJ', 'Músico', 'Cantante', 'Traductor', 'Redactor',
+  'Community Manager', 'Marketing Digital', 'Otro',
 ];
 
-interface EditProfessionalProfileProps {
-  professionalProfile: any;
-  onSave: () => void;
-  onCancel?: () => void;
-}
+// Buscador de profesiones y filtrado de palabras prohibidas (hooks deben ir al inicio del componente)
+const forbiddenWords = [
+  'prostitución', 'prostitucion', 'escort', 'sexo', 'sexual', 'pornografía', 'pornografia',
+  'puta', 'putas', 'puto', 'putos', 'putita', 'putitas', 'putito', 'putitos',
+  'drogas', 'narcotráfico', 'narcotrafico', 'venta de drogas', 'marihuana', 'cocaína', 'cocaina',
+  'trata de personas', 'tráfico de personas', 'trafico de personas', 'pedofilia', 'infantil',
+  'niño', 'niña', 'niños', 'niñas', 'child', 'children', 'abuso', 'abuso infantil',
+  'armas', 'venta de armas', 'asesino', 'sicario', 'hacker', 'piratería', 'pirateria',
+  'hackeo', 'hack', 'falsificación', 'falsificacion', 'documentos falsos', 'fraude',
+  'estafa', 'robos', 'robo', 'hurto', 'secuestro', 'extorsión', 'extorsion',
+  'terrorismo', 'terrorista', 'explosivos', 'bomba', 'violación', 'violacion',
+  'zoofilia', 'bestialismo', 'incesto', 'necrofília', 'necrofila', 'canibalismo',
+  'canibal', 'organos', 'venta de organos', 'tráfico de organos', 'trafico de organos',
+  'esclavitud', 'esclavo', 'esclava', 'esclavos', 'esclavas',
+];
 
 export default function EditProfessionalProfile({ 
   professionalProfile, 
   onSave, 
   onCancel 
 }: EditProfessionalProfileProps) {
+  // ...existing code...
+  const [professionSearch, setProfessionSearch] = useState('');
+  // ...existing code...
+
+  const filteredProfessions = PROFESSIONS.filter(p => {
+    if (p === 'Otro') return false;
+    return p.toLowerCase().includes(professionSearch.toLowerCase());
+  });
+  if (!filteredProfessions.includes('Otro')) filteredProfessions.push('Otro');
+
+// ...existing code...
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
   // Usar any para compatibilidad multiplataforma (web/node)
   const toastTimeout = useRef<any>(null);
@@ -144,6 +179,9 @@ export default function EditProfessionalProfile({
 
   const [loading, setLoading] = useState(false);
   const [countryModalVisible, setCountryModalVisible] = useState(false);
+  const [provinceModalVisible, setProvinceModalVisible] = useState(false);
+  const [departmentModalVisible, setDepartmentModalVisible] = useState(false);
+  const [cityModalVisible, setCityModalVisible] = useState(false);
 
   // 1. Cargar Provincias: Resetea hijos si el cambio es manual
   useEffect(() => {
@@ -168,25 +206,25 @@ export default function EditProfessionalProfile({
   useEffect(() => {
     setDepartmentList([]);
     setCityList([]);
-    
     if (province) {
       if (country === 'UY') {
         fetchCities(country, province, '').then((data) => {
           setCityList(data);
-          // Verificar si restauramos valor o reseteamos
+          // Restaurar valor si corresponde
           const isSavedProvince = professionalProfile?.province === province;
           if (isSavedProvince && professionalProfile?.city && data.some((c:any) => String(c.id) === String(professionalProfile.city))) {
-            setCity(professionalProfile.city);
+            setCity(String(professionalProfile.city));
           } else {
             setCity('');
           }
         });
+        setDepartment(''); // UY no usa departamento
       } else {
         fetchDepartments(country, province).then((data) => {
           setDepartmentList(data);
           const isSavedProvince = professionalProfile?.province === province;
           if (isSavedProvince && professionalProfile?.department && data.some((d:any) => String(d.id) === String(professionalProfile.department))) {
-            setDepartment(professionalProfile.department);
+            setDepartment(String(professionalProfile.department));
           } else {
             setDepartment('');
             setCity('');
@@ -194,7 +232,6 @@ export default function EditProfessionalProfile({
         });
       }
     } else {
-      // Si se deselecciona provincia
       setDepartmentList([]);
       setCityList([]);
       setCity('');
@@ -230,20 +267,20 @@ export default function EditProfessionalProfile({
 
   async function handleSave() {
     const finalProfession = profession === 'Otro' ? customProfession : profession;
-
+    let hasError = false;
     if (!displayName || !finalProfession || !city || !province || (country !== 'UY' && !department)) {
       setToast({ message: 'Por favor completa campos obligatorios', type: 'error' });
-      if (toastTimeout.current) clearTimeout(toastTimeout.current);
-      toastTimeout.current = setTimeout(() => setToast(null), 3000);
-      return;
+      hasError = true;
     }
     if (profession === 'Otro' && !customProfession.trim()) {
       setToast({ message: 'Especifica tu profesión', type: 'error' });
+      hasError = true;
+    }
+    if (hasError) {
       if (toastTimeout.current) clearTimeout(toastTimeout.current);
       toastTimeout.current = setTimeout(() => setToast(null), 3000);
       return;
     }
-
     setLoading(true);
     try {
       const { error } = await supabase
@@ -302,9 +339,18 @@ export default function EditProfessionalProfile({
             onChangeText={setDisplayName}
           />
 
+
           <Text style={styles.label}>Profesión *</Text>
+          {/* Buscador de profesiones */}
+          <TextInput
+            style={[styles.inputUnified, { marginBottom: 8 }]}
+            placeholder="Buscar profesión..."
+            placeholderTextColor="#9ca3af"
+            value={professionSearch}
+            onChangeText={setProfessionSearch}
+          />
           <View style={styles.professionContainer}>
-            {PROFESSIONS.map((p) => (
+            {filteredProfessions.map((p) => (
               <TouchableOpacity
                 key={p}
                 style={[
@@ -322,7 +368,6 @@ export default function EditProfessionalProfile({
               </TouchableOpacity>
             ))}
           </View>
-
           {profession === 'Otro' && (
             <>
               <Text style={styles.label}>Especifica tu profesión *</Text>
@@ -330,7 +375,16 @@ export default function EditProfessionalProfile({
                 style={styles.inputUnified}
                 placeholder="Ingresa tu profesión"
                 value={customProfession}
-                onChangeText={setCustomProfession}
+                onChangeText={text => {
+                  setCustomProfession(text);
+                  // Validar palabras prohibidas
+                  const lower = text.trim().toLowerCase();
+                  if (forbiddenWords.some(word => lower.includes(word))) {
+                    setToast({ message: 'El servicio ingresado no está permitido en la plataforma.', type: 'error' });
+                    if (toastTimeout.current) clearTimeout(toastTimeout.current);
+                    toastTimeout.current = setTimeout(() => setToast(null), 3000);
+                  }
+                }}
               />
             </>
           )}
@@ -350,18 +404,42 @@ export default function EditProfessionalProfile({
           {provinceList.length > 0 && (
             <>
               <Text style={styles.label}>{country === 'UY' ? 'Departamento *' : 'Provincia/Estado *'}</Text>
-              <View style={styles.pickerWrapper}>
-                <Picker
-                  selectedValue={province}
-                  onValueChange={setProvince}
-                  style={styles.pickerNative}
-                >
-                  <Picker.Item label="Selecciona una opción" value="" color="#999" />
-                  {provinceList.map(p => (
-                    <Picker.Item key={String(p.id)} label={p.nombre} value={String(p.id)} />
-                  ))}
-                </Picker>
-              </View>
+              <TouchableOpacity style={styles.customPickerTrigger} onPress={() => setProvinceModalVisible(true)}>
+                <Text style={styles.pickerTriggerText}>
+                  {provinceList.find(p => String(p.id) === String(province))?.nombre || 'Selecciona una opción'}
+                </Text>
+                <Text style={styles.pickerArrow}>▼</Text>
+              </TouchableOpacity>
+              <Modal visible={provinceModalVisible} transparent animationType="fade" onRequestClose={() => setProvinceModalVisible(false)}>
+                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setProvinceModalVisible(false)}>
+                  <View style={styles.modalContent}>
+                    <Text style={styles.modalTitle}>{country === 'UY' ? 'Selecciona un departamento' : 'Selecciona una provincia/estado'}</Text>
+                    <ScrollView style={styles.modalScroll}>
+                      {provinceList.map((p) => {
+                        const selected = String(p.id) === String(province);
+                        return (
+                          <TouchableOpacity
+                            key={String(p.id)}
+                            style={[styles.modalOption, selected && styles.modalOptionSelected]}
+                            onPress={() => {
+                              setProvince(String(p.id));
+                              setDepartment('');
+                              setCity('');
+                              setProvinceModalVisible(false);
+                            }}
+                          >
+                            <Text style={[styles.modalOptionText, selected && styles.modalOptionTextSelected]}>{p.nombre}</Text>
+                            {selected && <Text style={styles.checkmark}>✓</Text>}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                    <TouchableOpacity onPress={() => setProvinceModalVisible(false)} style={styles.modalCloseBtn}>
+                      <Text style={styles.modalCloseBtnText}>Cerrar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              </Modal>
             </>
           )}
 
@@ -369,18 +447,41 @@ export default function EditProfessionalProfile({
           {departmentList.length > 0 && (
             <>
               <Text style={styles.label}>Municipio/Localidad *</Text>
-              <View style={styles.pickerWrapper}>
-                <Picker
-                  selectedValue={department}
-                  onValueChange={setDepartment}
-                  style={styles.pickerNative}
-                >
-                  <Picker.Item label="Selecciona una opción" value="" color="#999" />
-                  {departmentList.map(d => (
-                    <Picker.Item key={String(d.id)} label={d.nombre} value={String(d.id)} />
-                  ))}
-                </Picker>
-              </View>
+              <TouchableOpacity style={styles.customPickerTrigger} onPress={() => setDepartmentModalVisible(true)}>
+                <Text style={styles.pickerTriggerText}>
+                  {departmentList.find(d => String(d.id) === String(department))?.nombre || 'Selecciona una opción'}
+                </Text>
+                <Text style={styles.pickerArrow}>▼</Text>
+              </TouchableOpacity>
+              <Modal visible={departmentModalVisible} transparent animationType="fade" onRequestClose={() => setDepartmentModalVisible(false)}>
+                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setDepartmentModalVisible(false)}>
+                  <View style={styles.modalContent}>
+                    <Text style={styles.modalTitle}>Selecciona un municipio/localidad</Text>
+                    <ScrollView style={styles.modalScroll}>
+                      {departmentList.map((d) => {
+                        const selected = String(d.id) === String(department);
+                        return (
+                          <TouchableOpacity
+                            key={String(d.id)}
+                            style={[styles.modalOption, selected && styles.modalOptionSelected]}
+                            onPress={() => {
+                              setDepartment(String(d.id));
+                              setCity('');
+                              setDepartmentModalVisible(false);
+                            }}
+                          >
+                            <Text style={[styles.modalOptionText, selected && styles.modalOptionTextSelected]}>{d.nombre}</Text>
+                            {selected && <Text style={styles.checkmark}>✓</Text>}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                    <TouchableOpacity onPress={() => setDepartmentModalVisible(false)} style={styles.modalCloseBtn}>
+                      <Text style={styles.modalCloseBtnText}>Cerrar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              </Modal>
             </>
           )}
 
@@ -388,18 +489,40 @@ export default function EditProfessionalProfile({
           {cityList.length > 0 && (
             <>
               <Text style={styles.label}>Ciudad *</Text>
-              <View style={styles.pickerWrapper}>
-                <Picker
-                  selectedValue={city}
-                  onValueChange={setCity}
-                  style={styles.pickerNative}
-                >
-                  <Picker.Item label="Selecciona una ciudad" value="" color="#999" />
-                  {cityList.map(c => (
-                    <Picker.Item key={String(c.id)} label={c.nombre} value={String(c.id)} />
-                  ))}
-                </Picker>
-              </View>
+              <TouchableOpacity style={styles.customPickerTrigger} onPress={() => setCityModalVisible(true)}>
+                <Text style={styles.pickerTriggerText}>
+                  {cityList.find(c => String(c.id) === String(city))?.nombre || 'Selecciona una ciudad'}
+                </Text>
+                <Text style={styles.pickerArrow}>▼</Text>
+              </TouchableOpacity>
+              <Modal visible={cityModalVisible} transparent animationType="fade" onRequestClose={() => setCityModalVisible(false)}>
+                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setCityModalVisible(false)}>
+                  <View style={styles.modalContent}>
+                    <Text style={styles.modalTitle}>Selecciona una ciudad</Text>
+                    <ScrollView style={styles.modalScroll}>
+                      {cityList.map((c) => {
+                        const selected = String(c.id) === String(city);
+                        return (
+                          <TouchableOpacity
+                            key={String(c.id)}
+                            style={[styles.modalOption, selected && styles.modalOptionSelected]}
+                            onPress={() => {
+                              setCity(String(c.id));
+                              setCityModalVisible(false);
+                            }}
+                          >
+                            <Text style={[styles.modalOptionText, selected && styles.modalOptionTextSelected]}>{c.nombre}</Text>
+                            {selected && <Text style={styles.checkmark}>✓</Text>}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                    <TouchableOpacity onPress={() => setCityModalVisible(false)} style={styles.modalCloseBtn}>
+                      <Text style={styles.modalCloseBtnText}>Cerrar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              </Modal>
             </>
           )}
           
@@ -420,10 +543,10 @@ export default function EditProfessionalProfile({
 
           <View style={styles.row}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Tarifa por Hora ($)</Text>
+              <Text style={styles.label}>Tarifa por Hora ($) <Text style={{ color: '#9ca3af', fontWeight: '400', fontSize: 13 }}>(opcional)</Text></Text>
               <TextInput
                 style={styles.inputUnified}
-                placeholder="1500"
+                placeholder="Ej: 1500"
                 value={hourlyRate}
                 onChangeText={setHourlyRate}
                 keyboardType="numeric"

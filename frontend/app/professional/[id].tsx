@@ -180,14 +180,29 @@ export default function ProfessionalProfileScreen() {
       return;
     }
 
-    console.log('📤 Enviando propuesta:', {
-      client_id: userProfile.id,
-      professional_id: professional.id,
-      message: message?.substring(0, 50)
-    });
-
+    // Check for existing pending or in-progress hire
     setActionLoading(true);
     try {
+      const { data: existingHire, error: existingError } = await supabase
+        .from('hires')
+        .select('*')
+        .eq('client_id', userProfile.id)
+        .eq('professional_id', professional.id)
+        .in('status', ['pending', 'in_progress', 'waiting_client_approval'])
+        .order('created_at', { ascending: false })
+        .maybeSingle();
+
+      if (!existingError && existingHire) {
+        // There is already a pending or in-progress proposal
+        Alert.alert(
+          'Propuesta ya enviada',
+          'Ya tienes una propuesta pendiente o un trabajo en progreso con este profesional. Debes esperar a que finalice antes de enviar otra.'
+        );
+        setActionLoading(false);
+        return;
+      }
+
+      // No existing pending/in-progress hire, proceed to send proposal
       const { data, error } = await supabase
         .from('hires')
         .insert({

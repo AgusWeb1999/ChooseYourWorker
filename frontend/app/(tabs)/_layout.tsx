@@ -1,9 +1,9 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, Text } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+// IconSymbol eliminado, se usan emojis manuales
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useWindowDimensions } from '@/hooks/useWindowDimensions';
@@ -53,21 +53,21 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Inicio',
-          tabBarIcon: ({ color }) => <IconSymbol size={20} name="house.fill" color={color} />,
+          tabBarIcon: () => <Text style={{fontSize: 20, marginBottom: 0}}>🏠</Text>,
         }}
       />
       <Tabs.Screen
         name="messages"
         options={{
           title: 'Mensajes',
-          tabBarIcon: ({ color }) => <IconSymbol size={20} name="bubble.left.and.bubble.right.fill" color={color} />,
+          tabBarIcon: () => <Text style={{fontSize: 20, marginBottom: 0}}>💬</Text>,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Perfil',
-          tabBarIcon: ({ color }) => <IconSymbol size={20} name="person.fill" color={color} />,
+          tabBarIcon: () => <Text style={{fontSize: 20, marginBottom: 0}}>👤</Text>,
         }}
       />
     </Tabs>
