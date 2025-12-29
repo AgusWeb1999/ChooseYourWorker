@@ -1,4 +1,17 @@
 import { useState, useEffect } from 'react';
+// Profesiones para trabajadores
+const PROFESSIONS = [
+  'Carpintero', 'Electricista', 'Plomero', 'Pintor', 'Técnico de HVAC',
+  'Jardinero', 'Limpieza del Hogar', 'Mantenimiento General', 'Servicios de Mudanza',
+  'Cerrajero', 'Albañil', 'Gasista', 'Techista', 'Decorador', 'Control de Plagas',
+  'Mecánico', 'Chofer', 'Niñera', 'Cuidador de Adultos', 'Cocinero', 'Panadero',
+  'Peluquero', 'Estilista', 'Manicurista', 'Masajista', 'Fotógrafo', 'Diseñador Gráfico',
+  'Programador', 'Profesor Particular', 'Entrenador Personal', 'Fumigador', 'Mudanzas',
+  'Reparación de Computadoras', 'Reparación de Celulares', 'Reparación de Electrodomésticos',
+  'Tapicero', 'Vidriero', 'Herrero', 'Soldador', 'Montador de Muebles', 'Paseador de Perros',
+  'Veterinario', 'Animador de Eventos', 'DJ', 'Músico', 'Cantante', 'Traductor', 'Redactor',
+  'Community Manager', 'Marketing Digital', 'Otro',
+];
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, SafeAreaView, KeyboardAvoidingView, Platform, Modal } from 'react-native';
 import { Link, router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
@@ -6,20 +19,7 @@ import { validatePhone, validateId, normalizePhone, normalizeId, getCountriesLis
 import { Picker } from '@react-native-picker/picker';
 import { useAuth } from '../../src/contexts/AuthContext';
 
-// --- INYECCIÓN DE CSS PARA WEB (Quita bordes nativos) ---
-if (Platform.OS === 'web' && typeof document !== 'undefined') {
-  const style = document.createElement('style');
-  style.textContent = `
-    select, input, textarea {
-      outline: none !important;
-      border: none !important;
-      appearance: none !important;
-      box-shadow: none !important;
-    }
-    select::-ms-expand { display: none; }
-  `;
-  document.head.append(style);
-}
+
 
 // --- FETCH PROVINCIAS (Departamentos) ---
 const fetchProvinces = async (country: string) => {
@@ -185,6 +185,7 @@ const fetchCities = async (country: string, provinceId: string, departmentId: st
   return [];
 };
 
+
 export default function RegisterScreen() {
   const { refreshProfiles } = useAuth();
   const [email, setEmail] = useState('');
@@ -205,6 +206,22 @@ export default function RegisterScreen() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [countryModalVisible, setCountryModalVisible] = useState(false);
+
+  // Campos de perfil profesional (solo para trabajadores)
+  const [displayName, setDisplayName] = useState('');
+  const [profession, setProfession] = useState('');
+  const [customProfession, setCustomProfession] = useState('');
+  const [bio, setBio] = useState('');
+  const [hourlyRate, setHourlyRate] = useState('');
+  const [yearsExperience, setYearsExperience] = useState('');
+
+  // Buscador de profesiones
+  const [professionSearch, setProfessionSearch] = useState('');
+  const filteredProfessions = PROFESSIONS.filter(p => {
+    if (p === 'Otro') return false; // 'Otro' se agrega siempre al final
+    return p.toLowerCase().includes(professionSearch.toLowerCase());
+  });
+  if (!filteredProfessions.includes('Otro')) filteredProfessions.push('Otro');
 
   // 1. Efecto: Al cambiar País
   useEffect(() => {
@@ -236,18 +253,59 @@ export default function RegisterScreen() {
 
   async function handleRegister() {
     const newErrors: Record<string, string> = {};
+
     if (!fullName) newErrors.fullName = 'El nombre es requerido';
     if (!email) newErrors.email = 'El email es requerido';
     if (!password || password.length < 6) newErrors.password = 'Mínimo 6 caracteres';
-    
     const phoneVal = validatePhone(phone, country);
     if (!phoneVal.valid) newErrors.phone = phoneVal.error || 'Teléfono inválido';
-    
     const idVal = validateId(idNumber, country);
     if (!idVal.valid) newErrors.idNumber = idVal.error || 'ID inválido';
 
+    // Departamento/Provincia y Ciudad requeridos
+    if (provinceList.length > 0 && !province) newErrors.province = country === 'UY' ? 'El departamento es requerido' : 'La provincia es requerida';
+    if (departmentList.length > 0 && !department) newErrors.department = 'El municipio/localidad es requerido';
+    if (cityList.length > 0 && !city) newErrors.city = 'La ciudad es requerida';
+
+    // Validación de campos profesionales si es trabajador
+    if (userType === 'worker') {
+      if (!displayName) newErrors.displayName = 'El nombre para mostrar es requerido';
+      let finalProfession = profession === 'Otro' ? customProfession : profession;
+      if (!finalProfession) newErrors.profession = 'La profesión es requerida';
+      if (profession === 'Otro') {
+        if (!customProfession.trim()) {
+          newErrors.customProfession = 'Por favor ingresa tu profesión específica';
+        } else {
+          // Filtro de profesiones ilegales/inapropiadas
+          const forbiddenWords = [
+            'prostitución', 'prostitucion', 'escort', 'sexo', 'sexual', 'pornografía', 'pornografia',
+            'puta', 'putas', 'puto', 'putos', 'putita', 'putitas', 'putito', 'putitos',
+            'drogas', 'narcotráfico', 'narcotrafico', 'venta de drogas', 'marihuana', 'cocaína', 'cocaina',
+            'trata de personas', 'tráfico de personas', 'trafico de personas', 'pedofilia', 'infantil',
+            'niño', 'niña', 'niños', 'niñas', 'child', 'children', 'abuso', 'abuso infantil',
+            'armas', 'venta de armas', 'asesino', 'sicario', 'hacker', 'piratería', 'pirateria',
+            'hackeo', 'hack', 'falsificación', 'falsificacion', 'documentos falsos', 'fraude',
+            'estafa', 'robos', 'robo', 'hurto', 'secuestro', 'extorsión', 'extorsion',
+            'terrorismo', 'terrorista', 'explosivos', 'bomba', 'violación', 'violacion',
+            'zoofilia', 'bestialismo', 'incesto', 'necrofília', 'necrofila', 'canibalismo',
+            'canibal', 'organos', 'venta de organos', 'tráfico de organos', 'trafico de organos',
+            'esclavitud', 'esclavo', 'esclava', 'esclavos', 'esclavas',
+          ];
+          const lower = customProfession.trim().toLowerCase();
+          if (forbiddenWords.some(word => lower.includes(word))) {
+            newErrors.customProfession = 'El servicio ingresado no está permitido en la plataforma.';
+          }
+        }
+      }
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      // Mostrar alerta general si hay algún error
+      const firstError = Object.values(newErrors)[0];
+      if (firstError) {
+        Alert.alert('Error', firstError);
+      }
       return;
     }
 
@@ -280,18 +338,19 @@ export default function RegisterScreen() {
           city
         }).eq('id', authData.user.id);
 
-        // Si es profesional, crear registro en professionals
+        // Si es profesional, crear registro en professionals con los datos completos
         if (userType === 'worker') {
+          const finalProfession = profession === 'Otro' ? customProfession : profession;
           await supabase.from('professionals').insert({
             user_id: authData.user.id,
-            display_name: fullName,
-            profession: '', // Se puede pedir luego en el onboarding
-            bio: '',
+            display_name: displayName,
+            profession: finalProfession.charAt(0).toUpperCase() + finalProfession.slice(1).toLowerCase(),
+            bio,
             city: city,
             state: province,
             zip_code: '',
-            hourly_rate: null,
-            years_experience: null,
+            hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
+            years_experience: yearsExperience ? parseInt(yearsExperience) : null,
             phone: normalizePhone(phone, country),
             rating: 0,
             rating_count: 0,
@@ -349,6 +408,7 @@ export default function RegisterScreen() {
                     ))}
                   </Picker>
                 </View>
+                {errors.province && <Text style={styles.errorText}>{errors.province}</Text>}
               </>
             )}
 
@@ -368,6 +428,7 @@ export default function RegisterScreen() {
                     ))}
                   </Picker>
                 </View>
+                {errors.department && <Text style={styles.errorText}>{errors.department}</Text>}
               </>
             )}
 
@@ -387,15 +448,26 @@ export default function RegisterScreen() {
                     ))}
                   </Picker>
                 </View>
+                {errors.city && <Text style={styles.errorText}>{errors.city}</Text>}
               </>
             )}
 
             <Text style={styles.label}>Información Personal</Text>
+
             <TextInput style={[styles.inputUnified, errors.fullName && styles.inputError]} placeholder="Nombre Completo" value={fullName} onChangeText={setFullName} placeholderTextColor="#9ca3af" />
+            {errors.fullName && <Text style={styles.errorText}>{errors.fullName}</Text>}
+
             <TextInput style={[styles.inputUnified, errors.email && styles.inputError]} placeholder="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" placeholderTextColor="#9ca3af" />
+            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+
             <TextInput style={[styles.inputUnified, errors.password && styles.inputError]} placeholder="Contraseña" value={password} onChangeText={setPassword} secureTextEntry placeholderTextColor="#9ca3af" />
+            {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+
             <TextInput style={[styles.inputUnified, errors.phone && styles.inputError]} placeholder="Teléfono" value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholderTextColor="#9ca3af" />
+            {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
+
             <TextInput style={[styles.inputUnified, errors.idNumber && styles.inputError]} placeholder="Cédula / DNI" value={idNumber} onChangeText={setIdNumber} placeholderTextColor="#9ca3af" />
+            {errors.idNumber && <Text style={styles.errorText}>{errors.idNumber}</Text>}
 
             <Text style={styles.label}>¿Qué buscas en WorkingGo?</Text>
             <View style={styles.typeContainer}>
@@ -407,11 +479,111 @@ export default function RegisterScreen() {
               </TouchableOpacity>
             </View>
 
+
+            {/* Campos de perfil profesional solo si elige Trabajador */}
+            {userType === 'worker' && (
+              <View style={{ marginTop: 10, marginBottom: 10 }}>
+                <Text style={styles.label}>Nombre para Mostrar *</Text>
+                <TextInput
+                  style={[styles.inputUnified, errors.displayName && styles.inputError]}
+                  placeholder="Cómo te verán los clientes"
+                  value={displayName}
+                  onChangeText={setDisplayName}
+                  placeholderTextColor="#9ca3af"
+                />
+                {errors.displayName && <Text style={styles.errorText}>{errors.displayName}</Text>}
+
+                <Text style={styles.label}>Profesión *</Text>
+
+                {/* Buscador de profesiones */}
+                <TextInput
+                  style={[styles.inputUnified, { marginBottom: 8 }]}
+                  placeholder="Buscar profesión..."
+                  placeholderTextColor="#9ca3af"
+                  value={professionSearch}
+                  onChangeText={setProfessionSearch}
+                />
+
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                  {filteredProfessions.map((p) => (
+                    <TouchableOpacity
+                      key={p}
+                      style={[
+                        styles.typeButton,
+                        profession === p && styles.typeButtonActive,
+                        { minWidth: 90, marginBottom: 6 },
+                      ]}
+                      onPress={() => setProfession(p)}
+                    >
+                      <Text style={profession === p ? styles.typeButtonTextActive : styles.typeButtonText}>{p}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                {errors.profession && <Text style={styles.errorText}>{errors.profession}</Text>}
+                {profession === 'Otro' && (
+                  <>
+                    <Text style={styles.label}>Especifique su profesión *</Text>
+                    <TextInput
+                      style={[styles.inputUnified, errors.customProfession && styles.inputError]}
+                      placeholder="Ingrese su profesión"
+                      value={customProfession}
+                      onChangeText={setCustomProfession}
+                      placeholderTextColor="#9ca3af"
+                    />
+                    {errors.customProfession && <Text style={styles.errorText}>{errors.customProfession}</Text>}
+                  </>
+                )}
+
+                <Text style={styles.label}>Bio</Text>
+                <TextInput
+                  style={[styles.inputUnified, { height: 100, textAlignVertical: 'top' }]}
+                  placeholder="Describe tu experiencia..."
+                  value={bio}
+                  onChangeText={setBio}
+                  multiline
+                  numberOfLines={4}
+                  placeholderTextColor="#9ca3af"
+                />
+
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.label}>Tarifa por Hora ($) <Text style={{color:'#9ca3af', fontWeight:'normal'}}>(opcional)</Text></Text>
+                    <TextInput
+                      style={styles.inputUnified}
+                      placeholder="1500"
+                      value={hourlyRate}
+                      onChangeText={setHourlyRate}
+                      keyboardType="numeric"
+                      placeholderTextColor="#9ca3af"
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.label}>Años de Experiencia</Text>
+                    <TextInput
+                      style={[styles.inputUnified, errors.yearsExperience && styles.inputError]}
+                      placeholder="5"
+                      value={yearsExperience}
+                      onChangeText={setYearsExperience}
+                      keyboardType="numeric"
+                      placeholderTextColor="#9ca3af"
+                    />
+                  </View>
+                </View>
+              </View>
+            )}
+
             <View style={styles.termsContainer}>
               <TouchableOpacity style={styles.checkbox} onPress={() => setTermsAccepted(!termsAccepted)}>
                 <View style={[styles.checkboxInner, termsAccepted && styles.checkboxChecked]}>{termsAccepted && <Text style={styles.checkmark}>✓</Text>}</View>
               </TouchableOpacity>
-              <Text style={styles.termsLabel}>Acepto los términos de servicio</Text>
+              <View style={{flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap'}}>
+                <Text style={styles.termsLabel}>Acepto los </Text>
+                <Link href="/auth/terms-of-service" asChild>
+                  <TouchableOpacity>
+                    <Text style={[styles.link, {textDecorationLine: 'underline'}]}>Términos de Servicio</Text>
+                  </TouchableOpacity>
+                </Link>
+              </View>
             </View>
 
             <TouchableOpacity style={[styles.buttonPrimary, loading && styles.buttonDisabled]} onPress={handleRegister} disabled={loading}>
@@ -460,7 +632,7 @@ const styles = StyleSheet.create({
     marginBottom: 14, 
     fontSize: 16,
     color: '#1f2937',
-    ...Platform.select({ web: { outlineStyle: 'none' } })
+    // outlineStyle removed for compatibility
   },
   inputError: { borderColor: '#ef4444', backgroundColor: '#fef2f2' },
   

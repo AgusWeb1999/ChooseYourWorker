@@ -21,7 +21,8 @@ function RootLayoutNav() {
     }
 
     const inAuthGroup = (segments[0] as string) === 'auth';
-    const inCompleteProfile = segments[1] === 'complete-profile' || segments[1] === 'complete-client-profile';
+    // Ya no existen rutas de completar perfil
+    const inCompleteProfile = false;
     const isWorker = userProfile?.is_professional === true;
     const isClient = userProfile?.is_professional === false;
 
@@ -41,20 +42,7 @@ function RootLayoutNav() {
       // No session and not in auth -> go to login
       console.log('➡️ Redirecting to login (no session)');
       router.replace('/auth/login' as any);
-    } else if (session && needsProfileCompletion && !inCompleteProfile) {
-      // Someone needs to complete profile
-      if (isWorker) {
-        console.log('➡️ Redirecting to complete worker profile');
-        router.replace('/auth/complete-profile' as any);
-      } else if (isClient) {
-        console.log('➡️ Redirecting to complete client profile');
-        router.replace('/auth/complete-client-profile' as any);
-      }
-    } else if (session && !needsProfileCompletion && inCompleteProfile) {
-      // Profile is complete but still in complete-profile page -> go to tabs
-      console.log('➡️ Redirecting to tabs (profile already complete, leaving form)');
-      router.replace('/(tabs)');
-    } else if (session && !needsProfileCompletion && inAuthGroup && !inCompleteProfile) {
+    } else if (session && !needsProfileCompletion && inAuthGroup) {
       // Has session, profile complete and in auth -> go to tabs
       console.log('➡️ Redirecting to tabs (profile complete)');
       router.replace('/(tabs)');
@@ -74,8 +62,6 @@ function RootLayoutNav() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="auth/login" />
         <Stack.Screen name="auth/register" />
-        <Stack.Screen name="auth/complete-profile" />
-        <Stack.Screen name="auth/complete-client-profile" />
       </Stack>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </View>

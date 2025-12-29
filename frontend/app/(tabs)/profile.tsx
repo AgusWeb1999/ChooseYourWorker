@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useWindowDimensions } from 'react-native';
 import { 
   StyleSheet, Text, View, TouchableOpacity, Alert, Modal, 
   ScrollView, Switch, Linking, Platform, SafeAreaView, Image 
@@ -19,6 +20,7 @@ import AvatarUpload from '../../components/AvatarUpload';
 // import { setOnboardingSeen, hasSeenOnboarding } from '../../utils/onboarding';
 
 export default function ProfileScreen() {
+  const { width } = useWindowDimensions();
   const { 
     user, userProfile, professionalProfile, signOut, 
     refreshProfiles, isSubscriptionActive 
@@ -93,15 +95,37 @@ export default function ProfileScreen() {
                 onRequestClose={() => setLogoutModalVisible(false)}
               >
                 <View style={styles.modalOverlay}>
-                  <View style={styles.customModalContent}>
+                  <View
+                    style={[
+                      styles.customModalContent,
+                      width < 500
+                        ? { width: width * 0.9, padding: 16 }
+                        : width < 900
+                        ? { width: 400, padding: 24 }
+                        : { width: 420, padding: 32 },
+                    ]}
+                  >
                     <Text style={styles.modalTitle}>Cerrar Sesión</Text>
-                    <Text style={{marginVertical: 16}}>¿Estás seguro que deseas cerrar sesión?</Text>
-                    <View style={{flexDirection: 'row', justifyContent: 'flex-end'}}>
-                      <TouchableOpacity onPress={() => setLogoutModalVisible(false)} style={[styles.modalButton, {backgroundColor:'#e5e7eb'}]}>
-                        <Text style={{color:'#374151'}}>Cancelar</Text>
+                    <Text style={{ marginVertical: 16, textAlign: 'center' }}>
+                      ¿Estás seguro que deseas cerrar sesión?
+                    </Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                      <TouchableOpacity
+                        onPress={() => setLogoutModalVisible(false)}
+                        style={[styles.modalButton, { backgroundColor: '#e5e7eb' }]}
+                      >
+                        <Text style={{ color: '#374151' }}>Cancelar</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity onPress={confirmLogout} style={[styles.modalButton, {backgroundColor:'#ef4444', marginLeft: 10}]}> 
-                        <Text style={{color:'#fff', fontWeight:'bold'}}>Cerrar Sesión</Text>
+                      <TouchableOpacity
+                        onPress={confirmLogout}
+                        style={[
+                          styles.modalButton,
+                          { backgroundColor: '#ef4444', marginLeft: 10 },
+                        ]}
+                      >
+                        <Text style={{ color: '#fff', fontWeight: 'bold' }}>
+                          Cerrar Sesión
+                        </Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -245,7 +269,30 @@ export default function ProfileScreen() {
             <TouchableOpacity onPress={() => setAboutModalVisible(false)}><Text style={styles.closeButton}>✕</Text></TouchableOpacity>
           </View>
           <ScrollView style={styles.modalContent}>
-            <Text style={styles.aboutText}>WorkingGo fue creada por estudiantes de ingeniería para potenciar el trabajo local.</Text>
+            <Text style={styles.aboutText}>
+              Bienvenido a WorkingGo 🚀
+              {'\n'}
+              Somos una plataforma creada por estudiantes de ingeniería con una misión clara: conectar el talento local con quienes lo necesitan, de forma fácil, segura y divertida.
+              {'\n'}
+              ¿Por qué existimos?
+              Porque creemos que todos merecen la oportunidad de encontrar trabajo digno y que cada cliente merece encontrar a la persona ideal para su proyecto, desde arreglar una canilla hasta crear una app.
+              {'\n'}
+              • Profesionales y clientes pueden chatear, dejar reseñas y construir confianza real.
+              • Aquí no hay robots (bueno, salvo este texto), solo personas reales ayudando a personas reales.
+              • ¡Nos encanta la diversidad! Hay espacio para electricistas, diseñadores, paseadores de perros, programadores y más.
+              {'\n'}
+              Nuestra visión:
+              Ser la comunidad de trabajo local más confiable y divertida de Latinoamérica. Queremos que cada contratación sea una experiencia positiva, transparente y segura.
+              {'\n'}
+              ¿Sabías que...?
+              - Puedes armar tu portafolio con fotos y logros.
+              - Hay sistema de calificaciones y comentarios para que elijas con confianza.
+              - ¡Tenemos versión web y móvil, para que nunca pierdas una oportunidad!
+              {'\n'}
+              ¿Tienes una idea loca para mejorar la app? ¡Escríbenos! Nos encanta escuchar a la comunidad.
+              {'\n'}
+              WorkingGo: Donde el trabajo y la buena onda se encuentran. 💪✨
+            </Text>
           </ScrollView>
         </SafeAreaView>
       </Modal>
@@ -287,7 +334,18 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   profileLimiter: { flexGrow: 1, alignItems: 'center', paddingVertical: 24, maxWidth: 1100, width: '100%', alignSelf: 'center' },
-  customModalContent: { backgroundColor: '#fff', borderRadius: 16, padding: 24, width: 820, alignSelf: 'center', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 10, elevation: 5 },
+  customModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: 420,
+    maxWidth: '95%',
+    alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 5,
+  },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', justifyContent: 'center', alignItems: 'center' },
   modalButton: { paddingVertical: 10, paddingHorizontal: 18, borderRadius: 8 },
     versionInfo: { alignItems: 'center', marginTop: 30, marginBottom: 10 },
