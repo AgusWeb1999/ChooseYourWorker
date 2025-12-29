@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Linking, Modal, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 import WebView from 'react-native-webview';
 
@@ -22,12 +21,49 @@ export default function SubscriptionPlan() {
   const [selectedProvider, setSelectedProvider] = useState<'mercadopago' | 'paypal' | null>(null);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [cotizacion, setCotizacion] = useState<number | null>(null);
+  const [cotizacionLoading, setCotizacionLoading] = useState(false);
+  // Consultar cotización si el usuario es de Uruguay
+  React.useEffect(() => {
+    const fetchCotizacion = async () => {
+      if (userProfile?.country_code === 'AR') {
+        setCotizacionLoading(true);
+        try {
+          const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+          const headers = new Headers();
+          headers.append('Content-Type', 'application/json');
+          if (anonKey) headers.append('apikey', anonKey);
+          if (anonKey) headers.append('Authorization', `Bearer ${anonKey}`);
+          const response = await fetch('https://oeabhlewxekejmgrucrz.supabase.co/rest/v1/rpc/convert_currency', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ amount: 20, from_currency: 'UYU', to_currency: 'ARS' })
+          });
+          const data = await response.json();
+          if (typeof data === 'number') {
+            setCotizacion(data);
+          } else if (typeof data === 'object' && data !== null && data.result) {
+            setCotizacion(Number(data.result));
+          } else {
+            setCotizacion(null);
+          }
+        } catch (e) {
+          setCotizacion(null);
+        } finally {
+          setCotizacionLoading(false);
+        }
+      } else {
+        setCotizacion(null);
+      }
+    };
+    fetchCotizacion();
+  }, [userProfile?.country_code]);
 
   const features = [
-    { icon: 'chatbubbles', text: 'Mensajes ilimitados', free: false, premium: true },
-    { icon: 'search', text: 'Búsqueda básica', free: true, premium: true },
-    { icon: 'star', text: 'Perfil destacado en búsquedas', free: false, premium: true },
-    { icon: 'ribbon', text: 'Insignia de cuenta Premium', free: false, premium: true },
+    { icon: 'chatbubbles', text: '💬 Mensajes ilimitados', free: false, premium: true },
+    { icon: 'search', text: '🔍 Búsqueda básica', free: true, premium: true },
+    { icon: 'star', text: '🌟 Perfil destacado en búsquedas', free: false, premium: true },
+    { icon: 'ribbon', text: '🏅 Insignia de cuenta Premium', free: false, premium: true },
   ];
 
   const closePaymentModal = () => {
@@ -38,16 +74,33 @@ export default function SubscriptionPlan() {
 
   const isLocalUrl = (url: string) => url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1');
 
+  // Variables de entorno para moneda y monto base
+  // Se deben definir en .env.local para que Expo las lea correctamente
+  const DEFAULT_CURRENCY = process.env.EXPO_PUBLIC_PAYMENT_CURRENCY || 'UYU';
+  const DEFAULT_AMOUNT = Number(process.env.EXPO_PUBLIC_PAYMENT_AMOUNT || '20');
+
   const handlePayWithMercadoPago = async () => {
-      try {
+    try {
       setLoading(true);
       setSelectedProvider('mercadopago');
 
-      // 1. Obtener la KEY
+      // Todas las variables deben estar en .env.local
       const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-
       if (!anonKey) {
         throw new Error("Falta la variable de entorno EXPO_PUBLIC_SUPABASE_ANON_KEY");
+      }
+
+      let currency = DEFAULT_CURRENCY;
+      let amount = DEFAULT_AMOUNT;
+      // Si el usuario es argentino, usar ARS y el monto convertido
+      if (userProfile?.country_code === 'AR') {
+        currency = 'ARS';
+        amount = cotizacion ? Number(cotizacion) : 0;
+        if (!amount || amount <= 0) {
+          Alert.alert('Error', 'No se pudo obtener la cotización ARS. Intenta más tarde.');
+          setLoading(false);
+          return;
+        }
       }
 
       const response = await fetch(SUPABASE_FUNCTION_URL, {
@@ -59,14 +112,14 @@ export default function SubscriptionPlan() {
         },
         body: JSON.stringify({
           userId: userProfile?.id,
-          currency: 'USD', 
+          currency,
+          amount,
         }),
       });
 
       const data = await response.json();
 
       if (data.initPoint) {
-        // Usar modal con WebView en todas las plataformas
         setPaymentUrl(data.initPoint);
         setShowPaymentModal(true);
       } else {
@@ -96,7 +149,7 @@ export default function SubscriptionPlan() {
       <View style={styles.container}>
         <View style={styles.contentLimiter}>
           <View style={styles.header}>
-            <Ionicons name="checkmark-circle" size={80} color={theme.colors.success} />
+            <Text style={{fontSize: 64, marginBottom: 8}}>✅</Text>
             <Text style={styles.title}>¡Eres Premium! 🎉</Text>
             <Text style={styles.subtitle}>
               Disfrutando de todas las funcionalidades
@@ -136,9 +189,8 @@ export default function SubscriptionPlan() {
             <Text style={styles.sectionTitle}>Beneficios Premium</Text>
             {features.filter(f => f.premium).map((feature, index) => (
               <View key={index} style={styles.featureRow}>
-                <Ionicons name={feature.icon as any} size={24} color={theme.colors.primary} />
                 <Text style={styles.featureText}>{feature.text}</Text>
-                <Ionicons name="checkmark" size={24} color={theme.colors.success} />
+                <Text style={{fontSize: 20, marginLeft: 8}}>✅</Text>
               </View>
             ))}
           </View>
@@ -157,7 +209,7 @@ export default function SubscriptionPlan() {
               style={styles.backButton}
               onPress={() => router.back()}
             >
-              <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
+              <Text style={{fontSize: 20}}>⬅️</Text>
             </TouchableOpacity>
             <Text style={styles.title}>Suscripción Premium</Text>
             <Text style={styles.subtitle}>
@@ -167,7 +219,7 @@ export default function SubscriptionPlan() {
               style={[styles.backButton, { left: 'auto', right: 16 }]}
               onPress={() => router.push('/' as any)}
             >
-              <Ionicons name="home" size={24} color={theme.colors.text} />
+              <Text style={{fontSize: 20}}>🏠</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -183,7 +235,7 @@ export default function SubscriptionPlan() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
+          <Text style={{fontSize: 20}}>⬅️</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Elige tu Plan</Text>
         <Text style={styles.subtitle}>
@@ -193,7 +245,7 @@ export default function SubscriptionPlan() {
           style={[styles.backButton, { left: 'auto', right: 16 }]}
           onPress={() => router.push('/' as any)}
         >
-          <Ionicons name="home" size={24} color={theme.colors.text} />
+          <Text style={{fontSize: 20}}>🏠</Text>
         </TouchableOpacity>
         </View>
 
@@ -206,11 +258,9 @@ export default function SubscriptionPlan() {
         <View style={styles.featuresList}>
           {features.map((feature, index) => (
             <View key={index} style={styles.featureRow}>
-              <Ionicons 
-                name={feature.icon as any} 
-                size={20} 
-                color={feature.free ? theme.colors.primary : theme.colors.textLight} 
-              />
+              <Text style={{fontSize: 18, marginRight: 8}}>
+                {feature.text.match(/^[^ ]+/)?.[0] || '🔹'}
+              </Text>
               <Text style={[
                 styles.featureText,
                 !feature.free && styles.featureDisabled
@@ -218,9 +268,9 @@ export default function SubscriptionPlan() {
                 {feature.text}
               </Text>
               {feature.free ? (
-                <Ionicons name="checkmark" size={20} color={theme.colors.success} />
+                <Text style={{fontSize: 18, marginLeft: 8}}>✅</Text>
               ) : (
-                <Ionicons name="close" size={20} color={theme.colors.error} />
+                <Text style={{fontSize: 18, marginLeft: 8}}>❌</Text>
               )}
             </View>
           ))}
@@ -234,7 +284,17 @@ export default function SubscriptionPlan() {
         </View>
         <View style={styles.planHeader}>
           <Text style={styles.planName}>Premium</Text>
-          <Text style={styles.planPrice}>USD $0.5</Text>
+          {userProfile?.country_code === 'AR' ? (
+            cotizacionLoading ? (
+              <Text style={styles.planPrice}>ARS $ {cotizacion ? cotizacion.toFixed(2) : '...'}</Text>
+            ) : cotizacion ? (
+              <Text style={styles.planPrice}>ARS $ {cotizacion.toFixed(2)}</Text>
+            ) : (
+              <Text style={styles.planPrice}>ARS $ ...</Text>
+            )
+          ) : (
+            <Text style={styles.planPrice}>UYU $20</Text>
+          )}
         </View>
         <Text style={styles.planPeriod}>/mes</Text>
         <Text style={styles.planDuration}>por mes</Text>
@@ -242,9 +302,8 @@ export default function SubscriptionPlan() {
         <View style={styles.featuresList}>
           {features.filter(f => f.premium).map((feature, index) => (
             <View key={index} style={styles.featureRow}>
-              <Ionicons name={feature.icon as any} size={20} color={theme.colors.primary} />
               <Text style={styles.featureText}>{feature.text}</Text>
-              <Ionicons name="checkmark" size={20} color={theme.colors.success} />
+              <Text style={{fontSize: 20, marginLeft: 8}}>✅</Text>
             </View>
           ))}
         </View>
@@ -264,8 +323,7 @@ export default function SubscriptionPlan() {
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <>
-                    <Ionicons name="card" size={24} color="#fff" />
-                    <Text style={styles.paymentButtonText}>Mercado Pago</Text>
+                    <Text style={styles.paymentButtonText}>💳 Mercado Pago</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -279,7 +337,7 @@ export default function SubscriptionPlan() {
         </View>
 
         <View style={styles.securityNote}>
-          <Ionicons name="shield-checkmark" size={24} color={theme.colors.success} />
+          <Text style={{fontSize: 20, marginRight: 8}}>🛡️</Text>
           <Text style={styles.securityText}>
             Pagos seguros. Puedes cancelar en cualquier momento.
           </Text>
@@ -301,7 +359,7 @@ export default function SubscriptionPlan() {
               {selectedProvider === 'mercadopago' ? 'Mercado Pago' : 'PayPal'}
             </Text>
             <TouchableOpacity onPress={closePaymentModal}>
-              <Ionicons name="close" size={24} color={theme.colors.text} />
+              <Text style={{fontSize: 24, color: theme.colors.text}}>✖️</Text>
             </TouchableOpacity>
           </View>
           

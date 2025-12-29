@@ -50,7 +50,7 @@ const SUBSCRIPTION_PRICE_USD = 0.5;
 // ============================================
 app.post('/api/mercadopago/create-preference', async (req, res) => {
   try {
-    const { userId, currency = 'USD' } = req.body;
+    const { userId, currency = 'USD', amount = 20 } = req.body;
 
     if (!userId) {
       return res.status(400).json({ error: 'userId es requerido' });
@@ -89,18 +89,40 @@ app.post('/api/mercadopago/create-preference', async (req, res) => {
       }
     }
 
-    const price = SUBSCRIPTION_PRICE_USD;
 
-    // Crear preferencia de pago
+    let finalCurrency = currency;
+    let finalAmount = amount;
+
+    if (currency === 'ARS') {
+      const { data: conversion, error: conversionError } = await supabase.rpc('convert_currency', {
+        amount,
+        from_currency: 'UYU',
+        to_currency: 'ARS',
+      });
+      if (conversionError || !conversion) {
+        console.error('Error al convertir moneda:', conversionError);
+        return res.status(500).json({ error: 'No se pudo obtener la cotización UYU→ARS' });
+      }
+      finalCurrency = 'ARS';
+      finalAmount = Number(conversion);
+    } else if (currency === 'UYU') {
+      // Forzar siempre 20 UYU para uruguayos
+      finalCurrency = 'UYU';
+      finalAmount = 20;
+    }
+
+    console.log('[MP] Preferencia: moneda', finalCurrency, 'monto', finalAmount);
+
+    // Crear preferencia de pago con el monto y moneda correctos
     const preference = await preferenceClient.create({
       body: {
         items: [
           {
             title: 'Suscripción Premium - ChooseYourWorker',
             description: 'Suscripción mensual premium con funcionalidades ilimitadas',
-            unit_price: price,
+            unit_price: finalAmount,
             quantity: 1,
-            currency_id: currency,
+            currency_id: finalCurrency,
           },
         ],
         payer: {
@@ -119,6 +141,10 @@ app.post('/api/mercadopago/create-preference', async (req, res) => {
           user_id: userId,
           subscription_type: 'premium',
           duration_months: 1,
+          original_currency: currency,
+          original_amount: amount,
+          converted_amount: finalAmount,
+          converted_currency: finalCurrency,
         },
       },
     });
