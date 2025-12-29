@@ -378,7 +378,7 @@ export default function ProfessionalProfileScreen() {
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>📍 Ubicación:</Text>
               <Text style={styles.infoValue}>
-                {professional.city}, {professional.state} ({professional.zip_code})
+                {professional.city})
               </Text>
             </View>
 

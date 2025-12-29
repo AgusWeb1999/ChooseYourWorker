@@ -268,6 +268,7 @@ export default function RegisterScreen() {
       if (authError) throw authError;
 
       if (authData.user) {
+        // Actualizar tabla users (siempre)
         await supabase.from('users').update({ 
           is_professional: userType === 'worker',
           phone: normalizePhone(phone, country),
@@ -276,6 +277,27 @@ export default function RegisterScreen() {
           province,
           city
         }).eq('id', authData.user.id);
+
+        // Si es profesional, crear registro en professionals
+        if (userType === 'worker') {
+          await supabase.from('professionals').insert({
+            user_id: authData.user.id,
+            display_name: fullName,
+            profession: '', // Se puede pedir luego en el onboarding
+            bio: '',
+            city: city,
+            state: province,
+            zip_code: '',
+            hourly_rate: null,
+            years_experience: null,
+            phone: normalizePhone(phone, country),
+            rating: 0,
+            rating_count: 0,
+            total_reviews: 0,
+            avatar_url: null,
+            completed_hires_count: 0
+          });
+        }
       }
       Alert.alert('Éxito', 'Registro completado');
     } catch (err: any) {

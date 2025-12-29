@@ -148,9 +148,6 @@ export default function ProfileScreen() {
             </>
           )}
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => setSettingsModalVisible(true)}>
-            <Text style={styles.menuText}>Configuración</Text>
-          </TouchableOpacity>
           <TouchableOpacity style={styles.menuItem} onPress={() => setHelpModalVisible(true)}>
             <Text style={styles.menuText}>Ayuda</Text>
           </TouchableOpacity>

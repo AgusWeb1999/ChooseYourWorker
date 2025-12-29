@@ -76,10 +76,25 @@ const fetchCities = async (country: string, provinceId: string, departmentId: st
     }
     if (country === 'UY') {
       const ciudadesUY: Record<string, {id:string, nombre:string}[]> = {
-        AR: [ {id:'artigas', nombre:'Artigas'}, {id:'bella_union', nombre:'Bella Unión'} ],
-        CA: [ {id:'canelones', nombre:'Canelones'}, {id:'ciudad_de_la_costa', nombre:'Ciudad de la Costa'} ],
-        // ... (resto de ciudades de tu lista original)
+        AR: [ {id:'artigas', nombre:'Artigas'}, {id:'bella_union', nombre:'Bella Unión'}, {id:'tomas_gomensoro', nombre:'Tomás Gomensoro'}, {id:'baltasar_brum', nombre:'Baltasar Brum'} ],
+        CA: [ {id:'canelones', nombre:'Canelones'}, {id:'ciudad_de_la_costa', nombre:'Ciudad de la Costa'}, {id:'las_piedras', nombre:'Las Piedras'}, {id:'pando', nombre:'Pando'}, {id:'la_paz', nombre:'La Paz'}, {id:'santa_lucia', nombre:'Santa Lucía'}, {id:'progreso', nombre:'Progreso'}, {id:'sauce', nombre:'Sauce'}, {id:'atlantida', nombre:'Atlántida'} ],
+        CL: [ {id:'melo', nombre:'Melo'}, {id:'rio_branco', nombre:'Río Branco'}, {id:'fraile_muerto', nombre:'Fraile Muerto'} ],
+        CO: [ {id:'colonia_del_sacramento', nombre:'Colonia del Sacramento'}, {id:'carmelo', nombre:'Carmelo'}, {id:'juan_lacaze', nombre:'Juan Lacaze'}, {id:'nueva_helvecia', nombre:'Nueva Helvecia'}, {id:'rosario', nombre:'Rosario'}, {id:'nueva_palmira', nombre:'Nueva Palmira'}, {id:'tarariras', nombre:'Tarariras'} ],
+        DU: [ {id:'durazno', nombre:'Durazno'}, {id:'sarandi_yi', nombre:'Sarandí del Yí'}, {id:'villa_del_carmen', nombre:'Villa del Carmen'} ],
+        FS: [ {id:'trinidad', nombre:'Trinidad'}, {id:'ismael_cortinas', nombre:'Ismael Cortinas'} ],
+        FD: [ {id:'florida', nombre:'Florida'}, {id:'sarandi_grande', nombre:'Sarandí Grande'}, {id:'casupa', nombre:'Casupá'}, {id:'25_de_mayo', nombre:'25 de Mayo'} ],
+        LA: [ {id:'minas', nombre:'Minas'}, {id:'jose_pedro_varela', nombre:'José Pedro Varela'}, {id:'solis_de_mataojo', nombre:'Solís de Mataojo'} ],
+        MA: [ {id:'maldonado', nombre:'Maldonado'}, {id:'san_carlos', nombre:'San Carlos'}, {id:'punta_del_este', nombre:'Punta del Este'}, {id:'piriapolis', nombre:'Piriápolis'}, {id:'pan_de_azucar', nombre:'Pan de Azúcar'}, {id:'aigua', nombre:'Aiguá'} ],
         MO: [ {id:'montevideo', nombre:'Montevideo'} ],
+        PA: [ {id:'paysandu', nombre:'Paysandú'}, {id:'guichon', nombre:'Guichón'}, {id:'quebracho', nombre:'Quebracho'} ],
+        RN: [ {id:'fray_bentos', nombre:'Fray Bentos'}, {id:'young', nombre:'Young'}, {id:'nuevo_berlin', nombre:'Nuevo Berlín'} ],
+        RV: [ {id:'rivera', nombre:'Rivera'}, {id:'tranqueras', nombre:'Tranqueras'}, {id:'vichadero', nombre:'Vichadero'}, {id:'minas_de_corrales', nombre:'Minas de Corrales'} ],
+        RO: [ {id:'rocha', nombre:'Rocha'}, {id:'chuy', nombre:'Chuy'}, {id:'castillos', nombre:'Castillos'}, {id:'lascano', nombre:'Lascano'}, {id:'la_paloma', nombre:'La Paloma'}, {id:'punta_del_diablo', nombre:'Punta del Diablo'} ],
+        SA: [ {id:'salto', nombre:'Salto'}, {id:'constitucion', nombre:'Constitución'}, {id:'belen', nombre:'Belén'} ],
+        SJ: [ {id:'san_jose_de_mayo', nombre:'San José de Mayo'}, {id:'ciudad_del_plata', nombre:'Ciudad del Plata'}, {id:'libertad', nombre:'Libertad'}, {id:'rodriguez', nombre:'Rodríguez'} ],
+        SO: [ {id:'mercedes', nombre:'Mercedes'}, {id:'dolores', nombre:'Dolores'}, {id:'cardona', nombre:'Cardona'}, {id:'palmitas', nombre:'Palmitas'} ],
+        TA: [ {id:'tacuarembo', nombre:'Tacuarembó'}, {id:'paso_de_los_toros', nombre:'Paso de los Toros'}, {id:'san_gregorio_de_polanco', nombre:'San Gregorio de Polanco'}, {id:'villa_ansina', nombre:'Villa Ansina'}, {id:'curtina', nombre:'Curtina'} ],
+        TT: [ {id:'treinta_y_tres', nombre:'Treinta y Tres'}, {id:'vergara', nombre:'Vergara'}, {id:'santa_clara_de_olimar', nombre:'Santa Clara de Olimar'} ],
       };
       return ciudadesUY[provinceId] || [];
     }
@@ -260,8 +275,8 @@ export default function EditUserProfile({ userProfile, userEmail, onSave, onCanc
           <TextInput style={[styles.inputUnified, styles.inputDisabled]} value={userEmail} editable={false} />
           <Text style={styles.label}>Cédula / DNI *</Text>
           <TextInput style={styles.inputUnified} value={idNumber} onChangeText={setIdNumber} keyboardType="numeric" />
-          <Text style={styles.label}>Cédula / DNI *</Text>
-          <TextInput style={styles.inputUnified} value={idNumber} onChangeText={setIdNumber} keyboardType="numeric" />
+          <Text style={styles.label}>Celular *</Text>
+          <TextInput style={styles.inputUnified} value={userProfile?.phone || ''} onChangeText={() => {}} keyboardType="phone-pad" editable={false} />
 
           <View style={styles.buttonRow}>
             {onCancel && (
