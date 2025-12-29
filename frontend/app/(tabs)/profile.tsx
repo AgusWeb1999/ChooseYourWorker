@@ -7,7 +7,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
 
 // Components
-import OnboardingModal from '../../components/OnboardingModal';
+// import OnboardingModal from '../../components/OnboardingModal';
 import EditProfessionalProfile from '../../components/EditProfessionalProfile';
 import EditClientProfile from '../../components/EditClientProfile';
 import ClientHirings from '../../components/ClientHirings';
@@ -16,7 +16,7 @@ import WorkPortfolio from '../../components/WorkPortfolio';
 import AvatarUpload from '../../components/AvatarUpload';
 
 // Utils
-import { setOnboardingSeen, hasSeenOnboarding } from '../../utils/onboarding';
+// import { setOnboardingSeen, hasSeenOnboarding } from '../../utils/onboarding';
 
 export default function ProfileScreen() {
   const { 
@@ -26,7 +26,7 @@ export default function ProfileScreen() {
   const router = useRouter();
 
   // Modales Visibility State
-  const [onboardingVisible, setOnboardingVisible] = useState(false);
+  // const [onboardingVisible, setOnboardingVisible] = useState(false);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editClientModalVisible, setEditClientModalVisible] = useState(false);
@@ -42,16 +42,7 @@ export default function ProfileScreen() {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [showProfile, setShowProfile] = useState(true);
 
-  // 1. Efecto Onboarding
-  useEffect(() => {
-    if (userProfile) {
-      const tipo = userProfile.is_professional ? 'profesional' : 'cliente';
-      if (!hasSeenOnboarding(tipo)) {
-        setOnboardingVisible(true);
-        setOnboardingSeen(tipo);
-      }
-    }
-  }, [userProfile]);
+  // Eliminado efecto de onboarding
 
   // Handlers
   const handleLogout = () => {
@@ -143,19 +134,19 @@ export default function ProfileScreen() {
                 <Text style={styles.menuText}>Editar Perfil Profesional</Text>
               </TouchableOpacity>
               
-              <TouchableOpacity style={[styles.menuItem, styles.menuItemHighlight]} onPress={() => setJobsModalVisible(true)}>
+              <TouchableOpacity style={[styles.menuItem]} onPress={() => setJobsModalVisible(true)}>
                 <Text style={styles.menuTextHighlight}>Mis Trabajos</Text>
               </TouchableOpacity>
               
-              <TouchableOpacity style={[styles.menuItem, styles.menuItemPortfolio]} onPress={() => setPortfolioModalVisible(true)}>
-                <Text style={styles.menuTextPortfolio}>📸 Portafolio de Trabajos</Text>
+              <TouchableOpacity style={[styles.menuItem]} onPress={() => setPortfolioModalVisible(true)}>
+                <Text style={styles.menuTextPortfolio}>Portafolio de Trabajos 📸</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
                 style={styles.menuItem} 
                 onPress={() => router.push(isSubscriptionActive ? '/subscription/manage' : '/subscription/plan')}
               >
-                <Text style={styles.menuText}>{isSubscriptionActive ? 'Gestionar Suscripción' : 'Ver Planes Premium'}</Text>
+                <Text style={styles.menuTextPremium}>{isSubscriptionActive ? 'Gestionar Suscripción' : 'Ver Planes Premium 👑'}</Text>
               </TouchableOpacity>
             </>
           ) : (
@@ -184,11 +175,7 @@ export default function ProfileScreen() {
 
       {/* --- MODALES --- */}
 
-      <OnboardingModal 
-        visible={onboardingVisible} 
-        onClose={() => setOnboardingVisible(false)} 
-        isProfessional={!!userProfile?.is_professional} 
-      />
+      {/* OnboardingModal eliminado de profile, ahora solo se muestra en Home */}
 
       {/* Modal Editar Profesional */}
       <Modal visible={editModalVisible} animationType="slide" presentationStyle="pageSheet">
@@ -237,7 +224,7 @@ export default function ProfileScreen() {
                 style={styles.contactButton}
                 onPress={() => {
                   setHelpModalVisible(false);
-                  setTimeout(() => setOnboardingVisible(true), 350);
+                  // setTimeout(() => setOnboardingVisible(true), 350);
                 }}
               >
                 <Text style={styles.contactButtonText}>👀 Ver Guía Rápida</Text>
@@ -320,6 +307,7 @@ const styles = StyleSheet.create({
   menuText: { fontSize: 16, color: '#1f2937' },
   menuTextHighlight: { fontSize: 16, color: '#4f46e5', fontWeight: 'bold' },
   menuTextPortfolio: { fontSize: 16, color: '#be185d', fontWeight: 'bold' },
+  menuTextPremium: { fontSize: 16, color: '#d97706', fontWeight: 'bold' },
   logoutButton: { margin: 20, padding: 16, alignItems: 'center' },
   logoutText: { color: '#ef4444', fontWeight: 'bold', fontSize: 16 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', padding: 20, alignItems: 'center', borderBottomWidth: 1, borderColor: '#eee' },

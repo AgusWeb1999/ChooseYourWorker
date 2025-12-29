@@ -15,33 +15,42 @@ const PROFESSIONS = [
 export default function CompleteProfileScreen() {
   const { user, userProfile, professionalProfile, needsProfileCompletion, refreshProfiles } = useAuth();
   const { width } = useWindowDimensions();
-  
+
+  // Si el usuario no es profesional, redirigir a home SOLO si userProfile está cargado
+  useEffect(() => {
+    if (userProfile && userProfile.is_professional === false) {
+      router.replace('/(tabs)');
+    }
+  }, [userProfile]);
+
   const [displayName, setDisplayName] = useState('');
   const [profession, setProfession] = useState('');
   const [customProfession, setCustomProfession] = useState('');
   const [bio, setBio] = useState('');
-  const [zipCode, setZipCode] = useState(''); // Se mantienen variables para evitar errores de referencia
-  // ...ubicación eliminada...
+  const [zipCode, setZipCode] = useState('');
   const [hourlyRate, setHourlyRate] = useState('');
   const [yearsExperience, setYearsExperience] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Verificar si el usuario ya tiene perfil completo
   useEffect(() => {
-    if (!needsProfileCompletion && professionalProfile) {
-      console.log('⚡ Profile already complete, redirecting...');
+    if (userProfile && userProfile.is_professional && !needsProfileCompletion && professionalProfile) {
       router.replace('/(tabs)');
     }
-  }, [needsProfileCompletion, professionalProfile]);
+  }, [needsProfileCompletion, professionalProfile, userProfile]);
 
   // Si ya tiene perfil completo, mostrar loading mientras redirige
-  if (!needsProfileCompletion && professionalProfile) {
+  if (userProfile && userProfile.is_professional && !needsProfileCompletion && professionalProfile) {
     return (
       <View style={[styles.container, styles.centerContent]}>
         <ActivityIndicator size="large" color="#1e3a5f" />
         <Text style={styles.loadingText}>Redirigiendo...</Text>
       </View>
     );
+  }
+  // Si es cliente, nunca mostrar este formulario
+  if (userProfile && userProfile.is_professional === false) {
+    return null;
   }
 
   // ...ubicación eliminada...

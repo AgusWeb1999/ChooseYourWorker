@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import OnboardingModal from '../../components/OnboardingModal';
+import { setOnboardingSeen, hasSeenOnboarding } from '../../utils/onboarding';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Image, Platform, SafeAreaView, ScrollView, Modal, ViewStyle, TextStyle, ImageStyle } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
@@ -45,6 +46,37 @@ export default function HomeScreen() {
   useEffect(() => {
     filterProfessionals();
   }, [searchQuery, selectedProfession, selectedCity, selectedMinRating, professionals, premiumUsersMap]);
+
+  // Onboarding para profesional
+  const [onboardingVisible, setOnboardingVisible] = useState(false);
+  const [onboardingReady, setOnboardingReady] = useState(false);
+  const { professionalProfile, needsProfileCompletion } = useAuth();
+
+  useEffect(() => {
+    // Mostrar onboarding solo si:
+    // - userProfile está cargado
+    // - es profesional
+    // - ya completó el perfil (tiene professionalProfile)
+    // - no falta completar perfil (needsProfileCompletion === false)
+    // - no lo ha visto antes
+    if (
+      userProfile &&
+      userProfile.is_professional &&
+      professionalProfile &&
+      !needsProfileCompletion &&
+      !hasSeenOnboarding('profesional')
+    ) {
+      setOnboardingReady(true);
+    }
+  }, [userProfile, professionalProfile, needsProfileCompletion]);
+
+  useEffect(() => {
+    if (onboardingReady) {
+      setOnboardingVisible(true);
+      setOnboardingSeen('profesional');
+      setOnboardingReady(false);
+    }
+  }, [onboardingReady]);
 
   async function fetchProfessionals() {
     try {
@@ -242,6 +274,11 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <OnboardingModal
+        visible={onboardingVisible}
+        onClose={() => setOnboardingVisible(false)}
+        isProfessional={!!userProfile?.is_professional}
+      />
       <View style={styles.container}>
         {/* Nav Bar Superior */}
         <View style={styles.topNav}>
@@ -267,7 +304,7 @@ export default function HomeScreen() {
           {(Platform.OS !== 'web' || width < 768) && (
             <>
               <View style={styles.headerCompact}>
-                <Text style={styles.welcomeTextCompact}>Para tu proximo trabajo encuentra un profesional!</Text>
+                <Text style={styles.welcomeTextCompact}>Encuentra tu profesional ideal!</Text>
               </View>
 
               {/* Search Bar */}
@@ -454,7 +491,7 @@ export default function HomeScreen() {
               {/* Contenido principal */}
               <View style={styles.mainContent}>
                 <View style={styles.webHeaderCompact}>
-                  <Text style={styles.webWelcomeText}>Encuentra tu profesional ideal</Text>
+                  <Text style={styles.webWelcomeText}>Encuentra tu profesional ideal!</Text>
                   <Text style={styles.webSubtitle}>Miles de expertos listos para ayudarte</Text>
                 </View>
 
@@ -973,6 +1010,7 @@ const styles = StyleSheet.create<Styles>({
     fontSize: 20,
     fontWeight: '700',
     color: '#0f172a',
+    marginBottom: 10
   },
   subtitleCompact: {
     fontSize: 14,

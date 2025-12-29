@@ -29,12 +29,33 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+    // Limpia sesión, perfiles y datos persistentes (localStorage/AsyncStorage y flags de onboarding)
+    async function resetAppState() {
+      setSession(null);
+      setUserProfile(null);
+      setProfessionalProfile(null);
+      setLoading(false);
+      // Limpiar localStorage (web)
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem('supabase.auth.token');
+        window.localStorage.removeItem('onboardingSeen_profesional');
+        window.localStorage.removeItem('onboardingSeen_cliente');
+      }
+      // Limpiar AsyncStorage (nativo)
+      try {
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        await AsyncStorage.removeItem('supabase.auth.token');
+        await AsyncStorage.removeItem('onboardingSeen_profesional');
+        await AsyncStorage.removeItem('onboardingSeen_cliente');
+      } catch {}
+    }
   const [session, setSession] = useState<Session | null>(null);
   const [userProfile, setUserProfile] = useState<any | null>(null);
   const [professionalProfile, setProfessionalProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let timeoutId: any;
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session?.user) {
@@ -55,7 +76,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Fallback: si loading dura más de 8 segundos, mostrar error pero NO limpiar sesión ni forzar logout
+    timeoutId = setTimeout(() => {
+      if (loading) {
+        console.error('⏳ Loading timeout: mostrando error pero manteniendo sesión');
+        // Opcional: podrías mostrar un toast o mensaje de error global aquí
+        // Solo mostrar error, no limpiar sesión
+      }
+    }, 8000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   async function fetchUserProfile(authUid: string) {
@@ -148,13 +181,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfessionalProfile(null);
   }
 
-  // Determine if user needs to complete their profile
-  // Workers need professional profile, Clients need phone/address
+  // Solo los profesionales deben completar perfil
   const needsProfileCompletion = 
     session !== null && 
     userProfile !== null &&
-    ((userProfile?.is_professional === true && professionalProfile === null) ||
-     (userProfile?.is_professional === false && (!userProfile?.phone || !userProfile?.address)));
+    userProfile?.is_professional === true && professionalProfile === null;
 
   // Check if user has premium subscription
   const isPremium = userProfile?.subscription_type === 'premium';
@@ -188,6 +219,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isSubscriptionActive,
       signOut,
       refreshProfiles,
+      resetAppState,
     }}>
       {children}
     </AuthContext.Provider>
