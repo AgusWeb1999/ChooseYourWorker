@@ -18,7 +18,7 @@ export default function SubscriptionPlan() {
   const router = useRouter();
   const { userProfile, isPremium, isSubscriptionActive, refreshProfiles } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<'mercadopago' | 'paypal' | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<'mercadopago' | null>(null);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [cotizacion, setCotizacion] = useState<number | null>(null);
@@ -60,10 +60,10 @@ export default function SubscriptionPlan() {
   }, [userProfile?.country_code]);
 
   const features = [
-    { icon: 'chatbubbles', text: '💬 Mensajes ilimitados', free: false, premium: true },
-    { icon: 'search', text: '🔍 Búsqueda básica', free: true, premium: true },
-    { icon: 'star', text: '🌟 Perfil destacado en búsquedas', free: false, premium: true },
-    { icon: 'ribbon', text: '🏅 Insignia de cuenta Premium', free: false, premium: true },
+    {text: '💬 Mensajes ilimitados', free: false, premium: true },
+    {text: '🔍 Búsqueda básica', free: true, premium: true },
+    {text: '🌟 Perfil destacado en búsquedas', free: false, premium: true },
+    {text: '🏅 Insignia de cuenta Premium', free: false, premium: true },
   ];
 
   const closePaymentModal = () => {
@@ -200,32 +200,11 @@ export default function SubscriptionPlan() {
   }
 
   // Solo profesionales pueden ver planes de suscripción
-  if (userProfile?.is_professional !== true) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.contentLimiter}>
-          <View style={styles.header}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => router.back()}
-            >
-              <Text style={{fontSize: 20}}>⬅️</Text>
-            </TouchableOpacity>
-            <Text style={styles.title}>Suscripción Premium</Text>
-            <Text style={styles.subtitle}>
-              Esta suscripción es exclusiva para profesionales.
-            </Text>
-            <TouchableOpacity 
-              style={[styles.backButton, { left: 'auto', right: 16 }]}
-              onPress={() => router.push('/' as any)}
-            >
-              <Text style={{fontSize: 20}}>🏠</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    );
-  }
+  React.useEffect(() => {
+    if (userProfile && userProfile.is_professional !== true) {
+      router.replace('/');
+    }
+  }, [userProfile]);
 
   return (
     <View style={styles.container}>
@@ -382,8 +361,8 @@ export default function SubscriptionPlan() {
                       // Refrescar perfil para obtener estado premium actualizado
                       refreshProfiles();
                       Alert.alert(
-                        'Pago exitoso',
-                        'Tu suscripción Premium ha sido activada',
+                        '✅ Pago exitoso',
+                        '🎉 Tu suscripción Premium ha sido activada',
                         [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
                       );
                     }
@@ -406,8 +385,8 @@ export default function SubscriptionPlan() {
                   // Refrescar perfil para obtener estado premium actualizado
                   refreshProfiles();
                   Alert.alert(
-                    'Pago exitoso',
-                    'Tu suscripción Premium ha sido activada',
+                    '✅ Pago exitoso',
+                    '🎉 Tu suscripción Premium ha sido activada',
                     [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
                   );
                 } else if (state.url.includes('/subscription/failure') || state.url.includes('failure')) {

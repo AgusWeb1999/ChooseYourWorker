@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+// import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 
 export default function SubscriptionFailure() {
@@ -11,7 +11,7 @@ export default function SubscriptionFailure() {
     <View style={styles.container}>
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Ionicons name="close-circle" size={120} color={theme.colors.error} />
+          <Text style={{ fontSize: 100, color: theme.colors.error, textAlign: 'center' }}>❌</Text>
         </View>
         
         <Text style={styles.title}>Pago No Completado</Text>
@@ -23,19 +23,19 @@ export default function SubscriptionFailure() {
           <Text style={styles.reasonsTitle}>Posibles causas:</Text>
           <View style={styles.reasonsList}>
             <View style={styles.reasonItem}>
-              <Ionicons name="alert-circle-outline" size={20} color={theme.colors.textLight} />
+              <Text style={{ fontSize: 20, marginRight: 8 }}>⚠️</Text>
               <Text style={styles.reasonText}>Fondos insuficientes</Text>
             </View>
             <View style={styles.reasonItem}>
-              <Ionicons name="alert-circle-outline" size={20} color={theme.colors.textLight} />
+              <Text style={{ fontSize: 20, marginRight: 8 }}>⚠️</Text>
               <Text style={styles.reasonText}>Datos de tarjeta incorrectos</Text>
             </View>
             <View style={styles.reasonItem}>
-              <Ionicons name="alert-circle-outline" size={20} color={theme.colors.textLight} />
+              <Text style={{ fontSize: 20, marginRight: 8 }}>⚠️</Text>
               <Text style={styles.reasonText}>Límite de compras excedido</Text>
             </View>
             <View style={styles.reasonItem}>
-              <Ionicons name="alert-circle-outline" size={20} color={theme.colors.textLight} />
+              <Text style={{ fontSize: 20, marginRight: 8 }}>⚠️</Text>
               <Text style={styles.reasonText}>Problemas de conexión</Text>
             </View>
           </View>
@@ -56,7 +56,7 @@ export default function SubscriptionFailure() {
         </TouchableOpacity>
 
         <View style={styles.supportCard}>
-          <Ionicons name="help-circle" size={32} color={theme.colors.primary} />
+          <Text style={{ fontSize: 32, color: theme.colors.primary }}>❓</Text>
           <Text style={styles.supportText}>
             ¿Necesitas ayuda?
           </Text>

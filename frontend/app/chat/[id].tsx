@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+// import { Ionicons } from '@expo/vector-icons';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/contexts/AuthContext';
@@ -399,24 +399,18 @@ export default function ChatScreen() {
           // Mensaje para clientes sobre el estado del trabajador
           otherUserIsPremium ? (
             <View style={styles.premiumAlertBox}>
-              <Ionicons 
-                name="checkmark-circle" 
-                size={20} 
-                color="#16a34a" 
-                style={{ marginRight: 8 }}
-              />
+              <Text style={{ fontSize: 20, marginRight: 8 }}>
+                ✅
+              </Text>
               <Text style={styles.premiumAlertText}> 
                 ✨ Trabajador Premium - Chats ilimitados disponibles
               </Text>
             </View>
           ) : (
             <View style={styles.premiumAlertBox}>
-              <Ionicons 
-                name="information-circle" 
-                size={20} 
-                color="#f59e0b" 
-                style={{ marginRight: 8 }}
-              />
+              <Text style={{ fontSize: 20, marginRight: 8 }}>
+                ℹ️
+              </Text>
               <Text style={styles.premiumAlertText}> 
                 Este trabajador no es premium, por lo que los chats ilimitados no están disponibles
               </Text>
@@ -425,11 +419,9 @@ export default function ChatScreen() {
         ) : (
             !isPremium && (
               <View style={[styles.limitWarning, hasReachedLimit && styles.limitWarningDanger]}>
-                <Ionicons 
-                  name={hasReachedLimit ? "alert-circle" : "information-circle"} 
-                  size={16} 
-                  color={hasReachedLimit ? "#ef4444" : "#f59e0b"} 
-                />
+                <Text style={{ fontSize: 16, marginRight: 4 }}>
+                  {hasReachedLimit ? "⚠️" : "ℹ️"}
+                </Text>
                 <Text style={[styles.limitWarningText, hasReachedLimit && styles.limitWarningTextDanger]}>
                   {hasReachedLimit 
                     ? `Límite alcanzado (${messageCount}/${MESSAGE_LIMIT_FREE}). Actualiza a Premium para continuar.`
@@ -470,7 +462,7 @@ export default function ChatScreen() {
             {sending ? (
               <ActivityIndicator size="small" color="#FFF" />
             ) : (
-              <Ionicons name="send" size={22} color="#FFF" />
+              <Text style={{ fontSize: 22, color: '#FFF' }}>📤</Text>
             )}
           </TouchableOpacity>
         </View>

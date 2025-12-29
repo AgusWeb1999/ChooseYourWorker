@@ -6,6 +6,10 @@ const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 
+// Importar y montar el endpoint de transacciones de suscripción
+const apiSubscriptionTransactions = require('./api-subscription-transactions');
+app.use(apiSubscriptionTransactions);
+
 // CORS: permitir llamadas desde cualquier origen en desarrollo
 app.use(
   cors({
@@ -260,6 +264,44 @@ app.post('/api/subscription/cancel', async (req, res) => {
       return res.status(400).json({ error: 'userId es requerido' });
     }
 
+    // 1. Obtener el preapproval/subscription_id del usuario
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('subscription_id, payment_provider')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !user) {
+      console.error('Usuario no encontrado o error:', userError);
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    // 2. Cancelar la suscripción en Mercado Pago si corresponde
+    if (user.payment_provider === 'mercadopago' && user.subscription_id) {
+      try {
+        // Mercado Pago preapproval cancellation endpoint
+        const mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+        const preapprovalId = user.subscription_id;
+        const response = await fetch(`https://api.mercadopago.com/preapproval/${preapprovalId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${mpAccessToken}`,
+          },
+          body: JSON.stringify({ status: 'cancelled' }),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          console.error('Error Mercado Pago al cancelar preapproval:', result);
+          // No retornamos error, seguimos con la cancelación local
+        }
+      } catch (mpError) {
+        console.error('Error llamando a Mercado Pago para cancelar preapproval:', mpError);
+        // No retornamos error, seguimos con la cancelación local
+      }
+    }
+
+    // 3. Cancelar la suscripción en Supabase
     const { error } = await supabase.rpc('cancel_subscription', {
       p_user_id: userId,
     });

@@ -157,21 +157,28 @@ export default function ProfileScreen() {
               <TouchableOpacity style={styles.menuItem} onPress={() => setEditModalVisible(true)}>
                 <Text style={styles.menuText}>Editar Perfil Profesional</Text>
               </TouchableOpacity>
-              
               <TouchableOpacity style={[styles.menuItem]} onPress={() => setJobsModalVisible(true)}>
                 <Text style={styles.menuTextHighlight}>Mis Trabajos</Text>
               </TouchableOpacity>
-              
               <TouchableOpacity style={[styles.menuItem]} onPress={() => setPortfolioModalVisible(true)}>
                 <Text style={styles.menuTextPortfolio}>Portafolio de Trabajos 📸</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.menuItem} 
-                onPress={() => router.push(isSubscriptionActive ? '/subscription/manage' : '/subscription/plan')}
-              >
-                <Text style={styles.menuTextPremium}>{isSubscriptionActive ? 'Gestionar Suscripción' : 'Ver Planes Premium 👑'}</Text>
-              </TouchableOpacity>
+              {/* Mostrar solo para premium activos: "Ver Mi Suscripción" */}
+              {isSubscriptionActive ? (
+                <TouchableOpacity 
+                  style={styles.menuItem} 
+                  onPress={() => router.push('/subscription/manage')}
+                >
+                  <Text style={styles.menuTextPremium}>Ver Mi Suscripción 👑</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity 
+                  style={styles.menuItem} 
+                  onPress={() => router.push('/subscription/plan')}
+                >
+                  <Text style={styles.menuTextPremium}>Ver Planes Premium 👑</Text>
+                </TouchableOpacity>
+              )}
             </>
           ) : (
             <>

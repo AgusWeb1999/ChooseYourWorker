@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+// import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 
 export default function TermsOfService() {
@@ -11,7 +11,9 @@ export default function TermsOfService() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
+          <Text style={{ fontSize: 24 }}>
+            ←
+          </Text>
         </TouchableOpacity>
         <Text style={styles.title}>Términos de Servicio</Text>
       </View>

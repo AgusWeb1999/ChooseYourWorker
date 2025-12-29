@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../src/contexts/AuthContext';
 
@@ -18,7 +17,7 @@ export default function SubscriptionSuccess() {
     <View style={styles.container}>
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Ionicons name="checkmark-circle" size={120} color={theme.colors.success} />
+          <Text style={{fontSize: 96, marginBottom: 8}}>✅</Text>
         </View>
         
         <Text style={styles.title}>¡Pago Exitoso!</Text>
@@ -30,19 +29,15 @@ export default function SubscriptionSuccess() {
           <Text style={styles.benefitsTitle}>Ya puedes disfrutar de:</Text>
           <View style={styles.benefitsList}>
             <View style={styles.benefitItem}>
-              <Ionicons name="checkmark" size={24} color={theme.colors.success} />
+              <Text style={{fontSize: 22, marginRight: 8}}>✅</Text>
               <Text style={styles.benefitText}>Mensajes ilimitados</Text>
             </View>
             <View style={styles.benefitItem}>
-              <Ionicons name="checkmark" size={24} color={theme.colors.success} />
-              <Text style={styles.benefitText}>Filtros avanzados</Text>
-            </View>
-            <View style={styles.benefitItem}>
-              <Ionicons name="checkmark" size={24} color={theme.colors.success} />
+              <Text style={{fontSize: 22, marginRight: 8}}>✅</Text>
               <Text style={styles.benefitText}>Perfil destacado</Text>
             </View>
             <View style={styles.benefitItem}>
-              <Ionicons name="checkmark" size={24} color={theme.colors.success} />
+              <Text style={{fontSize: 22, marginRight: 8}}>✅</Text>
               <Text style={styles.benefitText}>Soporte prioritario</Text>
             </View>
           </View>

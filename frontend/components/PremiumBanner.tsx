@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../constants/theme';
 import { useAuth } from '../src/contexts/AuthContext';
 
@@ -34,7 +33,7 @@ export default function PremiumBanner({
       <View style={[styles.banner, style]}>
         <View style={styles.bannerContent}>
           <View style={styles.iconWrapper}>
-            <Ionicons name="star" size={24} color="#FFD700" />
+            <Text style={{ fontSize: 24 }}>⭐️</Text>
           </View>
           <View style={styles.textContainer}>
             <Text style={styles.bannerTitle}>{message}</Text>
@@ -47,7 +46,7 @@ export default function PremiumBanner({
             onPress={() => router.push('/subscription/plan' as any)}
           >
             <Text style={styles.bannerButtonText}>Upgrade</Text>
-            <Ionicons name="arrow-forward" size={16} color="#fff" />
+            <Text style={{ fontSize: 16, color: '#fff', marginLeft: 4 }}>→</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -58,7 +57,7 @@ export default function PremiumBanner({
     return (
       <View style={[styles.card, style]}>
         <View style={styles.cardHeader}>
-          <Ionicons name="rocket" size={40} color={theme.colors.primary} />
+          <Text style={{ fontSize: 36, color: theme.colors.primary }}>🚀</Text>
           <Text style={styles.cardTitle}>Mejora tu Experiencia</Text>
         </View>
         <Text style={styles.cardDescription}>
@@ -67,15 +66,15 @@ export default function PremiumBanner({
         </Text>
         <View style={styles.cardFeatures}>
           <View style={styles.cardFeature}>
-            <Ionicons name="checkmark-circle" size={20} color={theme.colors.success} />
+            <Text style={{ fontSize: 20, color: theme.colors.success, marginRight: 4 }}>✅</Text>
             <Text style={styles.cardFeatureText}>Mensajes ilimitados</Text>
           </View>
           <View style={styles.cardFeature}>
-            <Ionicons name="checkmark-circle" size={20} color={theme.colors.success} />
+            <Text style={{ fontSize: 20, color: theme.colors.success, marginRight: 4 }}>✅</Text>
             <Text style={styles.cardFeatureText}>Perfil destacado</Text>
           </View>
           <View style={styles.cardFeature}>
-            <Ionicons name="checkmark-circle" size={20} color={theme.colors.success} />
+            <Text style={{ fontSize: 20, color: theme.colors.success, marginRight: 4 }}>✅</Text>
             <Text style={styles.cardFeatureText}>Filtros avanzados</Text>
           </View>
         </View>
@@ -84,7 +83,7 @@ export default function PremiumBanner({
           onPress={() => router.push('/subscription/plan' as any)}
         >
           <Text style={styles.cardButtonText}>Ver Planes Premium</Text>
-          <Ionicons name="sparkles" size={20} color="#fff" />
+          <Text style={{ fontSize: 20, color: '#fff', marginLeft: 4 }}>✨</Text>
         </TouchableOpacity>
       </View>
     );
@@ -97,10 +96,10 @@ export default function PremiumBanner({
       onPress={() => router.push('/subscription/plan' as any)}
     >
       <View style={styles.inlineContent}>
-        <Ionicons name="diamond" size={20} color={theme.colors.primary} />
+        <Text style={{ fontSize: 20, color: theme.colors.primary, marginRight: 4 }}>💎</Text>
         <Text style={styles.inlineText}>Hazte Premium</Text>
       </View>
-      <Ionicons name="chevron-forward" size={20} color={theme.colors.primary} />
+      <Text style={{ fontSize: 20, color: theme.colors.primary }}>→</Text>
     </TouchableOpacity>
   );
 }

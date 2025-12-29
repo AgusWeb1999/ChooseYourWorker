@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://192.168.1.3:3000';
@@ -16,11 +15,11 @@ export default function ManageSubscription() {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={{ position: 'absolute', left: 16 }}>
-            <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
+            <Text style={{ fontSize: 24 }}>←</Text>
           </TouchableOpacity>
           <Text style={styles.title}>Gestionar Suscripción</Text>
           <TouchableOpacity onPress={() => router.push('/' as any)} style={{ position: 'absolute', right: 16 }}>
-            <Ionicons name="home" size={24} color={theme.colors.text} />
+            <Text style={{ fontSize: 24 }}>🏠</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.card}>
@@ -146,17 +145,17 @@ export default function ManageSubscription() {
       <View style={styles.contentLimiter}>
         <View style={styles.topBar}>
           <TouchableOpacity style={styles.navButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
+            <Text style={{ fontSize: 20, marginRight: 4 }}>←</Text>
             <Text style={styles.navButtonText}>Atrás</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.navButton} onPress={() => router.push('/' as any)}>
-            <Ionicons name="home" size={22} color={theme.colors.text} />
+            <Text style={{ fontSize: 20, marginRight: 4 }}>🏠</Text>
             <Text style={styles.navButtonText}>Inicio</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.header}>
-          <Ionicons name="settings" size={60} color={theme.colors.primary} />
+          <Text style={{ fontSize: 54, color: theme.colors.primary, marginBottom: 8 }}>⚙️</Text>
           <Text style={styles.title}>Gestionar Suscripción</Text>
         </View>
 
@@ -166,7 +165,7 @@ export default function ManageSubscription() {
         
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Plan:</Text>
-          <Text style={[styles.infoBadge, styles.premiumBadge]}>Premium</Text>
+          <Text style={[styles.infoBadge, styles.premiumBadge]}>👑 Premium</Text>
         </View>
 
         <View style={styles.infoRow}>
@@ -175,12 +174,12 @@ export default function ManageSubscription() {
             styles.infoBadge,
             { backgroundColor: isSubscriptionActive ? theme.colors.success : theme.colors.error }
           ]}>
-            {isSubscriptionActive ? 'Activa' : userProfile?.subscription_status === 'cancelled' ? 'Cancelada' : 'Inactiva'}
+            {isSubscriptionActive ? '🟢 Activa' : userProfile?.subscription_status === 'cancelled' ? '🟠 Cancelada' : '🔴 Inactiva'}
           </Text>
         </View>
 
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Inicio:</Text>
+          <Text style={styles.infoLabel}>📅 Inicio:</Text>
           <Text style={styles.infoValue}>
             {userProfile?.subscription_start_date
               ? new Date(userProfile.subscription_start_date).toLocaleDateString('es-AR', {
@@ -194,7 +193,7 @@ export default function ManageSubscription() {
 
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>
-            {isSubscriptionActive ? 'Renovación:' : 'Finaliza:'}
+            {isSubscriptionActive ? '🔄 Renovación:' : '⏰ Finaliza:'}
           </Text>
           <Text style={styles.infoValue}>
             {userProfile?.subscription_end_date
@@ -208,15 +207,13 @@ export default function ManageSubscription() {
         </View>
 
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Método de pago:</Text>
+          <Text style={styles.infoLabel}>💳 Método de pago:</Text>
           <View style={styles.paymentMethod}>
-            <Ionicons 
-              name={userProfile?.payment_provider === 'mercadopago' ? 'card' : 'logo-paypal'} 
-              size={20} 
-              color={theme.colors.text} 
-            />
+            <Text style={{fontSize: 18}}>
+              {userProfile?.payment_provider === 'mercadopago' ? '💳' : '💸'}
+            </Text>
             <Text style={styles.infoValue}>
-              {userProfile?.payment_provider === 'mercadopago' ? 'Mercado Pago' : 'PayPal'}
+              {userProfile?.payment_provider === 'mercadopago' ? 'Mercado Pago' : 'Mercado Pago'}
             </Text>
           </View>
         </View>
@@ -225,23 +222,54 @@ export default function ManageSubscription() {
       {/* Acciones */}
       {isSubscriptionActive && userProfile?.subscription_status !== 'cancelled' && (
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Acciones</Text>
-          
+          <Text style={styles.sectionTitle}>🛑 Acciones</Text>
           <TouchableOpacity
             style={styles.cancelButton}
-            onPress={handleCancelSubscription}
+            onPress={async () => {
+              Alert.alert(
+                'Cancelar Suscripción',
+                '¿Estás seguro de que deseas cancelar tu suscripción premium? Perderás el acceso a las funcionalidades premium al finalizar el período actual.',
+                [
+                  { text: 'No, mantener', style: 'cancel' },
+                  { text: 'Sí, cancelar', style: 'destructive', onPress: async () => {
+                    try {
+                      setLoading(true);
+                      // Cancelar en Mercado Pago (llamar backend)
+                      const response = await fetch(`${BACKEND_URL}/api/subscription/cancel`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: userProfile?.id }),
+                      });
+                      if (response.ok) {
+                        Alert.alert(
+                          'Suscripción Cancelada',
+                          'Tu suscripción ha sido cancelada. Podrás seguir disfrutando de los beneficios hasta el final del período actual.',
+                          [{ text: 'OK', onPress: () => { refreshProfiles(); router.back(); } }]
+                        );
+                      } else {
+                        Alert.alert('Error', 'No se pudo cancelar la suscripción');
+                      }
+                    } catch (error) {
+                      console.error('Error al cancelar suscripción:', error);
+                      Alert.alert('Error', 'No se pudo cancelar la suscripción');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }},
+                ]
+              );
+            }}
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <Text style={{color: '#fff', fontSize: 18}}>⏳</Text>
             ) : (
               <>
-                <Ionicons name="close-circle" size={24} color="#fff" />
+                <Text style={{fontSize: 24, marginRight: 8}}>❌</Text>
                 <Text style={styles.cancelButtonText}>Cancelar Suscripción</Text>
               </>
             )}
           </TouchableOpacity>
-
           <Text style={styles.cancelNote}>
             Al cancelar, mantendrás el acceso premium hasta el {' '}
             {userProfile?.subscription_end_date
@@ -259,12 +287,11 @@ export default function ManageSubscription() {
               ? new Date(userProfile.subscription_end_date).toLocaleDateString('es-AR')
               : ''}.
           </Text>
-          
           <TouchableOpacity
             style={styles.renewButton}
             onPress={() => router.push('/subscription/plan' as any)}
           >
-            <Ionicons name="refresh" size={24} color="#fff" />
+            <Text style={{fontSize: 24, marginRight: 8}}>🔄</Text>
             <Text style={styles.renewButtonText}>Renovar Suscripción</Text>
           </TouchableOpacity>
         </View>
@@ -272,15 +299,15 @@ export default function ManageSubscription() {
 
         {/* Beneficios Premium (alineados con pantalla de suscripción) */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Tus Beneficios Premium</Text>
+          <Text style={styles.sectionTitle}>🎁 Tus Beneficios Premium</Text>
           <View style={styles.benefitsList}>
             {[
-              'Mensajes ilimitados',
-              'Perfil destacado en búsquedas',
-              'Insignia de cuenta Premium',
+              '💬 Mensajes ilimitados',
+              '🌟 Perfil destacado en búsquedas',
+              '🏅 Insignia de cuenta Premium',
             ].map((benefit, index) => (
               <View key={index} style={styles.benefitItem}>
-                <Ionicons name="checkmark-circle" size={20} color={theme.colors.success} />
+                <Text style={{fontSize: 20, marginRight: 8}}>✅</Text>
                 <Text style={styles.benefitText}>{benefit}</Text>
               </View>
             ))}
@@ -290,7 +317,7 @@ export default function ManageSubscription() {
         {/* Navegación */}
         <View style={{ padding: 16, flexDirection: 'row', justifyContent: 'center', gap: 12 }}>
           <TouchableOpacity style={[styles.cancelButton, { backgroundColor: theme.colors.card }]} onPress={() => router.push('/' as any)}>
-            <Ionicons name="home" size={20} color={theme.colors.text} />
+            <Text style={{fontSize: 20, marginRight: 8}}>🏠</Text>
             <Text style={[styles.cancelButtonText, { color: theme.colors.text }]}>Ir al Inicio</Text>
           </TouchableOpacity>
         </View>

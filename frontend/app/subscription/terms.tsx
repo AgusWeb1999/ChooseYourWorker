@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 
 export default function TermsAndConditions() {
@@ -14,21 +13,19 @@ export default function TermsAndConditions() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
+          <Text style={{ fontSize: 24 }}>←</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Términos y Condiciones</Text>
         <TouchableOpacity onPress={() => router.push('/' as any)} style={[styles.backButton, { left: 'auto', right: 16 }] }>
-          <Ionicons name="home" size={24} color={theme.colors.text} />
+          <Text style={{ fontSize: 24 }}>🏠</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content}>
         <View style={styles.providerBadge}>
-          <Ionicons 
-            name={isMercadoPago ? 'card' : 'logo-paypal'} 
-            size={32} 
-            color={theme.colors.primary} 
-          />
+          <Text style={{ fontSize: 32, marginRight: 8 }}>
+            {isMercadoPago ? '💳' : '💸'}
+          </Text>
           <Text style={styles.providerName}>
             {isMercadoPago ? 'Mercado Pago' : 'PayPal'}
           </Text>

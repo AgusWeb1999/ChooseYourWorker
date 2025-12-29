@@ -1,7 +1,6 @@
 import React, { ReactNode } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../constants/theme';
 import { useAuth } from '../src/contexts/AuthContext';
 
@@ -47,7 +46,7 @@ export default function PremiumGate({ children, feature, showBanner = true }: Pr
           {children}
           <View style={styles.overlay}>
             <View style={styles.lockBadge}>
-              <Ionicons name="lock-closed" size={24} color="#fff" />
+              <Text style={{ fontSize: 22, color: '#fff', marginRight: 6 }}>🔒</Text>
               <Text style={styles.lockText}>Premium</Text>
             </View>
           </View>
@@ -63,7 +62,7 @@ export default function PremiumGate({ children, feature, showBanner = true }: Pr
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Ionicons name="diamond" size={60} color={theme.colors.primary} />
+              <Text style={{ fontSize: 54, color: theme.colors.primary }}>💎</Text>
             </View>
 
             <Text style={styles.modalTitle}>Funcionalidad Premium</Text>
@@ -73,15 +72,15 @@ export default function PremiumGate({ children, feature, showBanner = true }: Pr
 
             <View style={styles.benefitsList}>
               <View style={styles.benefitItem}>
-                <Ionicons name="checkmark-circle" size={24} color={theme.colors.success} />
+                <Text style={{ fontSize: 22, color: theme.colors.success, marginRight: 6 }}>✅</Text>
                 <Text style={styles.benefitText}>Mensajes ilimitados</Text>
               </View>
               <View style={styles.benefitItem}>
-                <Ionicons name="checkmark-circle" size={24} color={theme.colors.success} />
+                <Text style={{ fontSize: 22, color: theme.colors.success, marginRight: 6 }}>✅</Text>
                 <Text style={styles.benefitText}>Perfil destacado en búsquedas</Text>
               </View>
               <View style={styles.benefitItem}>
-                <Ionicons name="checkmark-circle" size={24} color={theme.colors.success} />
+                <Text style={{ fontSize: 22, color: theme.colors.success, marginRight: 6 }}>✅</Text>
                 <Text style={styles.benefitText}>Insignia de cuenta Premium</Text>
               </View>
             </View>
@@ -98,7 +97,7 @@ export default function PremiumGate({ children, feature, showBanner = true }: Pr
                 router.push('/subscription/plan' as any);
               }}
             >
-              <Ionicons name="rocket" size={24} color="#fff" />
+              <Text style={{ fontSize: 22, color: '#fff', marginRight: 8 }}>🚀</Text>
               <Text style={styles.upgradeButtonText}>Hacerme Premium</Text>
             </TouchableOpacity>
 
