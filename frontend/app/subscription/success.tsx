@@ -3,14 +3,18 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { BackHandler } from 'react-native';
 
 export default function SubscriptionSuccess() {
   const router = useRouter();
   const { refreshProfiles } = useAuth();
 
   useEffect(() => {
-    // Refrescar el perfil del usuario para obtener la nueva suscripción
     refreshProfiles();
+    
+    // Bloquear botón atrás físico
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => backHandler.remove();
   }, []);
 
   return (

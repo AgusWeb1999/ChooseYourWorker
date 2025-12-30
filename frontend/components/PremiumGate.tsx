@@ -86,8 +86,8 @@ export default function PremiumGate({ children, feature, showBanner = true }: Pr
             </View>
 
             <View style={styles.priceContainer}>
-              <Text style={styles.priceLabel}>Precio</Text>
-              <Text style={styles.price}>USD $7.99/mes</Text>
+              <Text style={styles.priceLabel}>Desde</Text>
+              <Text style={styles.price}>Acceso Premium</Text>
             </View>
 
             <TouchableOpacity

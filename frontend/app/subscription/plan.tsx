@@ -1,38 +1,36 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Linking, Modal, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Modal, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { theme } from '../../constants/theme';
 import WebView from 'react-native-webview';
 
-// Usar variable de entorno y fallback solo en desarrollo
-
-// URL de la Edge Function de Supabase para crear preferencia de Mercado Pago
-// URL de la Edge Function de Supabase para crear preferencia de Mercado Pago
-const SUPABASE_FUNCTION_URL = 'https://oeabhlewxekejmgrucrz.supabase.co/functions/v1/smart-endpoint';
-
-// URL de la Edge Function de Supabase para el webhook de Mercado Pago (si se necesita en el frontend)
-const SUPABASE_WEBHOOK_URL = 'https://oeabhlewxekejmgrucrz.supabase.co/functions/v1/mp-webhook';
+// --- CONFIGURACIÓN DE URLS ---
+// Asegúrate de que tu proyecto ID sea correcto (oeabhlewxekejmgrucrz)
+const SUPABASE_FUNCTION_URL = 'https://oeabhlewxekejmgrucrz.supabase.co/functions/v1/create-preference';
 
 export default function SubscriptionPlan() {
   const router = useRouter();
   const { userProfile, isPremium, isSubscriptionActive, refreshProfiles } = useAuth();
+  
   const [loading, setLoading] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<'mercadopago' | null>(null);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  
+  // Cotización ARS
   const [cotizacion, setCotizacion] = useState<number | null>(null);
   const [cotizacionLoading, setCotizacionLoading] = useState(false);
 
-  // Solo profesionales pueden ver planes de suscripción
-  React.useEffect(() => {
+  // 1. Redireccionar si no es profesional
+  useEffect(() => {
     if (userProfile && userProfile.is_professional !== true) {
       router.replace('/');
     }
   }, [userProfile]);
 
-  // Consultar cotización si el usuario es de Uruguay
-  React.useEffect(() => {
+  // 2. Obtener cotización si es Argentina
+  useEffect(() => {
     const fetchCotizacion = async () => {
       if (userProfile?.country_code === 'AR') {
         setCotizacionLoading(true);
@@ -40,22 +38,29 @@ export default function SubscriptionPlan() {
           const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
           const headers = new Headers();
           headers.append('Content-Type', 'application/json');
-          if (anonKey) headers.append('apikey', anonKey);
-          if (anonKey) headers.append('Authorization', `Bearer ${anonKey}`);
+          if (anonKey) {
+            headers.append('apikey', anonKey);
+            headers.append('Authorization', `Bearer ${anonKey}`);
+          }
+          
           const response = await fetch('https://oeabhlewxekejmgrucrz.supabase.co/rest/v1/rpc/convert_currency', {
             method: 'POST',
             headers,
             body: JSON.stringify({ amount: 20, from_currency: 'UYU', to_currency: 'ARS' })
           });
+          
           const data = await response.json();
+          
+          // Manejo flexible de la respuesta (número directo o objeto JSON)
           if (typeof data === 'number') {
             setCotizacion(data);
-          } else if (typeof data === 'object' && data !== null && data.result) {
-            setCotizacion(Number(data.result));
+          } else if (typeof data === 'object' && data !== null && (data.result || data.output)) {
+            setCotizacion(Number(data.result || data.output));
           } else {
             setCotizacion(null);
           }
         } catch (e) {
+          console.error("Error fetching cotizacion:", e);
           setCotizacion(null);
         } finally {
           setCotizacionLoading(false);
@@ -80,10 +85,7 @@ export default function SubscriptionPlan() {
     setSelectedProvider(null);
   };
 
-  const isLocalUrl = (url: string) => url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1');
-
-  // Variables de entorno para moneda y monto base
-  // Se deben definir en .env.local para que Expo las lea correctamente
+  // Variables de entorno con fallbacks
   const DEFAULT_CURRENCY = process.env.EXPO_PUBLIC_PAYMENT_CURRENCY || 'UYU';
   const DEFAULT_AMOUNT = Number(process.env.EXPO_PUBLIC_PAYMENT_AMOUNT || '20');
 
@@ -92,7 +94,6 @@ export default function SubscriptionPlan() {
       setLoading(true);
       setSelectedProvider('mercadopago');
 
-      // Todas las variables deben estar en .env.local
       const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
       if (!anonKey) {
         throw new Error("Falta la variable de entorno EXPO_PUBLIC_SUPABASE_ANON_KEY");
@@ -100,7 +101,8 @@ export default function SubscriptionPlan() {
 
       let currency = DEFAULT_CURRENCY;
       let amount = DEFAULT_AMOUNT;
-      // Si el usuario es argentino, usar ARS y el monto convertido
+
+      // Lógica específica para Argentina
       if (userProfile?.country_code === 'AR') {
         currency = 'ARS';
         amount = cotizacion ? Number(cotizacion) : 0;
@@ -111,6 +113,7 @@ export default function SubscriptionPlan() {
         }
       }
 
+      // Llamada a tu Edge Function (create-preference)
       const response = await fetch(SUPABASE_FUNCTION_URL, {
         method: 'POST',
         headers: {
@@ -128,8 +131,15 @@ export default function SubscriptionPlan() {
       const data = await response.json();
 
       if (data.initPoint) {
-        setPaymentUrl(data.initPoint);
-        setShowPaymentModal(true);
+        // --- LÓGICA DIFERENCIADA WEB VS NATIVE ---
+        if (Platform.OS === 'web') {
+          // En Web redirigimos para evitar problemas de iframe/CORS
+          window.location.href = data.initPoint;
+        } else {
+          // En App Nativa abrimos WebView
+          setPaymentUrl(data.initPoint);
+          setShowPaymentModal(true);
+        }
       } else {
         Alert.alert('Error', 'No se pudo crear la preferencia de pago');
       }
@@ -137,12 +147,12 @@ export default function SubscriptionPlan() {
       console.error('Error al crear preferencia de Mercado Pago:', error);
       Alert.alert('Error', 'No se pudo iniciar el pago con Mercado Pago');
     } finally {
-      setLoading(false);
+      // Solo desactivamos loading si estamos en app nativa. 
+      // En web, la página recargará al ir a MP, así que dejar el loading da mejor UX.
+      if (Platform.OS !== 'web') {
+        setLoading(false);
+      }
     }
-  };
-
-  const handlePayWithPayPal = async () => {
-    throw new Error('PayPal solo disponible con backend propio o migrar a Edge Function');
   };
 
   const handleViewTerms = (provider: 'mercadopago') => {
@@ -152,6 +162,7 @@ export default function SubscriptionPlan() {
     } as any);
   };
 
+  // --- VISTA: USUARIO YA PREMIUM ---
   if (isPremium && isSubscriptionActive) {
     return (
       <View style={styles.container}>
@@ -180,9 +191,7 @@ export default function SubscriptionPlan() {
             </View>
             <View style={styles.subscriptionInfo}>
               <Text style={styles.infoLabel}>Método de pago:</Text>
-              <Text style={styles.infoValue}>
-                {userProfile?.payment_provider === 'mercadopago' ? 'Mercado Pago' : 'Mercado Pago'}
-              </Text>
+              <Text style={styles.infoValue}>Mercado Pago</Text>
             </View>
           </View>
 
@@ -207,211 +216,188 @@ export default function SubscriptionPlan() {
     );
   }
 
-  // Solo profesionales pueden ver planes de suscripción
-  React.useEffect(() => {
-    if (userProfile && userProfile.is_professional !== true) {
-      router.replace('/');
-    }
-  }, [userProfile]);
-
+  // --- VISTA: SELECCIÓN DE PLAN ---
   return (
     <View style={styles.container}>
       <ScrollView style={styles.contentLimiter}>
         <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Text style={{fontSize: 20}}>⬅️</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Elige tu Plan</Text>
-        <Text style={styles.subtitle}>
-          Desbloquea todas las funcionalidades de WorkingGo
-        </Text>
-        <TouchableOpacity 
-          style={[styles.backButton, { left: 'auto', right: 16 }]}
-          onPress={() => router.push('/' as any)}
-        >
-          <Text style={{fontSize: 20}}>🏠</Text>
-        </TouchableOpacity>
-        </View>
-
-      {/* Plan Free */}
-      <View style={styles.planCard}>
-        <View style={styles.planHeader}>
-          <Text style={styles.planName}>Gratis</Text>
-          <Text style={styles.planPrice}>$0</Text>
-        </View>
-        <View style={styles.featuresList}>
-          {features.map((feature, index) => (
-            <View key={index} style={styles.featureRow}>
-              <Text style={{fontSize: 18, marginRight: 8}}>{feature.emoji}</Text>
-              <Text style={[
-                styles.featureText,
-                !feature.free && styles.featureDisabled
-              ]}>
-                {feature.text}
-              </Text>
-              {feature.free ? (
-                <Text style={{fontSize: 18, marginLeft: 8}}>✅</Text>
-              ) : (
-                <Text style={{fontSize: 18, marginLeft: 8}}>❌</Text>
-              )}
-            </View>
-          ))}
-        </View>
-      </View>
-
-      {/* Plan Premium */}
-      <View style={[styles.planCard, styles.premiumCard]}>
-        <View style={styles.premiumBadge}>
-          <Text style={styles.premiumBadgeText}>RECOMENDADO</Text>
-        </View>
-        <View style={styles.planHeader}>
-          <Text style={styles.planName}>Premium</Text>
-          {userProfile?.country_code === 'AR' ? (
-            cotizacionLoading ? (
-              <Text style={styles.planPrice}>ARS $ {cotizacion ? cotizacion.toFixed(2) : '...'}</Text>
-            ) : cotizacion ? (
-              <Text style={styles.planPrice}>ARS $ {cotizacion.toFixed(2)}</Text>
-            ) : (
-              <Text style={styles.planPrice}>ARS $ ...</Text>
-            )
-          ) : (
-            <Text style={styles.planPrice}>UYU $20</Text>
-          )}
-        </View>
-        <Text style={styles.planPeriod}>/mes</Text>
-        <Text style={styles.planDuration}>por mes</Text>
-
-        <View style={styles.featuresList}>
-          {features.filter(f => f.premium).map((feature, index) => (
-            <View key={index} style={styles.featureRow}>
-              <Text style={{fontSize: 18, marginRight: 8}}>{feature.emoji}</Text>
-              <Text style={styles.featureText}>{feature.text}</Text>
-              <Text style={{fontSize: 20, marginLeft: 8}}>✅</Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={styles.paymentSection}>
-          <Text style={styles.paymentTitle}>Selecciona tu método de pago:</Text>
-
-          <View style={styles.paymentButtonsContainer}>
-            {/* Mercado Pago */}
-            <View style={styles.paymentMethodWrapper}>
-              <TouchableOpacity
-                style={styles.paymentButton}
-                onPress={handlePayWithMercadoPago}
-                disabled={loading}
-              >
-                {loading && selectedProvider === 'mercadopago' ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <>
-                    <Text style={styles.paymentButtonText}>💳 Mercado Pago</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleViewTerms('mercadopago')}>
-                <Text style={styles.termsLink}>Ver términos</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* PayPal eliminado */}
-          </View>
-        </View>
-
-        <View style={styles.securityNote}>
-          <Text style={{fontSize: 20, marginRight: 8}}>🛡️</Text>
-          <Text style={styles.securityText}>
-            Pagos seguros. Puedes cancelar en cualquier momento.
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Text style={{fontSize: 20}}>⬅️</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>Elige tu Plan</Text>
+          <Text style={styles.subtitle}>
+            Desbloquea todas las funcionalidades de WorkingGo
           </Text>
+          <TouchableOpacity 
+            style={[styles.backButton, { left: 'auto', right: 16 }]}
+            onPress={() => router.push('/' as any)}
+          >
+            <Text style={{fontSize: 20}}>🏠</Text>
+          </TouchableOpacity>
         </View>
-      </View>
-    </ScrollView>
 
-    {/* Payment Modal */}
-    <Modal
-      visible={showPaymentModal}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={closePaymentModal}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
-              {selectedProvider === 'mercadopago' ? 'Mercado Pago' : 'Mercado Pago'}
-            </Text>
-            <TouchableOpacity onPress={closePaymentModal}>
-              <Text style={{fontSize: 24, color: theme.colors.text}}>✖️</Text>
-            </TouchableOpacity>
+        {/* Plan Free */}
+        <View style={styles.planCard}>
+          <View style={styles.planHeader}>
+            <Text style={styles.planName}>Gratis</Text>
+            <Text style={styles.planPrice}>$0</Text>
           </View>
-          
-          {paymentUrl && Platform.OS === 'web' ? (
-            <iframe
-              src={paymentUrl}
-              style={{
-                width: '100%',
-                height: '100%',
-                border: 'none',
-              }}
-              title="Payment"
-              onLoad={(e: any) => {
-                const iframe = e.target;
-                try {
-                  const iframeUrl = iframe.contentWindow?.location.href;
-                  if (iframeUrl && (iframeUrl.includes('/subscription/success') || iframeUrl.includes('/subscription/failure'))) {
-                    closePaymentModal();
-                    if (iframeUrl.includes('/subscription/success')) {
-                      // Refrescar perfil para obtener estado premium actualizado
-                      refreshProfiles();
-                      Alert.alert(
-                        '✅ Pago exitoso',
-                        '🎉 Tu suscripción Premium ha sido activada',
-                        [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
-                      );
-                    }
-                  }
-                } catch (err) {
-                  // Cross-origin restriction
-                }
-              }}
-            />
-          ) : paymentUrl ? (
-            <WebView
-              source={{ uri: paymentUrl }}
-              style={styles.webview}
-              onNavigationStateChange={(state: any) => {
-                console.log('WebView URL:', state.url);
-                
-                // Detectar páginas de confirmación
-                if (state.url.includes('/subscription/success') || state.url.includes('success')) {
-                  closePaymentModal();
-                  // Refrescar perfil para obtener estado premium actualizado
-                  refreshProfiles();
-                  Alert.alert(
-                    '✅ Pago exitoso',
-                    '🎉 Tu suscripción Premium ha sido activada',
-                    [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
-                  );
-                } else if (state.url.includes('/subscription/failure') || state.url.includes('failure')) {
-                  closePaymentModal();
-                  Alert.alert(
-                    'Pago cancelado',
-                    'El pago no se completó. Intenta nuevamente.',
-                    [{ text: 'OK' }]
-                  );
-                }
-              }}
-            />
-          ) : (
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-          )}
+          <View style={styles.featuresList}>
+            {features.map((feature, index) => (
+              <View key={index} style={styles.featureRow}>
+                <Text style={{fontSize: 18, marginRight: 8}}>{feature.emoji}</Text>
+                <Text style={[
+                  styles.featureText,
+                  !feature.free && styles.featureDisabled
+                ]}>
+                  {feature.text}
+                </Text>
+                {feature.free ? (
+                  <Text style={{fontSize: 18, marginLeft: 8}}>✅</Text>
+                ) : (
+                  <Text style={{fontSize: 18, marginLeft: 8}}>❌</Text>
+                )}
+              </View>
+            ))}
+          </View>
         </View>
-      </View>
-    </Modal>
+
+        {/* Plan Premium */}
+        <View style={[styles.planCard, styles.premiumCard]}>
+          <View style={styles.premiumBadge}>
+            <Text style={styles.premiumBadgeText}>RECOMENDADO</Text>
+          </View>
+          <View style={styles.planHeader}>
+            <Text style={styles.planName}>Premium</Text>
+            {userProfile?.country_code === 'AR' ? (
+              cotizacionLoading ? (
+                <Text style={styles.planPrice}>ARS $ ...</Text>
+              ) : cotizacion ? (
+                <Text style={styles.planPrice}>ARS $ {cotizacion.toFixed(2)}</Text>
+              ) : (
+                <Text style={styles.planPrice}>ARS $ --</Text>
+              )
+            ) : (
+              <Text style={styles.planPrice}>UYU $20</Text>
+            )}
+          </View>
+          <Text style={styles.planPeriod}>/mes</Text>
+          <Text style={styles.planDuration}>Cobro mensual recurrente</Text>
+
+          <View style={styles.featuresList}>
+            {features.filter(f => f.premium).map((feature, index) => (
+              <View key={index} style={styles.featureRow}>
+                <Text style={{fontSize: 18, marginRight: 8}}>{feature.emoji}</Text>
+                <Text style={styles.featureText}>{feature.text}</Text>
+                <Text style={{fontSize: 20, marginLeft: 8}}>✅</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.paymentSection}>
+            <Text style={styles.paymentTitle}>Selecciona tu método de pago:</Text>
+
+            <View style={styles.paymentButtonsContainer}>
+              {/* Mercado Pago */}
+              <View style={styles.paymentMethodWrapper}>
+                <TouchableOpacity
+                  style={styles.paymentButton}
+                  onPress={handlePayWithMercadoPago}
+                  disabled={loading}
+                >
+                  {loading && selectedProvider === 'mercadopago' ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <>
+                      <Text style={styles.paymentButtonText}>💳 Mercado Pago</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleViewTerms('mercadopago')}>
+                  <Text style={styles.termsLink}>Ver términos</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.securityNote}>
+            <Text style={{fontSize: 20, marginRight: 8}}>🛡️</Text>
+            <Text style={styles.securityText}>
+              Pagos seguros. Puedes cancelar en cualquier momento.
+            </Text>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Payment Modal (SOLO MOBILE) */}
+      <Modal
+        visible={showPaymentModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={closePaymentModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Mercado Pago</Text>
+              <TouchableOpacity onPress={closePaymentModal}>
+                <Text style={{fontSize: 24, color: theme.colors.text}}>✖️</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Solo mostramos WebView si hay URL y NO es web (por seguridad extra) */}
+            {paymentUrl && Platform.OS !== 'web' ? (
+              <WebView
+                source={{ uri: paymentUrl }}
+                style={styles.webview}
+                startInLoadingState={true}
+                renderLoading={() => <ActivityIndicator style={{position:'absolute', top: '50%', left: '50%'}} />}
+                onNavigationStateChange={(state) => {
+                  console.log('WebView URL:', state.url);
+                  
+                  // Detectar ÉXITO
+                  if (state.url.includes('/subscription/success') || state.url.includes('collection_status=approved')) {
+                    closePaymentModal();
+                    
+                    // Estrategia anti-carrera (Race Condition)
+                    Alert.alert(
+                      '✅ Procesando pago...',
+                      'Estamos confirmando tu suscripción con Mercado Pago.',
+                      [{ 
+                        text: 'Aceptar', 
+                        onPress: async () => {
+                          // 1. Refrescar ya
+                          await refreshProfiles();
+                          // 2. Refrescar en 4 segundos por si el webhook se demoró
+                          setTimeout(() => refreshProfiles(), 4000);
+                          router.replace('/(tabs)');
+                        } 
+                      }]
+                    );
+                  } 
+                  // Detectar FALLO
+                  else if (state.url.includes('/subscription/failure')) {
+                    closePaymentModal();
+                    Alert.alert(
+                      'Pago cancelado',
+                      'El pago no se completó o fue rechazado.',
+                      [{ text: 'OK' }]
+                    );
+                  }
+                }}
+              />
+            ) : (
+              <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+                 <ActivityIndicator size="large" color={theme.colors.primary} />
+                 <Text style={{marginTop: 10}}>Cargando pasarela de pago...</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -544,11 +530,6 @@ const styles = StyleSheet.create({
     color: theme.colors.textLight,
     textAlign: 'right',
   },
-  planPriceUSD: {
-    fontSize: 14,
-    color: theme.colors.textLight,
-    textAlign: 'right',
-  },
   planDuration: {
     fontSize: 14,
     color: theme.colors.textLight,
@@ -600,9 +581,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 8,
     minHeight: 56,
-  },
-  paypalButton: {
-    backgroundColor: '#0070BA',
   },
   paymentButtonText: {
     color: '#fff',
