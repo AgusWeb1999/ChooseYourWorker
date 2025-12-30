@@ -125,6 +125,8 @@ export default function SubscriptionPlan() {
           userId: userProfile?.id,
           currency,
           amount,
+          email: userProfile?.email || userProfile?.user_email || '',
+          fullName: userProfile?.full_name || 'Usuario WorkingGo',
         }),
       });
 

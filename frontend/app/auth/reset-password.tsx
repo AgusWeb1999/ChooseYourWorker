@@ -86,7 +86,9 @@ function getOtpExpiredError() {
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
-  const { access_token } = useLocalSearchParams();
+  const params = useLocalSearchParams();
+  // Permitir tanto access_token como token
+  const access_token = params.access_token || params.token;
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);

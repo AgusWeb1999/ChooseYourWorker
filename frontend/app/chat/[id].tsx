@@ -14,7 +14,6 @@ import {
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { IconSymbol } from '../../components/ui/icon-symbol';
 
 interface Message {
   id: string;
@@ -330,10 +329,19 @@ export default function ChatScreen() {
       <Stack.Screen
         options={{
           title: otherUser?.display_name || 'Chat',
-          headerShown: true,
-          headerBackTitle: 'Atrás',
+          headerShown: false, // Ocultamos el header nativo para usar uno propio
         }}
       />
+
+      {/* Header personalizado con flecha de volver */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16, padding: 4 }}>
+          <Text style={{ fontSize: 26, color: '#007AFF' }}>←</Text>
+        </TouchableOpacity>
+        <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#222' }} numberOfLines={1}>
+          {otherUser?.display_name || 'Chat'}
+        </Text>
+      </View>
 
       <View style={styles.contentLimiter}>
         <ScrollView
@@ -344,7 +352,7 @@ export default function ChatScreen() {
         >
           {messages.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <IconSymbol name="bubble.left.and.bubble.right" size={48} color="#999" />
+              <Text style={{ fontSize: 48, color: '#999' }}>💬</Text>
               <Text style={styles.emptyText}>No hay mensajes aún</Text>
               <Text style={styles.emptySubtext}>
                 Envía el primer mensaje para iniciar la conversación

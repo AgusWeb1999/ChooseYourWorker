@@ -3,7 +3,6 @@ import { StyleSheet, Text, View, ScrollView, TouchableOpacity, ActivityIndicator
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { IconSymbol } from '../../components/ui/icon-symbol';
 import ReviewsList from '../../components/ReviewsList';
 import AddReview from '../../components/AddReview';
 import ClientReviewsList from '../../components/ClientReviewsList';
@@ -440,7 +439,7 @@ export default function ProfessionalProfileScreen() {
                 style={[styles.actionButton, styles.messageButton]} 
                 onPress={() => router.push(`/chat/${professional.user_id}`)}
               >
-                <IconSymbol name="bubble.left.and.bubble.right.fill" size={20} color="#FFF" />
+                <Text style={{ fontSize: 20, color: '#FFF' }}>💬</Text>
                 <Text style={styles.actionButtonText}>Mensaje</Text>
               </TouchableOpacity>
 

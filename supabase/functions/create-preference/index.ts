@@ -7,38 +7,61 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Manejo de CORS
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    // Recibe userId, currency y amount desde el frontend
-    const { userId, currency = "UYU", amount = 20 } = await req.json();
+    // Recibimos los nuevos datos del frontend
+    const { userId, currency = "UYU", amount = 20, email, fullName } = await req.json();
 
     const accessToken = Deno.env.get("MERCADOPAGO_ACCESS_TOKEN");
-    
-    // MEJORA: Definimos la URL exacta de TU proyecto para evitar errores de cálculo
-    // Esta es la URL de la función webhook que acabamos de arreglar
     const webhookUrl = "https://oeabhlewxekejmgrucrz.supabase.co/functions/v1/mp-webhook";
 
-    console.log("Creando preferencia para usuario:", userId);
-    console.log("Webhook destino:", webhookUrl);
+    // Lógica para separar Nombre y Apellido (MP lo pide separado)
+    let nameParts = (fullName || "Usuario").trim().split(" ");
+    const firstName = nameParts[0];
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "User";
 
     const preference = {
+      // 1. ITEMS DETALLADOS (Sube puntaje)
       items: [{
+        id: "premium_subscription", // MP pide ID
         title: "Suscripción Premium - WorkingGo",
-        unit_price: Number(amount), // Aseguramos que sea número
+        description: "Acceso ilimitado a funcionalidades premium para profesionales", // MP pide descripción
+        category_id: "services", // MP pide categoría
+        picture_url: "https://working-go.com/assets/premium-badge.png", // Opcional, ayuda visual
+        unit_price: Number(amount),
         quantity: 1,
         currency_id: currency,
       }],
+      
+      // 2. DATOS DEL PAGADOR (Obligatorio para aprobación de fraude)
+      payer: {
+        name: firstName,
+        surname: lastName,
+        email: email || "usuario@working-go.com", // Fallback por seguridad
+        // Si tuvieras teléfono o dirección, agregarlos aquí subiría más el score
+      },
+
+      // 3. NOMBRE EN EL RESUMEN BANCARIO
+      statement_descriptor: "WORKINGGO PREMIUM", 
+
       back_urls: {
-        // Asegúrate de que estas URLs existan en tu Frontend
         success: "https://working-go.com/subscription/success",
         failure: "https://working-go.com/subscription/failure",
+        pending: "https://working-go.com/subscription/pending"
       },
       auto_return: "approved",
+      
+      // 4. REFERENCIAS INTERNAS (Conciliación)
       external_reference: userId,
-      notification_url: webhookUrl, // <--- Aquí usamos la URL fija y segura
+      notification_url: webhookUrl,
+      
+      // 5. Configuración extra recomendada
+      binary_mode: true, // Aprobación instantánea (sin pendientes eternos)
+      expires: false,
     };
+
+    console.log("Creando preferencia enriquecida para:", email);
 
     const res = await fetch("https://api.mercadopago.com/checkout/preferences", {
       method: "POST",

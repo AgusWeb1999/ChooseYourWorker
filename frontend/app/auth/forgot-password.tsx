@@ -31,8 +31,10 @@ export default function ForgotPasswordScreen() {
       setErrorMsg('Email no encontrado.');
       return;
     }
-    // Construir redirectTo dinámicamente
-    let redirectTo = 'https://working-go.com/auth/reset-password';
+    // Construir redirectTo dinámicamente según entorno
+    let frontendUrl = process.env.EXPO_PUBLIC_FRONTEND_URL || 'https://working-go.com';
+    // El path debe coincidir con tu ruta de reset-password
+    let redirectTo = `${frontendUrl}/auth/reset-password`;
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo,
     });

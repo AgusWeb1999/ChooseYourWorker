@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { theme } from '../../constants/theme';
 import { supabase } from '../../src/lib/supabase';
+// Importa tu sistema de notificaciones visuales
+import { useToast } from '../../contexts/ToastContext';
 
 // URL de tu función para cancelar
 const CANCEL_FUNCTION_URL = 'https://oeabhlewxekejmgrucrz.supabase.co/functions/v1/cancel-subscription';
@@ -11,6 +13,7 @@ const CANCEL_FUNCTION_URL = 'https://oeabhlewxekejmgrucrz.supabase.co/functions/
 export default function ManageSubscription() {
   const router = useRouter();
   const { userProfile, refreshProfiles, isSubscriptionActive } = useAuth();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
 
   // Solo profesionales
@@ -22,10 +25,7 @@ export default function ManageSubscription() {
   const executeCancellation = async () => {
     try {
       setLoading(true);
-      console.log("Iniciando cancelación..."); // Debug
-      
       const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-      
       const response = await fetch(CANCEL_FUNCTION_URL, {
         method: 'POST',
         headers: {
@@ -34,53 +34,31 @@ export default function ManageSubscription() {
         },
         body: JSON.stringify({ userId: userProfile?.id }),
       });
-
       const data = await response.json();
-
       if (response.ok) {
-        console.log("Cancelación exitosa en backend");
         await refreshProfiles();
-        
-        const successMsg = 'No se te volverá a cobrar. Mantienes tus beneficios hasta la fecha de vencimiento.';
-        
-        if (Platform.OS === 'web') {
-          window.alert(`Suscripción Cancelada: ${successMsg}`);
-          router.back();
-        } else {
-          Alert.alert('Suscripción Cancelada', successMsg, [{ text: 'OK', onPress: () => router.back() }]);
-        }
+        showToast('Suscripción cancelada. Mantienes tus beneficios hasta la fecha de vencimiento.', 'success');
+        setTimeout(() => router.back(), 1200);
       } else {
         throw new Error(data.error || 'Error al cancelar');
       }
     } catch (error: any) {
       console.error('Error:', error);
-      const errorMsg = error.message || 'No se pudo cancelar la suscripción.';
-      
-      if (Platform.OS === 'web') {
-        window.alert(`Error: ${errorMsg}`);
-      } else {
-        Alert.alert('Error', errorMsg);
-      }
+      showToast(error.message || 'No se pudo cancelar la suscripción.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   const handleCancelSubscription = () => {
-    const title = 'Cancelar Suscripción';
-    const message = '¿Estás seguro? Perderás el acceso premium al finalizar tu periodo actual.';
-
-    // LÓGICA DIFERENCIADA PARA WEB vs APP
     if (Platform.OS === 'web') {
-      // Usar confirm nativo del navegador
-      if (window.confirm(`${title}\n\n${message}`)) {
+      if (window.confirm('¿Estás seguro? Perderás el acceso premium al finalizar tu periodo actual.')) {
         executeCancellation();
       }
     } else {
-      // Usar Alert nativo de React Native (iOS/Android)
       Alert.alert(
-        title,
-        message,
+        'Cancelar Suscripción',
+        '¿Estás seguro? Perderás el acceso premium al finalizar tu periodo actual.',
         [
           { text: 'No, mantener', style: 'cancel' },
           {

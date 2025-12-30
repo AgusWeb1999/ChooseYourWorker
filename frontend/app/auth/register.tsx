@@ -338,7 +338,8 @@ export default function RegisterScreen() {
           id_number: normalizeId(idNumber),
           country,
           province,
-          city
+          city,
+          email_verified: false // Siempre false al crear
         }).eq('id', authData.user.id);
 
         // Si es profesional, crear registro en professionals con los datos completos
@@ -364,8 +365,10 @@ export default function RegisterScreen() {
         }
         // REFRESH PROFILE after registration and data update
         await refreshProfiles();
+        // Redirigir a pantalla de confirmación de email
+        router.replace({ pathname: '/auth/email-confirmation', params: { email } });
+        return;
       }
-      Alert.alert('Éxito', 'Registro completado');
     } catch (err: any) {
       setErrorMsg(err.message);
       Alert.alert('Error', err.message);

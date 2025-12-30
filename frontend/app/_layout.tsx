@@ -42,6 +42,15 @@ function RootLayoutNav() {
       // No session and not in auth -> go to login
       console.log('➡️ Redirecting to login (no session)');
       router.replace('/auth/login' as any);
+    } else if (
+      session &&
+      userProfile &&
+      userProfile.email_verified === false &&
+      !segments.join('/').includes('auth/email-confirmation')
+    ) {
+      // Usuario logueado pero no verificó email
+      console.log('✉️ Email no verificado, redirigiendo a confirmación');
+      router.replace({ pathname: '/auth/email-confirmation', params: { email: userProfile.email } });
     } else if (session && !needsProfileCompletion && inAuthGroup) {
       // Has session, profile complete and in auth -> go to tabs
       console.log('➡️ Redirecting to tabs (profile complete)');
