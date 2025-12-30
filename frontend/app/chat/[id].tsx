@@ -45,7 +45,11 @@ export default function ChatScreen() {
   const [otherUserIsPremium, setOtherUserIsPremium] = useState(false);
   
   const MESSAGE_LIMIT_FREE = 10;
-  const hasReachedLimit = !isPremium && messageCount >= MESSAGE_LIMIT_FREE;
+  
+  // LÓGICA DE DESBLOQUEO:
+  // Es ilimitado si: YO soy premium O el OTRO USUARIO (Profesional) es premium.
+  const isUnlimited = isPremium || otherUserIsPremium;
+  const hasReachedLimit = !isUnlimited && messageCount >= MESSAGE_LIMIT_FREE;
 
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -101,7 +105,7 @@ export default function ChatScreen() {
       }
 
       setConversationId(convId);
-      await fetchOtherUser();
+      await fetchOtherUser(); // Aquí verificamos si es Premium en la tabla pública
       await fetchMessages(convId);
       await markConversationAsRead(convId);
     } catch (error) {
@@ -113,7 +117,6 @@ export default function ChatScreen() {
   }
 
   async function getOrCreateConversation(): Promise<string | null> {
-    // Primero intenta encontrar una conversación existente
     const { data: convRow, error: convError } = await supabase
       .from('conversation_list')
       .select('conversation_id')
@@ -128,7 +131,6 @@ export default function ChatScreen() {
       return convRow.conversation_id;
     }
 
-    // Si no existe, intentar vía RPC con firma (user1_id, user2_id)
     const { data: createdConv, error: createError } = await supabase.rpc(
       'get_or_create_conversation',
       { user1_id: user?.id, user2_id: otherUserId }
@@ -146,10 +148,10 @@ export default function ChatScreen() {
   async function fetchOtherUser() {
     if (!otherUserId) return;
 
-    // Preferir datos del profesional si existen
+    // 1. Buscamos en la tabla PROFESSIONALS (que ahora es pública y tiene el estado premium)
     const { data: professional } = await supabase
       .from('professionals')
-      .select('user_id, display_name, profession')
+      .select('user_id, display_name, profession, is_premium, subscription_end_date')
       .eq('user_id', otherUserId)
       .maybeSingle();
 
@@ -159,7 +161,17 @@ export default function ChatScreen() {
         display_name: professional.display_name,
         profession: professional.profession,
       });
+
+      // Validar si es premium (bandera + fecha válida)
+      const now = new Date();
+      const isActive = professional.is_premium && 
+                       professional.subscription_end_date && 
+                       new Date(professional.subscription_end_date) > now;
+      
+      setOtherUserIsPremium(!!isActive);
+
     } else {
+      // Si no es profesional, buscamos nombre básico en USERS (fallback)
       const { data: userData } = await supabase
         .from('users')
         .select('id, full_name')
@@ -172,22 +184,8 @@ export default function ChatScreen() {
           display_name: userData.full_name,
         });
       }
-    }
-
-    // Verificar si el otro usuario es premium
-    const { data: otherUserData } = await supabase
-      .from('users')
-      .select('subscription_type, subscription_status, subscription_end_date')
-      .eq('id', otherUserId)
-      .maybeSingle();
-
-    if (otherUserData) {
-      const isPremium = 
-        otherUserData.subscription_type === 'premium' &&
-        otherUserData.subscription_status === 'active' &&
-        otherUserData.subscription_end_date &&
-        new Date(otherUserData.subscription_end_date) > new Date();
-      setOtherUserIsPremium(!!isPremium);
+      // Un usuario normal (cliente) no suele ser "Premium" en este contexto
+      setOtherUserIsPremium(false);
     }
   }
 
@@ -205,7 +203,6 @@ export default function ChatScreen() {
 
     if (data) {
       setMessages(data);
-      // Contar mensajes enviados por el usuario actual
       const myMessages = data.filter(msg => msg.sender_id === user?.id);
       setMessageCount(myMessages.length);
       scrollToBottom();
@@ -227,13 +224,13 @@ export default function ChatScreen() {
   }
 
   async function sendMessage() {
+    // Verificación de límite actualizada con lógica "isUnlimited"
     if (!newMessage.trim() || !conversationId || sending || !user) return;
 
-    // Verificar límite de mensajes para usuarios gratuitos
-    if (!isPremium && messageCount >= MESSAGE_LIMIT_FREE) {
+    if (!isUnlimited && messageCount >= MESSAGE_LIMIT_FREE) {
       Alert.alert(
         'Límite alcanzado',
-        `Has alcanzado el límite de ${MESSAGE_LIMIT_FREE} mensajes de la versión gratuita. Actualiza a Premium para enviar mensajes ilimitados.`,
+        `Has alcanzado el límite de ${MESSAGE_LIMIT_FREE} mensajes. Actualiza a Premium para continuar.`,
         [
           { text: 'Cancelar', style: 'cancel' },
           { text: 'Ver Planes', onPress: () => router.push('/subscription/plan') }
@@ -393,58 +390,48 @@ export default function ChatScreen() {
           )}
         </ScrollView>
 
-        {/* Advertencia de límite o estado premium del trabajador */}
-        {userProfile?.is_professional === false ? (
-          // Mensaje para clientes sobre el estado del trabajador
-          otherUserIsPremium ? (
-            <View style={styles.premiumAlertBox}>
-              <Text style={{ fontSize: 20, marginRight: 8 }}>
-                ✅
-              </Text>
-              <Text style={styles.premiumAlertText}> 
-                ✨ Trabajador Premium - Chats ilimitados disponibles
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.premiumAlertBox}>
-              <Text style={{ fontSize: 20, marginRight: 8 }}>
-                ℹ️
-              </Text>
-              <Text style={styles.premiumAlertText}> 
-                Este trabajador no es premium, por lo que los chats ilimitados no están disponibles
+        {/* --- SECCIÓN DE ALERTAS Y AVISOS --- */}
+        
+        {otherUserIsPremium ? (
+          // CASO 1: El profesional es Premium -> Chat Ilimitado
+          <View style={styles.premiumAlertBox}>
+            <Text style={{ fontSize: 20, marginRight: 8 }}>✅</Text>
+            <View style={{flex: 1}}>
+              <Text style={styles.premiumAlertTextBold}>¡Chat Ilimitado!</Text>
+              <Text style={styles.premiumAlertText}>
+                Gracias a que este profesional es Premium, puedes chatear sin límites.
               </Text>
             </View>
-          )
-        ) : (
-            !isPremium && (
-              <View style={[styles.limitWarning, hasReachedLimit && styles.limitWarningDanger]}>
-                <Text style={{ fontSize: 16, marginRight: 4 }}>
-                  {hasReachedLimit ? "⚠️" : "ℹ️"}
-                </Text>
-                <Text style={[styles.limitWarningText, hasReachedLimit && styles.limitWarningTextDanger]}>
-                  {hasReachedLimit 
-                    ? `Límite alcanzado (${messageCount}/${MESSAGE_LIMIT_FREE}). Actualiza a Premium para continuar.`
-                    : `${messageCount}/${MESSAGE_LIMIT_FREE} mensajes usados. Actualiza a Premium para mensajes ilimitados.`
-                  }
-                </Text>
-                {hasReachedLimit && (
-                  <TouchableOpacity 
-                    style={styles.upgradeButton}
-                    onPress={() => router.push('/subscription/plan')}
-                  >
-                    <Text style={styles.upgradeButtonText}>Actualizar</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )
-        )}
+          </View>
+        ) : !isPremium ? (
+          // CASO 2: Nadie es Premium -> Mostrar Límite
+          <View style={[styles.limitWarning, hasReachedLimit && styles.limitWarningDanger]}>
+            <Text style={{ fontSize: 16, marginRight: 4 }}>
+              {hasReachedLimit ? "⚠️" : "ℹ️"}
+            </Text>
+            <Text style={[styles.limitWarningText, hasReachedLimit && styles.limitWarningTextDanger]}>
+              {hasReachedLimit 
+                ? `Límite alcanzado (${messageCount}/${MESSAGE_LIMIT_FREE}). Actualiza a Premium.`
+                : `${messageCount}/${MESSAGE_LIMIT_FREE} mensajes gratuitos usados.`
+              }
+            </Text>
+            {hasReachedLimit && (
+              <TouchableOpacity 
+                style={styles.upgradeButton}
+                onPress={() => router.push('/subscription/plan')}
+              >
+                <Text style={styles.upgradeButtonText}>Upgrade</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : null /* Si YO soy premium, no muestro alertas, simplemente funciona */}
 
         <View style={styles.inputContainer}>
           <TextInput
             style={[styles.input, hasReachedLimit && styles.inputDisabled]}
             value={newMessage}
             onChangeText={setNewMessage}
-            placeholder={hasReachedLimit ? "Límite de mensajes alcanzado..." : "Escribe un mensaje..."}
+            placeholder={hasReachedLimit ? "Límite alcanzado..." : "Escribe un mensaje..."}
             placeholderTextColor="#999"
             multiline
             maxLength={1000}
@@ -589,6 +576,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#fbbf24',
     gap: 8,
+    borderRadius: 12,
+    marginBottom: 8,
   },
   limitWarningDanger: {
     backgroundColor: '#fee2e2',
@@ -647,22 +636,30 @@ const styles = StyleSheet.create({
   premiumAlertBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF8E1',
+    backgroundColor: '#ecfdf5', // Verde muy claro
+    borderWidth: 1,
+    borderColor: '#10b981',
     borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     marginHorizontal: 12,
-    marginBottom: Platform.OS === 'web' ? 24 : 16,
-    shadowColor: '#000',
+    marginBottom: 16,
+    shadowColor: '#10b981',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  premiumAlertTextBold: {
+    color: '#047857',
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 2,
   },
   premiumAlertText: {
     flex: 1,
-    color: '#8a6d3b',
-    fontSize: 15,
+    color: '#065f46',
+    fontSize: 13,
     fontWeight: '500',
     textAlign: 'left',
   },

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useFocusEffect } from '@react-navigation/native'; // Importante para refrescar al volver
+import { useFocusEffect } from '@react-navigation/native';
 import OnboardingModal from '../../components/OnboardingModal';
 import { setOnboardingSeen, hasSeenOnboarding } from '../../utils/onboarding';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Image, Platform, SafeAreaView, ScrollView, Modal, ViewStyle, TextStyle, ImageStyle } from 'react-native';
@@ -8,6 +8,7 @@ import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useWindowDimensions } from '../../hooks/useWindowDimensions';
 
+// 1. Interfaz actualizada con los nuevos campos de la tabla professionals
 interface Professional {
   id: string;
   user_id: string;
@@ -20,56 +21,57 @@ interface Professional {
   rating_count: number;
   bio: string;
   avatar_url: string | null;
+  is_premium?: boolean;            // Nuevo campo público
+  subscription_end_date?: string;  // Nuevo campo público
 }
 
 export default function HomeScreen() {
   const { user, userProfile, professionalProfile, needsProfileCompletion, refreshProfiles } = useAuth();
   const { width } = useWindowDimensions();
+  
   const [professionals, setProfessionals] = useState<Professional[]>([]);
-  const [premiumUsersMap, setPremiumUsersMap] = useState<Record<string, boolean>>({});
   const [filteredProfessionals, setFilteredProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Filtros
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProfession, setSelectedProfession] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [selectedMinRating, setSelectedMinRating] = useState<number>(0);
+  
+  // Modales
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [cityModalVisible, setCityModalVisible] = useState(false);
   
-  // Filtros dinámicos
+  // Listas dinámicas para filtros
   const [professions, setProfessions] = useState<string[]>(['Todos']);
   const [cities, setCities] = useState<string[]>(['Todas']);
 
   // Onboarding states
   const [onboardingVisible, setOnboardingVisible] = useState(false);
 
-  // 1. Refrescar datos cada vez que la pantalla obtiene el foco (al volver de completar perfil)
+  // Refrescar datos al enfocar la pantalla
   useFocusEffect(
     useCallback(() => {
-      refreshProfiles(); // Asegura que el AuthContext tenga la data más fresca
+      refreshProfiles();
       fetchProfessionals();
     }, [])
   );
 
-  // 2. Lógica de Filtrado
+  // Lógica de Filtrado (Se ejecuta cuando cambian los filtros o la data)
   useEffect(() => {
     filterProfessionals();
-  }, [searchQuery, selectedProfession, selectedCity, selectedMinRating, professionals, premiumUsersMap]);
+  }, [searchQuery, selectedProfession, selectedCity, selectedMinRating, professionals]);
 
-  // 3. Lógica de Onboarding para cliente y profesional
+  // Lógica de Onboarding
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout>;
 
     const checkOnboarding = async () => {
       if (!userProfile) return;
       if (needsProfileCompletion) return;
-
-      // Profesional: esperar a que el perfil profesional esté cargado
-
-      // Si es profesional, esperar a que professionalProfile esté definido (puede ser objeto vacío)
       if (userProfile.is_professional && professionalProfile === null) return;
 
-      // Determinar tipo para el storage
       const tipo = userProfile.is_professional ? 'profesional' : 'cliente';
       const hasSeen = await hasSeenOnboarding(tipo);
       if (!hasSeen) {
@@ -87,19 +89,32 @@ export default function HomeScreen() {
     };
   }, [userProfile, professionalProfile, needsProfileCompletion]);
 
+  // --- FETCH DE DATOS OPTIMIZADO ---
   async function fetchProfessionals() {
     try {
+      // Ahora pedimos is_premium y subscription_end_date directamente de esta tabla
       const { data, error } = await supabase
         .from('professionals')
-        .select('id, user_id, display_name, profession, city, state, hourly_rate, rating, rating_count, bio, avatar_url')
+        .select('id, user_id, display_name, profession, city, state, hourly_rate, rating, rating_count, bio, avatar_url, is_premium, subscription_end_date')
         .order('rating', { ascending: false });
 
       if (!error && data) {
-        setProfessionals(data);
+        const now = new Date();
+
+        // Validamos la fecha para asegurar que el premium sigue vigente
+        const validatedData: Professional[] = data.map((p: any) => {
+          const isActive = p.is_premium && p.subscription_end_date && new Date(p.subscription_end_date) > now;
+          return {
+            ...p,
+            is_premium: !!isActive // Sobrescribimos con la realidad de la fecha
+          };
+        });
+
+        setProfessionals(validatedData);
         
-        // Procesar filtros
+        // Extraer filtros únicos
         const professionSet = new Set<string>();
-        data.forEach(p => {
+        data.forEach((p: any) => {
           if (p.profession) {
             const normalized = p.profession.trim().charAt(0).toUpperCase() + p.profession.trim().slice(1).toLowerCase();
             professionSet.add(normalized);
@@ -108,29 +123,13 @@ export default function HomeScreen() {
         setProfessions(['Todos', ...Array.from(professionSet).sort()]);
         
         const citySet = new Set<string>();
-        data.forEach(p => {
+        data.forEach((p: any) => {
           if (p.city) {
             const normalized = p.city.trim().charAt(0).toUpperCase() + p.city.trim().slice(1).toLowerCase();
             citySet.add(normalized);
           }
         });
         setCities(['Todas', ...Array.from(citySet).sort()]);
-        
-        // Fetch premium status
-        const userIds = data.map(p => p.user_id).filter(Boolean);
-        if (userIds.length > 0) {
-          const { data: usersData } = await supabase
-            .from('users')
-            .select('id, subscription_type, subscription_status, subscription_end_date')
-            .in('id', userIds);
-          const now = new Date();
-          const map: Record<string, boolean> = {};
-          (usersData || []).forEach(u => {
-            const active = u.subscription_type === 'premium' && u.subscription_status === 'active' && u.subscription_end_date && new Date(u.subscription_end_date) > now;
-            map[u.id] = !!active;
-          });
-          setPremiumUsersMap(map);
-        }
       }
     } catch (error) {
       console.error('Error fetching professionals:', error);
@@ -139,18 +138,22 @@ export default function HomeScreen() {
     }
   }
 
+  // --- LÓGICA DE FILTRADO Y ORDENAMIENTO ---
   function filterProfessionals() {
     let filtered = [...professionals];
 
+    // 1. Filtro por texto
     if (searchQuery) {
+      const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (prof) =>
-          prof.display_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          prof.profession?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          prof.city?.toLowerCase().includes(searchQuery.toLowerCase())
+          prof.display_name?.toLowerCase().includes(query) ||
+          prof.profession?.toLowerCase().includes(query) ||
+          prof.city?.toLowerCase().includes(query)
       );
     }
 
+    // 2. Filtro por profesión
     if (selectedProfession && selectedProfession !== 'Todos') {
       filtered = filtered.filter((prof) => {
         const profNormalized = prof.profession?.trim().charAt(0).toUpperCase() + prof.profession?.trim().slice(1).toLowerCase();
@@ -158,6 +161,7 @@ export default function HomeScreen() {
       });
     }
 
+    // 3. Filtro por ciudad
     if (selectedCity && selectedCity !== 'Todas') {
       filtered = filtered.filter((prof) => {
         const cityNormalized = prof.city?.trim().charAt(0).toUpperCase() + prof.city?.trim().slice(1).toLowerCase();
@@ -165,18 +169,23 @@ export default function HomeScreen() {
       });
     }
 
+    // 4. Filtro por rating
     if (selectedMinRating > 0) {
       filtered = filtered.filter((prof) => (prof.rating || 0) >= selectedMinRating);
     }
 
+    // 5. ORDENAMIENTO: Premium primero, luego Rating
     filtered.sort((a, b) => {
-      const isPremiumA = premiumUsersMap[a.user_id] ? 1 : 0;
-      const isPremiumB = premiumUsersMap[b.user_id] ? 1 : 0;
+      const isPremiumA = a.is_premium ? 1 : 0;
+      const isPremiumB = b.is_premium ? 1 : 0;
       
+      // Si uno es premium y el otro no, el premium gana
       if (isPremiumA !== isPremiumB) return isPremiumB - isPremiumA;
+      
+      // Si ambos son iguales (ambos premium o ambos free), gana el rating
       return (b.rating || 0) - (a.rating || 0);
     });
-    
+
     setFilteredProfessionals(filtered);
   }
 
@@ -194,7 +203,9 @@ export default function HomeScreen() {
   }
 
   function renderProfessionalCard({ item }: { item: Professional }) {
-    const isPremium = premiumUsersMap[item.user_id];
+    // Usamos directamente la propiedad del objeto, ya validada
+    const isPremium = item.is_premium;
+    
     return (
       <TouchableOpacity
         style={[styles.card, isPremium && styles.premiumCard]}
@@ -240,7 +251,7 @@ export default function HomeScreen() {
           </View>
           <View style={styles.rateContainer}>
             <Text style={styles.rate}>
-              {item.hourly_rate ? `$${item.hourly_rate}/hr` : 'No especificado'}
+              {item.hourly_rate ? `$${item.hourly_rate}/hr` : ''}
             </Text>
           </View>
         </View>
@@ -248,8 +259,7 @@ export default function HomeScreen() {
     );
   }
 
-  // PREVENCIÓN DE FLASH: Si necesita completar perfil, mostrar Loading en lugar de Home
-  // Esto permite que el Layout maneje la redirección sin pintar la Home primero.
+  // Loading States
   if (needsProfileCompletion) {
     return (
       <View style={styles.loadingContainer}>
@@ -296,6 +306,7 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.contentLimiter}>
+          {/* VISTA MOBILE / COMPACTA */}
           {(Platform.OS !== 'web' || width < 768) && (
             <>
               <View style={styles.headerCompact}>
@@ -337,6 +348,7 @@ export default function HomeScreen() {
             </>
           )}
 
+          {/* VISTA WEB DESKTOP */}
           {Platform.OS === 'web' && width >= 768 ? (
             <View style={styles.webLayoutContainer}>
               <ScrollView style={styles.sidebarFilters} contentContainerStyle={styles.sidebarContent}>
@@ -430,6 +442,7 @@ export default function HomeScreen() {
               </View>
             </View>
           ) : (
+            // LISTA MOBILE
             <>
               <View style={styles.mobileFiltersCompact}>
                 <TouchableOpacity style={styles.filterButton} onPress={() => setCategoryModalVisible(true)}>
@@ -505,6 +518,7 @@ export default function HomeScreen() {
   );
 }
 
+// ESTILOS (Idénticos al anterior, necesarios para que corra el código)
 interface Styles {
   safeArea: ViewStyle;
   container: ViewStyle;

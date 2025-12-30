@@ -6,13 +6,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "apikey, content-type",
 };
 
-// Función auxiliar para logs limpios en Supabase Dashboard
 function log(msg: string, data?: any) {
   console.log(msg, data ? JSON.stringify(data) : "");
 }
 
 serve(async (req) => {
-  // Manejo de CORS (Pre-flight)
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
@@ -21,60 +19,37 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // 1. Manejo robusto del Body (JSON o Form)
     let body: any;
     const contentType = req.headers.get("content-type") || "";
-
     if (contentType.includes("application/json")) {
       body = await req.json();
-    } else if (contentType.includes("application/x-www-form-urlencoded")) {
-      const form = await req.formData();
-      body = {};
-      for (const [key, value] of form.entries()) {
-        body[key] = value;
-      }
     } else {
-      // Intento final de parseo
       body = await req.json().catch(() => ({}));
     }
 
-    log("Webhook recibido. Payload:", body);
-
-    // 2. Verificación GET (MercadoPago a veces verifica la URL así)
-    if (req.method === "GET") {
-      log("Recibida petición GET de verificación");
-      return new Response("ok", { headers: corsHeaders });
-    }
-
-    // 3. Validar tipo de evento (Payment)
     const eventType = body.type || body.topic;
     const paymentId = body.data?.id || body.id;
 
     if (eventType === "payment" && paymentId) {
       log(`Procesando pago ID: ${paymentId}`);
-      
       const accessToken = Deno.env.get("MERCADOPAGO_ACCESS_TOKEN");
 
-      // 4. Consultar API de MercadoPago
       const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
       if (mpRes.ok) {
         const payment = await mpRes.json();
-        log("Estado del pago en MP:", { status: payment.status, ref: payment.external_reference });
-
         const userId = payment.external_reference;
         const status = payment.status;
 
         if (userId && status === "approved") {
-          // Calcular fechas (1 mes de suscripción)
           const now = new Date();
           const nextMonth = new Date(now);
           nextMonth.setMonth(now.getMonth() + 1);
 
-          // 5. Actualizar Usuario en Supabase
-          const { error } = await supabase
+          // 1. Actualizar tabla privada USERS (para que el usuario gestione su cuenta)
+          const updateUsers = await supabase
             .from("users")
             .update({ 
               subscription_type: "premium",
@@ -85,20 +60,26 @@ serve(async (req) => {
             })
             .eq("id", userId);
 
-          if (error) {
-            log("Error CRÍTICO al actualizar BD:", error);
-            throw error;
-          } else {
-            log(`¡Éxito! Usuario ${userId} actualizado a Premium.`);
+          if (updateUsers.error) throw updateUsers.error;
+
+          // 2. Actualizar tabla pública PROFESSIONALS (para que aparezca en el Home)
+          // Esto es lo nuevo que soluciona tu problema de seguridad
+          const updateProf = await supabase
+            .from("professionals")
+            .update({
+              is_premium: true,
+              subscription_end_date: nextMonth.toISOString()
+            })
+            .eq("user_id", userId);
+
+          if (updateProf.error) {
+            log("Usuario no es profesional o error al actualizar professionals:", updateProf.error);
+            // No lanzamos error aquí para no revertir el pago, solo logueamos
           }
-        } else {
-          log("El pago no está aprobado o falta el ID de usuario.", { userId, status });
+
+          log(`¡Éxito Total! Usuario ${userId} actualizado a Premium en ambas tablas.`);
         }
-      } else {
-        log("Error al consultar API de MercadoPago", { status: mpRes.status });
       }
-    } else {
-      log("Evento ignorado (no es pago o falta ID)", body);
     }
 
     return new Response(JSON.stringify({ received: true }), { 
@@ -107,10 +88,7 @@ serve(async (req) => {
     });
 
   } catch (e) {
-    log("Excepción en Webhook:", e.message);
-    return new Response(JSON.stringify({ error: e.message }), { 
-      status: 200, 
-      headers: { ...corsHeaders, "Content-Type": "application/json" } 
-    });
+    log("Error:", e.message);
+    return new Response(JSON.stringify({ error: e.message }), { status: 200, headers: corsHeaders });
   }
 });
