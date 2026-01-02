@@ -21,8 +21,7 @@ function RootLayoutNav() {
     }
 
     const inAuthGroup = (segments[0] as string) === 'auth';
-    // Ya no existen rutas de completar perfil
-    const inCompleteProfile = false;
+    const inEmailConfirmation = segments.join('/').includes('auth/email-confirmation');
     const isWorker = userProfile?.is_professional === true;
     const isClient = userProfile?.is_professional === false;
 
@@ -31,33 +30,41 @@ function RootLayoutNav() {
       loading,
       segments: segments.join('/'),
       inAuthGroup,
-      inCompleteProfile,
+      inEmailConfirmation,
       isWorker,
       isClient,
       needsProfileCompletion,
+      emailVerified: userProfile?.email_verified,
       userProfile: userProfile ? { id: userProfile.id, is_professional: userProfile.is_professional, phone: userProfile.phone } : null,
     });
 
+    // No session -> go to login
     if (!session && !inAuthGroup) {
-      // No session and not in auth -> go to login
       console.log('➡️ Redirecting to login (no session)');
       router.replace('/auth/login' as any);
-    } else if (
+      return;
+    }
+
+    // Has session but email not verified -> go to email confirmation (and stay there)
+    if (
       session &&
       userProfile &&
       userProfile.email_verified === false &&
-      !segments.join('/').includes('auth/email-confirmation')
+      !inEmailConfirmation
     ) {
-      // Usuario logueado pero no verificó email
       console.log('✉️ Email no verificado, redirigiendo a confirmación');
       router.replace({ pathname: '/auth/email-confirmation', params: { email: userProfile.email } });
-    } else if (session && !needsProfileCompletion && inAuthGroup) {
-      // Has session, profile complete and in auth -> go to tabs
+      return;
+    }
+
+    // Email verified, profile complete, in auth -> go to tabs
+    if (session && !needsProfileCompletion && inAuthGroup && !inEmailConfirmation) {
       console.log('➡️ Redirecting to tabs (profile complete)');
       router.replace('/(tabs)');
-    } else {
-      console.log('✋ No navigation action taken');
+      return;
     }
+
+    console.log('✋ No navigation action taken');
   }, [session, loading, segments, needsProfileCompletion, userProfile]);
 
 
@@ -71,6 +78,7 @@ function RootLayoutNav() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="auth/login" />
         <Stack.Screen name="auth/register" />
+        <Stack.Screen name="auth/email-confirmation" />
       </Stack>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </View>

@@ -258,7 +258,15 @@ export default function RegisterScreen() {
     const newErrors: Record<string, string> = {};
 
     if (!fullName) newErrors.fullName = 'El nombre es requerido';
-    if (!email) newErrors.email = 'El email es requerido';
+    if (!email) {
+      newErrors.email = 'El email es requerido';
+    } else {
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        newErrors.email = 'Email inválido';
+      }
+    }
     if (!password || password.length < 6) newErrors.password = 'Mínimo 6 caracteres';
     const phoneVal = validatePhone(phone, country);
     if (!phoneVal.valid) newErrors.phone = phoneVal.error || 'Teléfono inválido';
@@ -319,11 +327,11 @@ export default function RegisterScreen() {
 
     setLoading(true);
     try {
-      const { data: emailAvailable, error: rpcError } = await supabase.rpc('check_email_available', { p_email: email });
-      if (!emailAvailable) throw new Error('Este correo ya está registrado.');
-
+      // Normalize email: trim whitespace and lowercase
+      const normalizedEmail = email.trim().toLowerCase();
+      
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
+        email: normalizedEmail,
         password,
         options: { data: { full_name: fullName, user_type: userType } }
       });
@@ -331,16 +339,24 @@ export default function RegisterScreen() {
       if (authError) throw authError;
 
       if (authData.user) {
-        // Actualizar tabla users (siempre)
-        await supabase.from('users').update({ 
+        // Crear registro en tabla users (UPSERT para evitar conflictos)
+        const { error: userError } = await supabase.from('users').upsert({ 
+          id: authData.user.id,
+          auth_uid: authData.user.id,
+          email: normalizedEmail,
+          full_name: fullName,
           is_professional: userType === 'worker',
           phone: normalizePhone(phone, country),
           id_number: normalizeId(idNumber),
           country,
           province,
           city,
-          email_verified: false // Siempre false al crear
-        }).eq('id', authData.user.id);
+          email_verified: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
+
+        if (userError) throw userError;
 
         // Si es profesional, crear registro en professionals con los datos completos
         if (userType === 'worker') {
@@ -366,7 +382,7 @@ export default function RegisterScreen() {
         // REFRESH PROFILE after registration and data update
         await refreshProfiles();
         // Redirigir a pantalla de confirmación de email
-        router.replace({ pathname: '/auth/email-confirmation', params: { email } });
+        router.replace({ pathname: '/auth/email-confirmation', params: { email: normalizedEmail } });
         return;
       }
     } catch (err: any) {
