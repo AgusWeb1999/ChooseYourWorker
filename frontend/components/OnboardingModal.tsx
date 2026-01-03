@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, Image, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, Platform } from 'react-native';
 
 interface Step {
   title: string;
@@ -26,13 +26,18 @@ const stepsClient: Step[] = [
   },
   {
     title: 'Ver perfiles y enviar propuesta',
-    description: 'Explora el perfil, revisa experiencia y opiniones, y envía tu propuesta de trabajo.',
+    description: 'Explora el perfil, revisa experiencia y opiniones',
     image: require('../assets/onboarding/client-3.png'),
+  },
+  {
+    title: 'Ver perfiles y enviar propuesta',
+    description: 'Envía una propuesta detallando el trabajo que necesitas y espera a que el profesional la acepte.',
+    image: require('../assets/onboarding/client-4.png'),
   },
   {
     title: 'Gestiona tus contrataciones',
     description: 'Recibe notificaciones cuando acepten tu propuesta y haz seguimiento desde la sección "Mis Contrataciones".',
-    image: require('../assets/onboarding/client-4.png'),
+    image: require('../assets/onboarding/client-5.png'),
   },
 ];
 
@@ -44,7 +49,7 @@ const stepsProfessional: Step[] = [
   },
   {
     title: 'Completa tu perfil y portafolio',
-    description: 'Agrega tu experiencia, tarifas y sube fotos de tus trabajos para destacar.',
+    description: 'Comparte tus trabajos con fotos reales para destacar.',
     image: require('../assets/onboarding/prof-2.png'),
   },
   {
@@ -53,15 +58,60 @@ const stepsProfessional: Step[] = [
     image: require('../assets/onboarding/prof-3.png'),
   },
   {
-    title: 'Solicita cerrar trabajos',
-    description: 'Cuando termines un trabajo, solicita al cliente que lo cierre y deja tu reseña.',
+    title: 'Suscribe un plan y alcanza más clientes',
+    description: 'Suscríbete a un plan para aumentar tu visibilidad y conseguir más clientes.',
     image: require('../assets/onboarding/prof-4.png'),
   },
 ];
 
+// Precargar imágenes en web
+const preloadImages = (steps: Step[]) => {
+  if (Platform.OS === 'web') {
+    steps.forEach(step => {
+      if (step.image && step.image.uri) {
+        const img = new window.Image();
+        img.src = step.image.uri;
+      }
+    });
+  }
+};
+
 export default function OnboardingModal({ visible, onClose, isProfessional }: OnboardingModalProps) {
   const steps = isProfessional ? stepsProfessional : stepsClient;
   const [step, setStep] = useState(0);
+  const [imagesLoaded, setImagesLoaded] = useState(Platform.OS !== 'web');
+
+  // Precargar todas las imágenes cuando el modal se hace visible
+  useEffect(() => {
+    if (visible && Platform.OS === 'web') {
+      let loadedCount = 0;
+      const totalImages = steps.filter(s => s.image).length;
+
+      if (totalImages === 0) {
+        setImagesLoaded(true);
+        return;
+      }
+
+      steps.forEach(step => {
+        if (step.image && step.image.uri) {
+          const img = new window.Image();
+          img.onload = () => {
+            loadedCount++;
+            if (loadedCount === totalImages) {
+              setImagesLoaded(true);
+            }
+          };
+          img.onerror = () => {
+            loadedCount++;
+            if (loadedCount === totalImages) {
+              setImagesLoaded(true);
+            }
+          };
+          img.src = step.image.uri;
+        }
+      });
+    }
+  }, [visible, steps]);
 
   const handleNext = () => {
     if (step < steps.length - 1) setStep(step + 1);
@@ -72,8 +122,14 @@ export default function OnboardingModal({ visible, onClose, isProfessional }: On
   };
   const handleClose = () => {
     setStep(0);
+    setImagesLoaded(Platform.OS !== 'web');
     onClose();
   };
+
+  // No mostrar el modal hasta que las imágenes estén cargadas
+  if (!imagesLoaded) {
+    return null;
+  }
 
   return (
     <Modal visible={visible} animationType="slide" transparent>

@@ -16,6 +16,7 @@ import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView,
 import { Link, router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { validatePhone, validateId, normalizePhone, normalizeId, getCountriesList, CountryCode } from '../../utils/countryValidation';
+import { getBarriosPorCiudad, Barrio } from '../../utils/barrios';
 import { Picker } from '@react-native-picker/picker';
 import { useAuth } from '../../src/contexts/AuthContext';
 
@@ -197,6 +198,7 @@ export default function RegisterScreen() {
   const [provinceModalVisible, setProvinceModalVisible] = useState(false);
   const [departmentModalVisible, setDepartmentModalVisible] = useState(false);
   const [cityModalVisible, setCityModalVisible] = useState(false);
+  const [barrioModalVisible, setBarrioModalVisible] = useState(false);
   const [userType, setUserType] = useState<'client' | 'worker' | null>(null);
   const [province, setProvince] = useState<string>('');
   const [provinceList, setProvinceList] = useState<any[]>([]);
@@ -204,6 +206,8 @@ export default function RegisterScreen() {
   const [departmentList, setDepartmentList] = useState<any[]>([]);
   const [city, setCity] = useState<string>('');
   const [cityList, setCityList] = useState<any[]>([]);
+  const [barrio, setBarrio] = useState<string>('');
+  const [barrioList, setBarrioList] = useState<Barrio[]>([]);
   const [loading, setLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -254,6 +258,17 @@ export default function RegisterScreen() {
     }
   }, [department, province, country]);
 
+  // 4. Efecto: Al cambiar Ciudad - cargar barrios
+  useEffect(() => {
+    setBarrio('');
+    if (city) {
+      const barrios = getBarriosPorCiudad(city);
+      setBarrioList(barrios);
+    } else {
+      setBarrioList([]);
+    }
+  }, [city]);
+
   async function handleRegister() {
     const newErrors: Record<string, string> = {};
 
@@ -277,6 +292,7 @@ export default function RegisterScreen() {
     if (provinceList.length > 0 && !province) newErrors.province = country === 'UY' ? 'El departamento es requerido' : 'La provincia es requerida';
     if (departmentList.length > 0 && !department) newErrors.department = 'El municipio/localidad es requerido';
     if (cityList.length > 0 && !city) newErrors.city = 'La ciudad es requerida';
+    if (barrioList.length > 0 && !barrio) newErrors.barrio = 'El barrio es requerido';
 
     // Validación de campos profesionales si es trabajador
     if (userType === 'worker') {
@@ -362,6 +378,7 @@ export default function RegisterScreen() {
             p_bio: bio || '',
             p_city: city,
             p_state: province,
+            p_barrio: barrio,
             p_phone: normalizePhone(phone, country),
             p_id_number: normalizeId(idNumber),
             p_country: country,
@@ -379,6 +396,7 @@ export default function RegisterScreen() {
               bio: bio || '',
               city: city,
               state: province,
+              barrio: barrio,
               zip_code: '',
               hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
               years_experience: yearsExperience ? parseInt(yearsExperience) : null,
@@ -405,7 +423,8 @@ export default function RegisterScreen() {
             id_number: normalizeId(idNumber),
             country,
             province,
-            city
+            city,
+            barrio
           }));
         }
         
@@ -568,6 +587,48 @@ export default function RegisterScreen() {
                   </TouchableOpacity>
                 </Modal>
                 {errors.city && <Text style={styles.errorText}>{errors.city}</Text>}
+              </>
+            )}
+
+            {/* Barrio */}
+            {barrioList.length > 0 && (
+              <>
+                <Text style={styles.label}>Barrio *</Text>
+                <TouchableOpacity style={styles.customPickerTrigger} onPress={() => setBarrioModalVisible(true)}>
+                  <Text style={styles.pickerTriggerText}>
+                    {barrioList.find(b => String(b.id) === String(barrio))?.nombre || 'Selecciona barrio'}
+                  </Text>
+                  <Text style={styles.pickerArrow}>▼</Text>
+                </TouchableOpacity>
+                <Modal visible={barrioModalVisible} transparent animationType="fade" onRequestClose={() => setBarrioModalVisible(false)}>
+                  <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setBarrioModalVisible(false)}>
+                    <View style={styles.modalContent}>
+                      <Text style={styles.modalTitle}>Selecciona un barrio</Text>
+                      <ScrollView style={styles.modalScroll}>
+                        {barrioList.map((b) => {
+                          const selected = String(b.id) === String(barrio);
+                          return (
+                            <TouchableOpacity
+                              key={String(b.id)}
+                              style={[styles.modalOption, selected && styles.modalOptionSelected]}
+                              onPress={() => {
+                                setBarrio(String(b.id));
+                                setBarrioModalVisible(false);
+                              }}
+                            >
+                              <Text style={[styles.modalOptionText, selected && styles.modalOptionTextSelected]}>{b.nombre}</Text>
+                              {selected && <Text style={styles.checkmark}>✓</Text>}
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </ScrollView>
+                      <TouchableOpacity onPress={() => setBarrioModalVisible(false)} style={styles.modalCloseBtn}>
+                        <Text style={styles.modalCloseBtnText}>Cerrar</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
+                </Modal>
+                {errors.barrio && <Text style={styles.errorText}>{errors.barrio}</Text>}
               </>
             )}
 

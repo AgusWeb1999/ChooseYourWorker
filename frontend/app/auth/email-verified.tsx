@@ -59,6 +59,7 @@ export default function EmailVerifiedScreen() {
               country: data.country,
               province: data.province,
               city: data.city,
+              barrio: data.barrio,
               updated_at: new Date().toISOString()
             })
             .eq('id', session.user.id);

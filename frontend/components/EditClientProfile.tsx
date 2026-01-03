@@ -14,6 +14,7 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import { supabase } from '../src/lib/supabase';
 import { getCountriesList, CountryCode, COUNTRIES } from '../utils/countryValidation';
+import { getBarriosPorCiudad, Barrio } from '../utils/barrios';
 
 // --- INYECCIÓN DE CSS PARA WEB (Elimina el foco azul y bordes extra) ---
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -120,16 +121,19 @@ export default function EditUserProfile({ userProfile, userEmail, onSave, onCanc
   const [province, setProvince] = useState<string>(userProfile?.province || '');
   const [department, setDepartment] = useState<string>(userProfile?.department || '');
   const [city, setCity] = useState<string>(userProfile?.city || '');
+  const [barrio, setBarrio] = useState<string>(userProfile?.barrio || '');
   
   const [provinceList, setProvinceList] = useState<any[]>([]);
   const [departmentList, setDepartmentList] = useState<any[]>([]);
   const [cityList, setCityList] = useState<any[]>([]);
+  const [barrioList, setBarrioList] = useState<Barrio[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [countryModalVisible, setCountryModalVisible] = useState(false);
   const [provinceModalVisible, setProvinceModalVisible] = useState(false);
   const [departmentModalVisible, setDepartmentModalVisible] = useState(false);
   const [cityModalVisible, setCityModalVisible] = useState(false);
+  const [barrioModalVisible, setBarrioModalVisible] = useState(false);
 
   // 1. Cargar provincias
   useEffect(() => {
@@ -181,9 +185,33 @@ export default function EditUserProfile({ userProfile, userEmail, onSave, onCanc
     }
   }, [department]);
 
+  // 4. Cargar barrios al cambiar ciudad
+  useEffect(() => {
+    if (city) {
+      const barrios = getBarriosPorCiudad(city);
+      setBarrioList(barrios);
+      
+      // Si es la ciudad guardada y el barrio existe en la lista, mantenerlo
+      const isSavedCity = userProfile?.city === city;
+      if (isSavedCity && userProfile?.barrio && barrios.some((b) => String(b.id) === String(userProfile.barrio))) {
+        setBarrio(userProfile.barrio);
+      } else if (!isSavedCity) {
+        // Solo resetear si cambió la ciudad manualmente
+        setBarrio('');
+      }
+    } else {
+      setBarrioList([]);
+      setBarrio('');
+    }
+  }, [city]);
+
   async function handleSave() {
     if (!fullName || !idNumber || !province || !city) {
       Alert.alert('Error', 'Por favor completa todos los campos obligatorios');
+      return;
+    }
+    if (barrioList.length > 0 && !barrio) {
+      Alert.alert('Error', 'El barrio es requerido');
       return;
     }
 
@@ -199,6 +227,7 @@ export default function EditUserProfile({ userProfile, userEmail, onSave, onCanc
           country: country || null,
           province: province || null,
           city: city || null,
+          barrio: barrio || null,
           department: department || null
         })
         .eq('id', userProfile.id);
@@ -348,6 +377,47 @@ export default function EditUserProfile({ userProfile, userEmail, onSave, onCanc
                       })}
                     </ScrollView>
                     <TouchableOpacity onPress={() => setCityModalVisible(false)} style={styles.modalCloseBtn}>
+                      <Text style={styles.modalCloseBtnText}>Cerrar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              </Modal>
+            </>
+          )}
+
+          {/* Barrio */}
+          {barrioList.length > 0 && (
+            <>
+              <Text style={styles.label}>Barrio *</Text>
+              <TouchableOpacity style={styles.customPickerTrigger} onPress={() => setBarrioModalVisible(true)}>
+                <Text style={styles.pickerTriggerText}>
+                  {barrioList.find(b => String(b.id) === String(barrio))?.nombre || 'Selecciona barrio'}
+                </Text>
+                <Text style={styles.pickerArrow}>▼</Text>
+              </TouchableOpacity>
+              <Modal visible={barrioModalVisible} transparent animationType="fade" onRequestClose={() => setBarrioModalVisible(false)}>
+                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setBarrioModalVisible(false)}>
+                  <View style={styles.modalContent}>
+                    <Text style={styles.modalTitle}>Selecciona un barrio</Text>
+                    <ScrollView style={styles.modalScroll}>
+                      {barrioList.map((b) => {
+                        const selected = String(b.id) === String(barrio);
+                        return (
+                          <TouchableOpacity
+                            key={String(b.id)}
+                            style={[styles.modalOption, selected && styles.modalOptionSelected]}
+                            onPress={() => {
+                              setBarrio(String(b.id));
+                              setBarrioModalVisible(false);
+                            }}
+                          >
+                            <Text style={[styles.modalOptionText, selected && styles.modalOptionTextSelected]}>{b.nombre}</Text>
+                            {selected && <Text style={styles.checkmark}>✓</Text>}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                    <TouchableOpacity onPress={() => setBarrioModalVisible(false)} style={styles.modalCloseBtn}>
                       <Text style={styles.modalCloseBtnText}>Cerrar</Text>
                     </TouchableOpacity>
                   </View>

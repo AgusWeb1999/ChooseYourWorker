@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useWindowDimensions } from '../../hooks/useWindowDimensions';
+import { getBarriosPorCiudad } from '../../utils/barrios';
 
 // 1. Interfaz actualizada con los nuevos campos de la tabla professionals
 interface Professional {
@@ -16,6 +17,7 @@ interface Professional {
   profession: string;
   city: string;
   state: string;
+  barrio?: string;
   hourly_rate: number;
   rating: number;
   rating_count: number;
@@ -37,15 +39,18 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProfession, setSelectedProfession] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [selectedBarrio, setSelectedBarrio] = useState<string | null>(null);
   const [selectedMinRating, setSelectedMinRating] = useState<number>(0);
   
   // Modales
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [cityModalVisible, setCityModalVisible] = useState(false);
+  const [barrioModalVisible, setBarrioModalVisible] = useState(false);
   
   // Listas dinámicas para filtros
   const [professions, setProfessions] = useState<string[]>(['Todos']);
   const [cities, setCities] = useState<string[]>(['Todas']);
+  const [barrios, setBarrios] = useState<string[]>(['Todos']);
 
   // Onboarding states
   const [onboardingVisible, setOnboardingVisible] = useState(false);
@@ -61,7 +66,33 @@ export default function HomeScreen() {
   // Lógica de Filtrado (Se ejecuta cuando cambian los filtros o la data)
   useEffect(() => {
     filterProfessionals();
-  }, [searchQuery, selectedProfession, selectedCity, selectedMinRating, professionals]);
+  }, [searchQuery, selectedProfession, selectedCity, selectedBarrio, selectedMinRating, professionals]);
+
+  // Actualizar barrios cuando cambia la ciudad
+  useEffect(() => {
+    if (selectedCity && selectedCity !== 'Todas') {
+      // Obtener barrios de la ciudad seleccionada
+      // Necesitamos el ID de la ciudad (valor original en minúsculas), no el normalizado
+      const prof = professionals.find(p => {
+        const cityNormalized = p.city?.trim().charAt(0).toUpperCase() + p.city?.trim().slice(1).toLowerCase();
+        return cityNormalized === selectedCity;
+      });
+      
+      if (prof && prof.city) {
+        // Usar el ID original de la ciudad para buscar barrios
+        const cityId = prof.city.trim().toLowerCase();
+        const barriosList = getBarriosPorCiudad(cityId);
+        const barriosNombres = ['Todos', ...barriosList.map(b => b.nombre)];
+        setBarrios(barriosNombres);
+      } else {
+        setBarrios(['Todos']);
+      }
+      setSelectedBarrio(null); // Reset barrio al cambiar ciudad
+    } else {
+      setBarrios(['Todos']);
+      setSelectedBarrio(null);
+    }
+  }, [selectedCity, professionals]);
 
   // Lógica de Onboarding
   useEffect(() => {
@@ -169,12 +200,21 @@ export default function HomeScreen() {
       });
     }
 
-    // 4. Filtro por rating
+    // 4. Filtro por barrio
+    if (selectedBarrio && selectedBarrio !== 'Todos') {
+      filtered = filtered.filter((prof) => {
+        if (!prof.barrio) return false;
+        const barrioNormalized = prof.barrio.trim().charAt(0).toUpperCase() + prof.barrio.trim().slice(1).toLowerCase();
+        return barrioNormalized === selectedBarrio;
+      });
+    }
+
+    // 5. Filtro por rating
     if (selectedMinRating > 0) {
       filtered = filtered.filter((prof) => (prof.rating || 0) >= selectedMinRating);
     }
 
-    // 5. ORDENAMIENTO: Premium primero, luego Rating
+    // 6. ORDENAMIENTO: Premium primero, luego Rating
     filtered.sort((a, b) => {
       const isPremiumA = a.is_premium ? 1 : 0;
       const isPremiumB = b.is_premium ? 1 : 0;
@@ -354,7 +394,7 @@ export default function HomeScreen() {
               <ScrollView style={styles.sidebarFilters} contentContainerStyle={styles.sidebarContent}>
                 <View style={styles.sidebarHeader}>
                   <Text style={styles.sidebarTitle}>Filtros</Text>
-                  <TouchableOpacity onPress={() => { setSelectedProfession(null); setSelectedCity(null); setSelectedMinRating(0); }}>
+                  <TouchableOpacity onPress={() => { setSelectedProfession(null); setSelectedCity(null); setSelectedBarrio(null); setSelectedMinRating(0); }}>
                     <Text style={styles.clearText}>Limpiar</Text>
                   </TouchableOpacity>
                 </View>
@@ -398,6 +438,25 @@ export default function HomeScreen() {
                   </View>
                 </View>
                 <View style={styles.sidebarDivider} />
+                {barrios.length > 1 && (
+                  <>
+                    <View style={styles.filterGroup}>
+                      <Text style={styles.filterGroupTitle}>Barrios</Text>
+                      <View style={styles.verticalChipList}>
+                        {barrios.map((item) => (
+                          <TouchableOpacity
+                            key={item}
+                            style={[styles.sidebarChip, selectedBarrio === item && styles.sidebarChipActive]}
+                            onPress={() => setSelectedBarrio(item === 'Todos' ? null : item)}
+                          >
+                            <Text style={[styles.sidebarChipText, selectedBarrio === item && styles.sidebarChipTextActive]}>{item}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                    <View style={styles.sidebarDivider} />
+                  </>
+                )}
                 <View style={styles.filterGroup}>
                   <Text style={styles.filterGroupTitle}>Clasificación Mínima</Text>
                   <View style={styles.ratingFilterContainer}>
@@ -453,6 +512,12 @@ export default function HomeScreen() {
                   <Text style={styles.filterButtonText}>{selectedCity || 'Ciudad'}</Text>
                   <Text style={styles.filterArrow}>▼</Text>
                 </TouchableOpacity>
+                {barrios.length > 1 && (
+                  <TouchableOpacity style={styles.filterButton} onPress={() => setBarrioModalVisible(true)}>
+                    <Text style={styles.filterButtonText}>{selectedBarrio || 'Barrio'}</Text>
+                    <Text style={styles.filterArrow}>▼</Text>
+                  </TouchableOpacity>
+                )}
               </View>
               {filteredProfessionals.length === 0 ? (
                 <View style={styles.emptyContainer}>
@@ -506,6 +571,27 @@ export default function HomeScreen() {
                     >
                       <Text style={[styles.modalOptionText, (selectedCity === city || (city === 'Todas' && !selectedCity)) && styles.modalOptionTextSelected]}>{city}</Text>
                       {(selectedCity === city || (city === 'Todas' && !selectedCity)) && <Text style={styles.checkmark}>✓</Text>}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </TouchableOpacity>
+          </Modal>
+
+          {/* Barrio Modal */}
+          <Modal visible={barrioModalVisible} transparent={true} animationType="fade" onRequestClose={() => setBarrioModalVisible(false)}>
+            <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setBarrioModalVisible(false)}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Selecciona un barrio</Text>
+                <ScrollView style={styles.modalScroll}>
+                  {barrios.map((barrio) => (
+                    <TouchableOpacity
+                      key={barrio}
+                      style={[styles.modalOption, (selectedBarrio === barrio || (barrio === 'Todos' && !selectedBarrio)) && styles.modalOptionSelected]}
+                      onPress={() => { setSelectedBarrio(barrio === 'Todos' ? null : barrio); setBarrioModalVisible(false); }}
+                    >
+                      <Text style={[styles.modalOptionText, (selectedBarrio === barrio || (barrio === 'Todos' && !selectedBarrio)) && styles.modalOptionTextSelected]}>{barrio}</Text>
+                      {(selectedBarrio === barrio || (barrio === 'Todos' && !selectedBarrio)) && <Text style={styles.checkmark}>✓</Text>}
                     </TouchableOpacity>
                   ))}
                 </ScrollView>

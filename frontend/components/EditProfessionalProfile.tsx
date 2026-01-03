@@ -10,6 +10,7 @@ import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView,
 import { Picker } from '@react-native-picker/picker';
 import { supabase } from '../src/lib/supabase';
 import { getCountriesList, CountryCode, COUNTRIES } from '../utils/countryValidation';
+import { getBarriosPorCiudad, Barrio } from '../utils/barrios';
 
 // --- INYECCIÓN DE CSS PARA WEB ---
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -172,16 +173,19 @@ export default function EditProfessionalProfile({
   const [province, setProvince] = useState<string>(professionalProfile?.province || '');
   const [department, setDepartment] = useState<string>(professionalProfile?.department || '');
   const [city, setCity] = useState<string>(professionalProfile?.city || '');
+  const [barrio, setBarrio] = useState<string>(professionalProfile?.barrio || '');
   
   const [provinceList, setProvinceList] = useState<any[]>([]);
   const [departmentList, setDepartmentList] = useState<any[]>([]);
   const [cityList, setCityList] = useState<any[]>([]);
+  const [barrioList, setBarrioList] = useState<Barrio[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [countryModalVisible, setCountryModalVisible] = useState(false);
   const [provinceModalVisible, setProvinceModalVisible] = useState(false);
   const [departmentModalVisible, setDepartmentModalVisible] = useState(false);
   const [cityModalVisible, setCityModalVisible] = useState(false);
+  const [barrioModalVisible, setBarrioModalVisible] = useState(false);
 
   // 1. Cargar Provincias: Resetea hijos si el cambio es manual
   useEffect(() => {
@@ -257,6 +261,26 @@ export default function EditProfessionalProfile({
     }
   }, [department, province, country]);
 
+  // 4. Cargar Barrios al cambiar Ciudad
+  useEffect(() => {
+    if (city) {
+      const barrios = getBarriosPorCiudad(city);
+      setBarrioList(barrios);
+      
+      // Si es la ciudad guardada y el barrio existe en la lista, mantenerlo
+      const isSavedCity = professionalProfile?.city === city;
+      if (isSavedCity && professionalProfile?.barrio && barrios.some((b) => String(b.id) === String(professionalProfile.barrio))) {
+        setBarrio(professionalProfile.barrio);
+      } else if (!isSavedCity) {
+        // Solo resetear si cambió la ciudad manualmente
+        setBarrio('');
+      }
+    } else {
+      setBarrioList([]);
+      setBarrio('');
+    }
+  }, [city]);
+
   // Manejar profesión personalizada
   useEffect(() => {
     if (professionalProfile?.profession && !PROFESSIONS.includes(professionalProfile.profession)) {
@@ -270,6 +294,10 @@ export default function EditProfessionalProfile({
     let hasError = false;
     if (!displayName || !finalProfession || !city || !province || (country !== 'UY' && !department)) {
       setToast({ message: 'Por favor completa campos obligatorios', type: 'error' });
+      hasError = true;
+    }
+    if (barrioList.length > 0 && !barrio) {
+      setToast({ message: 'El barrio es requerido', type: 'error' });
       hasError = true;
     }
     if (profession === 'Otro' && !customProfession.trim()) {
@@ -294,6 +322,7 @@ export default function EditProfessionalProfile({
           country,
           province,
           city,
+          barrio: barrio || null,
           department: department || null
         })
         .eq('id', professionalProfile.id);
@@ -526,6 +555,46 @@ export default function EditProfessionalProfile({
             </>
           )}
           
+          {/* Barrio */}
+          {barrioList.length > 0 && (
+            <>
+              <Text style={styles.label}>Barrio *</Text>
+              <TouchableOpacity style={styles.customPickerTrigger} onPress={() => setBarrioModalVisible(true)}>
+                <Text style={styles.pickerTriggerText}>
+                  {barrioList.find(b => String(b.id) === String(barrio))?.nombre || 'Selecciona barrio'}
+                </Text>
+                <Text style={styles.pickerArrow}>▼</Text>
+              </TouchableOpacity>
+              <Modal visible={barrioModalVisible} transparent animationType="fade" onRequestClose={() => setBarrioModalVisible(false)}>
+                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setBarrioModalVisible(false)}>
+                  <View style={styles.modalContent}>
+                    <Text style={styles.modalTitle}>Selecciona un barrio</Text>
+                    <ScrollView style={styles.modalScroll}>
+                      {barrioList.map((b) => {
+                        const selected = String(b.id) === String(barrio);
+                        return (
+                          <TouchableOpacity
+                            key={String(b.id)}
+                            style={[styles.modalOption, selected && styles.modalOptionSelected]}
+                            onPress={() => {
+                              setBarrio(String(b.id));
+                              setBarrioModalVisible(false);
+                            }}
+                          >
+                            <Text style={[styles.modalOptionText, selected && styles.modalOptionTextSelected]}>{b.nombre}</Text>
+                            {selected && <Text style={styles.checkmark}>✓</Text>}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                    <TouchableOpacity onPress={() => setBarrioModalVisible(false)} style={styles.modalCloseBtn}>
+                      <Text style={styles.modalCloseBtnText}>Cerrar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              </Modal>
+            </>
+          )}
 
 
           <Text style={styles.sectionTitle}>Detalles</Text>
