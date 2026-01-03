@@ -1,6 +1,7 @@
 // Declarar la interfaz de props antes de usarla
 interface EditProfessionalProfileProps {
   professionalProfile: any;
+  userProfile: any; // Necesario para obtener el teléfono
   onSave: () => void;
   onCancel?: () => void;
 }
@@ -137,7 +138,8 @@ const forbiddenWords = [
 ];
 
 export default function EditProfessionalProfile({ 
-  professionalProfile, 
+  professionalProfile,
+  userProfile,
   onSave, 
   onCancel 
 }: EditProfessionalProfileProps) {
@@ -160,7 +162,7 @@ export default function EditProfessionalProfile({
   const [customProfession, setCustomProfession] = useState('');
   const [bio, setBio] = useState(professionalProfile?.bio || '');
   // const [zipCode, setZipCode] = useState(professionalProfile?.zip_code || '');
-  // Teléfono eliminado (ya no se edita aquí)
+  const [phone, setPhone] = useState(userProfile?.phone || ''); // Teléfono del usuario (de tabla users)
   const [hourlyRate, setHourlyRate] = useState(
     professionalProfile?.hourly_rate ? String(professionalProfile.hourly_rate) : ''
   );
@@ -304,6 +306,10 @@ export default function EditProfessionalProfile({
       setToast({ message: 'Especifica tu profesión', type: 'error' });
       hasError = true;
     }
+    if (!phone || phone.trim() === '') {
+      setToast({ message: 'El celular es requerido', type: 'error' });
+      hasError = true;
+    }
     if (hasError) {
       if (toastTimeout.current) clearTimeout(toastTimeout.current);
       toastTimeout.current = setTimeout(() => setToast(null), 3000);
@@ -311,6 +317,7 @@ export default function EditProfessionalProfile({
     }
     setLoading(true);
     try {
+      // Actualizar tabla professionals
       const { error } = await supabase
         .from('professionals')
         .update({
@@ -327,14 +334,20 @@ export default function EditProfessionalProfile({
         })
         .eq('id', professionalProfile.id);
 
-      if (error) {
-        setToast({ message: error.message, type: 'error' });
-      } else {
-        setToast({ message: '¡Perfil actualizado exitosamente!', type: 'success' });
-        setTimeout(() => {
-          onSave();
-        }, 1200);
-      }
+      if (error) throw error;
+
+      // Actualizar teléfono en tabla users
+      const { error: phoneError } = await supabase
+        .from('users')
+        .update({ phone: phone })
+        .eq('id', userProfile.id);
+
+      if (phoneError) throw phoneError;
+
+      setToast({ message: '¡Perfil actualizado exitosamente!', type: 'success' });
+      setTimeout(() => {
+        onSave();
+      }, 1200);
     } catch (error: any) {
       setToast({ message: error.message || 'Error desconocido', type: 'error' });
     } finally {
@@ -607,6 +620,15 @@ export default function EditProfessionalProfile({
             onChangeText={setBio}
             multiline
             numberOfLines={4}
+          />
+
+          <Text style={styles.label}>Celular *</Text>
+          <TextInput
+            style={styles.inputUnified}
+            placeholder="Ej: 099 123 456"
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
           />
 
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, Image, ScrollView, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, Image, ScrollView, SafeAreaView, KeyboardAvoidingView, Platform, Linking } from 'react-native';
 import { Link, router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 
@@ -213,6 +213,20 @@ export default function LoginScreen() {
                     </TouchableOpacity>
                   </Link>
                 </View>
+                <TouchableOpacity 
+                  style={styles.supportLink}
+                  onPress={async () => {
+                    const url = 'mailto:workinggoam@gmail.com?subject=Consulta%20desde%20Login';
+                    const supported = await Linking.canOpenURL(url);
+                    if (supported) {
+                      await Linking.openURL(url);
+                    } else {
+                      Alert.alert('Error', 'No se pudo abrir la aplicación de correo.');
+                    }
+                  }}
+                >
+                  <Text style={styles.supportLinkText}>¿Necesitas ayuda? Contacta soporte</Text>
+                </TouchableOpacity>
               </View>
             </View>
           ) : (
@@ -299,6 +313,20 @@ export default function LoginScreen() {
                   </TouchableOpacity>
                 </Link>
               </View>
+              <TouchableOpacity 
+                style={styles.supportLink}
+                onPress={async () => {
+                  const url = 'mailto:workinggoam@gmail.com?subject=Consulta%20desde%20Login';
+                  const supported = await Linking.canOpenURL(url);
+                  if (supported) {
+                    await Linking.openURL(url);
+                  } else {
+                    Alert.alert('Error', 'No se pudo abrir la aplicación de correo.');
+                  }
+                }}
+              >
+                <Text style={styles.supportLinkText}>¿Necesitas ayuda? Contacta soporte</Text>
+              </TouchableOpacity>
             </View>
           )}
         </ScrollView>
@@ -458,5 +486,15 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#991B1B',
     fontSize: 14,
+  },
+  supportLink: {
+    marginTop: 16,
+    marginBottom: 8,
+    alignItems: 'center',
+  },
+  supportLinkText: {
+    fontSize: 12,
+    color: '#9ca3af',
+    textDecorationLine: 'underline',
   },
 });

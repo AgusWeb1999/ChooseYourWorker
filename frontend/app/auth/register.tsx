@@ -12,13 +12,14 @@ const PROFESSIONS = [
   'Veterinario', 'Animador de Eventos', 'DJ', 'Músico', 'Cantante', 'Traductor', 'Redactor',
   'Community Manager', 'Marketing Digital', 'Otro',
 ];
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, SafeAreaView, KeyboardAvoidingView, Platform, Modal } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, SafeAreaView, KeyboardAvoidingView, Platform, Modal, Linking } from 'react-native';
 import { Link, router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { validatePhone, validateId, normalizePhone, normalizeId, getCountriesList, CountryCode } from '../../utils/countryValidation';
 import { getBarriosPorCiudad, Barrio } from '../../utils/barrios';
 import { Picker } from '@react-native-picker/picker';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { useRef } from 'react';
 
 
 
@@ -213,6 +214,8 @@ export default function RegisterScreen() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [countryModalVisible, setCountryModalVisible] = useState(false);
+  const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+  const toastTimeout = useRef<any>(null);
 
   // Campos de perfil profesional (solo para trabajadores)
   const [displayName, setDisplayName] = useState('');
@@ -345,6 +348,91 @@ export default function RegisterScreen() {
     try {
       // Normalize email: trim whitespace and lowercase
       const normalizedEmail = email.trim().toLowerCase();
+      const normalizedPhone = normalizePhone(phone, country);
+      const normalizedIdNumber = normalizeId(idNumber);
+
+      console.log('🔍 Verificando duplicados...');
+      console.log('Email normalizado:', normalizedEmail);
+      console.log('Teléfono normalizado:', normalizedPhone);
+      console.log('Cédula normalizada:', normalizedIdNumber);
+
+      // ========== VALIDACIONES DE DUPLICADOS ==========
+      
+      // 1. Verificar si el email ya existe usando función RPC pública
+      const { data: emailExists, error: emailCheckError } = await supabase
+        .rpc('check_email_exists', { email_to_check: normalizedEmail });
+
+      console.log('📧 Verificación email:', { emailExists, emailCheckError });
+
+      if (emailCheckError) {
+        console.error('❌ Error verificando email:', emailCheckError);
+        setToast({ message: 'Error al verificar disponibilidad del email. Por favor intenta nuevamente.', type: 'error' });
+        if (toastTimeout.current) clearTimeout(toastTimeout.current);
+        toastTimeout.current = setTimeout(() => setToast(null), 3000);
+        setLoading(false);
+        return;
+      }
+
+      if (emailExists) {
+        console.log('⚠️ Email ya existe');
+        setToast({ message: 'Este correo electrónico ya está registrado. Verifica tu email o recupera tu contraseña.', type: 'error' });
+        if (toastTimeout.current) clearTimeout(toastTimeout.current);
+        toastTimeout.current = setTimeout(() => setToast(null), 4000);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Verificar si el teléfono ya existe usando función RPC pública
+      const { data: phoneExists, error: phoneCheckError } = await supabase
+        .rpc('check_phone_exists', { phone_to_check: normalizedPhone });
+
+      console.log('📱 Verificación teléfono:', { phoneExists, phoneCheckError });
+
+      if (phoneCheckError) {
+        console.error('❌ Error verificando teléfono:', phoneCheckError);
+        setToast({ message: 'Error al verificar disponibilidad del teléfono. Por favor intenta nuevamente.', type: 'error' });
+        if (toastTimeout.current) clearTimeout(toastTimeout.current);
+        toastTimeout.current = setTimeout(() => setToast(null), 3000);
+        setLoading(false);
+        return;
+      }
+
+      if (phoneExists) {
+        console.log('⚠️ Teléfono ya existe');
+        setToast({ message: 'Este número de teléfono ya está asociado a otra cuenta. Cada usuario debe tener un número único.', type: 'error' });
+        if (toastTimeout.current) clearTimeout(toastTimeout.current);
+        toastTimeout.current = setTimeout(() => setToast(null), 4000);
+        setLoading(false);
+        return;
+      }
+
+      // 3. Verificar si la cédula/DNI ya existe usando función RPC pública
+      const { data: idExists, error: idCheckError } = await supabase
+        .rpc('check_id_exists', { id_to_check: normalizedIdNumber });
+
+      console.log('🪪 Verificación cédula:', { idExists, idCheckError });
+
+      if (idCheckError) {
+        console.error('❌ Error verificando cédula:', idCheckError);
+        setToast({ message: 'Error al verificar disponibilidad de la cédula/DNI. Por favor intenta nuevamente.', type: 'error' });
+        if (toastTimeout.current) clearTimeout(toastTimeout.current);
+        toastTimeout.current = setTimeout(() => setToast(null), 3000);
+        setLoading(false);
+        return;
+      }
+
+      if (idExists) {
+        console.log('⚠️ Cédula ya existe');
+        setToast({ message: 'Esta cédula/DNI ya está asociada a otra cuenta. Si crees que es un error, contacta a soporte.', type: 'error' });
+        if (toastTimeout.current) clearTimeout(toastTimeout.current);
+        toastTimeout.current = setTimeout(() => setToast(null), 4000);
+        setLoading(false);
+        return;
+      }
+
+      console.log('✅ Todas las validaciones pasaron, creando cuenta...');
+
+      // ========== CREAR CUENTA ==========
       
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: normalizedEmail,
@@ -355,7 +443,25 @@ export default function RegisterScreen() {
         }
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        // Manejar errores específicos de Supabase Auth
+        if (authError.message.includes('already registered')) {
+          Alert.alert(
+            'Email ya registrado',
+            'Este correo ya está en uso. ¿Deseas recuperar tu contraseña?',
+            [
+              { text: 'Cancelar', style: 'cancel' },
+              { 
+                text: 'Recuperar contraseña', 
+                onPress: () => router.push('/auth/forgot-password')
+              }
+            ]
+          );
+          setLoading(false);
+          return;
+        }
+        throw authError;
+      }
 
       if (authData.user) {
         const userId = authData.user.id;
@@ -379,8 +485,8 @@ export default function RegisterScreen() {
             p_city: city,
             p_state: province,
             p_barrio: barrio,
-            p_phone: normalizePhone(phone, country),
-            p_id_number: normalizeId(idNumber),
+            p_phone: normalizedPhone,
+            p_id_number: normalizedIdNumber,
             p_country: country,
             p_hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
             p_years_experience: yearsExperience ? parseInt(yearsExperience) : null
@@ -400,7 +506,7 @@ export default function RegisterScreen() {
               zip_code: '',
               hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
               years_experience: yearsExperience ? parseInt(yearsExperience) : null,
-              phone: normalizePhone(phone, country),
+              phone: normalizedPhone,
               rating: 0,
               rating_count: 0,
               total_reviews: 0,
@@ -419,8 +525,8 @@ export default function RegisterScreen() {
         if (typeof window !== 'undefined') {
           localStorage.setItem('pending_user_data', JSON.stringify({
             user_id: userId,
-            phone: normalizePhone(phone, country),
-            id_number: normalizeId(idNumber),
+            phone: normalizedPhone,
+            id_number: normalizedIdNumber,
             country,
             province,
             city,
@@ -776,6 +882,21 @@ export default function RegisterScreen() {
                 <TouchableOpacity><Text style={styles.link}>Inicia Sesión</Text></TouchableOpacity>
               </Link>
             </View>
+
+            <TouchableOpacity 
+              style={styles.supportLink}
+              onPress={async () => {
+                const url = 'mailto:workinggoam@gmail.com?subject=Consulta%20desde%20Registro';
+                const supported = await Linking.canOpenURL(url);
+                if (supported) {
+                  await Linking.openURL(url);
+                } else {
+                  Alert.alert('Error', 'No se pudo abrir la aplicación de correo.');
+                }
+              }}
+            >
+              <Text style={styles.supportLinkText}>¿Necesitas ayuda? Contacta soporte</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -789,6 +910,13 @@ export default function RegisterScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* TOAST NOTIFICATION */}
+      {toast && (
+        <View style={[styles.toast, toast.type === 'success' ? styles.toastSuccess : styles.toastError]}>
+          <Text style={styles.toastText}>{toast.message}</Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -867,5 +995,13 @@ const styles = StyleSheet.create({
   checkboxInner: { width: 24, height: 24, borderWidth: 2, borderColor: '#1e3a5f', borderRadius: 6, justifyContent: 'center', alignItems: 'center' },
   checkboxChecked: { backgroundColor: '#1e3a5f' },
   // checkmark duplicado eliminado para evitar conflicto de propiedades
-  termsLabel: { color: '#4b5563', fontSize: 14 }
+  termsLabel: { color: '#4b5563', fontSize: 14 },
+
+  toast: { position: 'absolute', bottom: 40, left: 20, right: 20, padding: 16, borderRadius: 12, zIndex: 1000, elevation: 5 },
+  toastSuccess: { backgroundColor: '#10b981' },
+  toastError: { backgroundColor: '#ef4444' },
+  toastText: { color: '#fff', textAlign: 'center', fontWeight: '700', fontSize: 15 },
+
+  supportLink: { marginTop: 16, marginBottom: 8, alignItems: 'center' },
+  supportLinkText: { fontSize: 12, color: '#9ca3af', textDecorationLine: 'underline' }
 });

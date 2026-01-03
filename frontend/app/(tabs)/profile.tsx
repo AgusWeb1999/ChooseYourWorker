@@ -214,9 +214,10 @@ export default function ProfileScreen() {
 
       {/* Modal Editar Profesional */}
       <Modal visible={editModalVisible} animationType="slide" presentationStyle="pageSheet">
-        {professionalProfile && (
+        {professionalProfile && userProfile && (
           <EditProfessionalProfile 
-            professionalProfile={professionalProfile} 
+            professionalProfile={professionalProfile}
+            userProfile={userProfile}
             onSave={handleProfileSaved} 
             onCancel={() => setEditModalVisible(false)} 
           />

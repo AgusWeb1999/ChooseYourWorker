@@ -114,6 +114,7 @@ export default function EditUserProfile({ userProfile, userEmail, onSave, onCanc
   const [fullName, setFullName] = useState(userProfile?.full_name || '');
   const [dateOfBirth, setDateOfBirth] = useState(userProfile?.date_of_birth || '');
   const [idNumber, setIdNumber] = useState(userProfile?.id_number || '');
+  const [phone, setPhone] = useState(userProfile?.phone || '');
   const [zipCode, setZipCode] = useState(userProfile?.zip_code || '');
   
   // Ubicación
@@ -214,6 +215,10 @@ export default function EditUserProfile({ userProfile, userEmail, onSave, onCanc
       Alert.alert('Error', 'El barrio es requerido');
       return;
     }
+    if (!phone || phone.trim() === '') {
+      Alert.alert('Error', 'El celular es requerido');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -223,6 +228,7 @@ export default function EditUserProfile({ userProfile, userEmail, onSave, onCanc
           full_name: fullName,
           date_of_birth: dateOfBirth || null,
           id_number: idNumber,
+          phone: phone,
           zip_code: zipCode || null,
           country: country || null,
           province: province || null,
@@ -436,7 +442,7 @@ export default function EditUserProfile({ userProfile, userEmail, onSave, onCanc
           <Text style={styles.label}>Cédula / DNI *</Text>
           <TextInput style={styles.inputUnified} value={idNumber} onChangeText={setIdNumber} keyboardType="numeric" />
           <Text style={styles.label}>Celular *</Text>
-          <TextInput style={styles.inputUnified} value={userProfile?.phone || ''} onChangeText={() => {}} keyboardType="phone-pad" editable={false} />
+          <TextInput style={styles.inputUnified} value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="Ej: 099 123 456" />
 
           <View style={styles.buttonRow}>
             {onCancel && (
