@@ -333,54 +333,82 @@ export default function RegisterScreen() {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: normalizedEmail,
         password,
-        options: { data: { full_name: fullName, user_type: userType } }
+        options: { 
+          data: { full_name: fullName, user_type: userType },
+          emailRedirectTo: 'https://working-go.com/auth/email-verified'
+        }
       });
 
       if (authError) throw authError;
 
       if (authData.user) {
-        // Crear registro en tabla users (UPSERT para evitar conflictos)
-        const { error: userError } = await supabase.from('users').upsert({ 
-          id: authData.user.id,
-          auth_uid: authData.user.id,
-          email: normalizedEmail,
-          full_name: fullName,
-          is_professional: userType === 'worker',
-          phone: normalizePhone(phone, country),
-          id_number: normalizeId(idNumber),
-          country,
-          province,
-          city,
-          email_verified: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'id' });
-
-        if (userError) throw userError;
-
-        // Si es profesional, crear registro en professionals con los datos completos
+        const userId = authData.user.id;
+        
+        // El trigger de base de datos ya creó el registro base en users
+        // Solo actualizamos los campos adicionales que no están en el trigger
+        
+        // Esperar un momento para que el trigger complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Si es profesional, crear registro en professionals con TODOS los datos necesarios
         if (userType === 'worker') {
           const finalProfession = profession === 'Otro' ? customProfession : profession;
-          await supabase.from('professionals').insert({
-            user_id: authData.user.id,
-            display_name: displayName,
-            profession: finalProfession.charAt(0).toUpperCase() + finalProfession.slice(1).toLowerCase(),
-            bio,
-            city: city,
-            state: province,
-            zip_code: '',
-            hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
-            years_experience: yearsExperience ? parseInt(yearsExperience) : null,
-            phone: normalizePhone(phone, country),
-            rating: 0,
-            rating_count: 0,
-            total_reviews: 0,
-            avatar_url: null,
-            completed_hires_count: 0
+          
+          // Intentar usar RPC call para insertar con permisos elevados
+          const { error: profError } = await supabase.rpc('create_professional_profile', {
+            p_user_id: userId,
+            p_display_name: displayName,
+            p_profession: finalProfession.charAt(0).toUpperCase() + finalProfession.slice(1).toLowerCase(),
+            p_bio: bio || '',
+            p_city: city,
+            p_state: province,
+            p_phone: normalizePhone(phone, country),
+            p_id_number: normalizeId(idNumber),
+            p_country: country,
+            p_hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
+            p_years_experience: yearsExperience ? parseInt(yearsExperience) : null
           });
+          
+          // Si el RPC falla, intentar insert directo (fallback)
+          if (profError) {
+            console.log('RPC failed, trying direct insert:', profError);
+            const { error: insertError } = await supabase.from('professionals').insert({
+              user_id: userId,
+              display_name: displayName,
+              profession: finalProfession.charAt(0).toUpperCase() + finalProfession.slice(1).toLowerCase(),
+              bio: bio || '',
+              city: city,
+              state: province,
+              zip_code: '',
+              hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
+              years_experience: yearsExperience ? parseInt(yearsExperience) : null,
+              phone: normalizePhone(phone, country),
+              rating: 0,
+              rating_count: 0,
+              total_reviews: 0,
+              avatar_url: null,
+              completed_hires_count: 0
+            });
+            
+            if (insertError) {
+              console.error('Error creating professional profile:', insertError);
+              // No lanzamos error aquí, permitimos que continúe
+            }
+          }
         }
-        // REFRESH PROFILE after registration and data update
-        await refreshProfiles();
+        
+        // Guardar datos adicionales en localStorage para actualizar después de confirmar email
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('pending_user_data', JSON.stringify({
+            user_id: userId,
+            phone: normalizePhone(phone, country),
+            id_number: normalizeId(idNumber),
+            country,
+            province,
+            city
+          }));
+        }
+        
         // Redirigir a pantalla de confirmación de email
         router.replace({ pathname: '/auth/email-confirmation', params: { email: normalizedEmail } });
         return;

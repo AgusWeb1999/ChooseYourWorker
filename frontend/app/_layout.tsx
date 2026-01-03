@@ -79,6 +79,7 @@ function RootLayoutNav() {
         <Stack.Screen name="auth/login" />
         <Stack.Screen name="auth/register" />
         <Stack.Screen name="auth/email-confirmation" />
+        <Stack.Screen name="auth/email-verified" />
       </Stack>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </View>
