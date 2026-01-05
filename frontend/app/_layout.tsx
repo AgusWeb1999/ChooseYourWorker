@@ -45,17 +45,18 @@ function RootLayoutNav() {
       return;
     }
 
+    // TEMPORALMENTE DESACTIVADO - Verificación por email
     // Has session but email not verified -> go to email confirmation (and stay there)
-    if (
-      session &&
-      userProfile &&
-      userProfile.email_verified === false &&
-      !inEmailConfirmation
-    ) {
-      console.log('✉️ Email no verificado, redirigiendo a confirmación');
-      router.replace({ pathname: '/auth/email-confirmation', params: { email: userProfile.email } });
-      return;
-    }
+    // if (
+    //   session &&
+    //   userProfile &&
+    //   userProfile.email_verified === false &&
+    //   !inEmailConfirmation
+    // ) {
+    //   console.log('✉️ Email no verificado, redirigiendo a confirmación');
+    //   router.replace({ pathname: '/auth/email-confirmation', params: { email: userProfile.email } });
+    //   return;
+    // }
 
     // Email verified, profile complete, in auth -> go to tabs
     if (session && !needsProfileCompletion && inAuthGroup && !inEmailConfirmation) {

@@ -117,12 +117,15 @@ export default function EditUserProfile({ userProfile, userEmail, onSave, onCanc
   const [phone, setPhone] = useState(userProfile?.phone || '');
   const [zipCode, setZipCode] = useState(userProfile?.zip_code || '');
   
-  // Ubicación
+  // Ubicación - Cargar datos existentes
   const [country, setCountry] = useState<CountryCode>(userProfile?.country || 'UY');
-  const [province, setProvince] = useState<string>(userProfile?.province || '');
+  const [province, setProvince] = useState<string>(userProfile?.province || userProfile?.state || '');
   const [department, setDepartment] = useState<string>(userProfile?.department || '');
   const [city, setCity] = useState<string>(userProfile?.city || '');
   const [barrio, setBarrio] = useState<string>(userProfile?.barrio || '');
+  
+  // Flag para saber si es la carga inicial
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   
   const [provinceList, setProvinceList] = useState<any[]>([]);
   const [departmentList, setDepartmentList] = useState<any[]>([]);
@@ -141,36 +144,32 @@ export default function EditUserProfile({ userProfile, userEmail, onSave, onCanc
     const loadProvinces = async () => {
       const provinces = await fetchProvinces(country);
       setProvinceList(provinces);
-      // Solo mantenemos la provincia si el país es el que ya estaba guardado
-      if (userProfile?.country === country && provinces.some((p:any) => String(p.id) === String(userProfile.province))) {
-        setProvince(userProfile.province);
-      } else {
+      // Solo resetear si NO es carga inicial y el usuario cambió el país
+      if (!isInitialLoad) {
         setProvince(''); setDepartment(''); setCity('');
       }
+      setIsInitialLoad(false);
     };
     loadProvinces();
   }, [country]);
 
   // 2. Cargar departamentos (AR) o Ciudades (UY)
   useEffect(() => {
-    setDepartmentList([]); 
-    setCityList([]);
     if (province) {
       if (country === 'UY') {
         fetchCities(country, province, '').then((cities) => {
           setCityList(cities);
-          if (userProfile?.province === province && userProfile?.city && cities.some((c:any) => String(c.id) === String(userProfile.city))) {
-            setCity(userProfile.city);
-          } else { setCity(''); }
+          // No resetear city si ya está cargada la lista y coincide
         });
       } else {
         fetchDepartments(country, province).then((departments) => {
           setDepartmentList(departments);
-          if (userProfile?.province === province && userProfile?.department && departments.some((d:any) => String(d.id) === String(userProfile.department))) {
-            setDepartment(userProfile.department);
-          } else { setDepartment(''); setCity(''); }
+          // No resetear department si ya está cargado
         });
       }
+    } else {
+      setDepartmentList([]); 
+      setCityList([]);
     }
   }, [province, country]);
 

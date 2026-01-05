@@ -162,7 +162,7 @@ export default function EditProfessionalProfile({
   const [customProfession, setCustomProfession] = useState('');
   const [bio, setBio] = useState(professionalProfile?.bio || '');
   // const [zipCode, setZipCode] = useState(professionalProfile?.zip_code || '');
-  const [phone, setPhone] = useState(userProfile?.phone || ''); // Teléfono del usuario (de tabla users)
+  const [phone, setPhone] = useState(professionalProfile?.phone || userProfile?.phone || ''); // Intentar de professional primero, luego de user
   const [hourlyRate, setHourlyRate] = useState(
     professionalProfile?.hourly_rate ? String(professionalProfile.hourly_rate) : ''
   );
@@ -170,12 +170,15 @@ export default function EditProfessionalProfile({
     professionalProfile?.years_experience ? String(professionalProfile.years_experience) : ''
   );
 
-  // --- Ubicación ---
-  const [country, setCountry] = useState<CountryCode>(professionalProfile?.country || 'UY');
-  const [province, setProvince] = useState<string>(professionalProfile?.province || '');
-  const [department, setDepartment] = useState<string>(professionalProfile?.department || '');
-  const [city, setCity] = useState<string>(professionalProfile?.city || '');
-  const [barrio, setBarrio] = useState<string>(professionalProfile?.barrio || '');
+  // --- Ubicación - Cargar datos existentes (state se mapea a province) ---
+  const [country, setCountry] = useState<CountryCode>(professionalProfile?.country || userProfile?.country || 'UY');
+  const [province, setProvince] = useState<string>(professionalProfile?.province || professionalProfile?.state || userProfile?.province || '');
+  const [department, setDepartment] = useState<string>(professionalProfile?.department || userProfile?.department || '');
+  const [city, setCity] = useState<string>(professionalProfile?.city || userProfile?.city || '');
+  const [barrio, setBarrio] = useState<string>(professionalProfile?.barrio || userProfile?.barrio || '');
+  
+  // Flag para saber si es la carga inicial
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   
   const [provinceList, setProvinceList] = useState<any[]>([]);
   const [departmentList, setDepartmentList] = useState<any[]>([]);
@@ -189,59 +192,39 @@ export default function EditProfessionalProfile({
   const [cityModalVisible, setCityModalVisible] = useState(false);
   const [barrioModalVisible, setBarrioModalVisible] = useState(false);
 
-  // 1. Cargar Provincias: Resetea hijos si el cambio es manual
+  // 1. Cargar Provincias: No resetear en carga inicial
   useEffect(() => {
     fetchProvinces(country).then((data) => {
       setProvinceList(data);
       
-      // Chequeo si estamos cargando el dato guardado del perfil
-      const isSavedCountry = professionalProfile?.country === country;
-      
-      if (isSavedCountry && professionalProfile?.province && data.some((p:any) => String(p.id) === String(professionalProfile.province))) {
-        setProvince(professionalProfile.province);
-      } else {
-        // Si el usuario cambió de país manualmente, reseteamos la provincia
+      // Solo resetear si NO es carga inicial (usuario cambió país manualmente)
+      if (!isInitialLoad) {
         setProvince('');
         setDepartment('');
         setCity('');
       }
+      setIsInitialLoad(false);
     });
   }, [country]);
 
   // 2. Cargar Deptos/Ciudades al cambiar Provincia
   useEffect(() => {
-    setDepartmentList([]);
-    setCityList([]);
     if (province) {
       if (country === 'UY') {
         fetchCities(country, province, '').then((data) => {
           setCityList(data);
-          // Restaurar valor si corresponde
-          const isSavedProvince = professionalProfile?.province === province;
-          if (isSavedProvince && professionalProfile?.city && data.some((c:any) => String(c.id) === String(professionalProfile.city))) {
-            setCity(String(professionalProfile.city));
-          } else {
-            setCity('');
-          }
+          // No resetear city en carga inicial
         });
         setDepartment(''); // UY no usa departamento
       } else {
         fetchDepartments(country, province).then((data) => {
           setDepartmentList(data);
-          const isSavedProvince = professionalProfile?.province === province;
-          if (isSavedProvince && professionalProfile?.department && data.some((d:any) => String(d.id) === String(professionalProfile.department))) {
-            setDepartment(String(professionalProfile.department));
-          } else {
-            setDepartment('');
-            setCity('');
-          }
+          // No resetear department en carga inicial
         });
       }
     } else {
       setDepartmentList([]);
       setCityList([]);
-      setCity('');
-      setDepartment('');
     }
   }, [province, country]);
 

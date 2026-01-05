@@ -351,10 +351,7 @@ export default function RegisterScreen() {
       const normalizedPhone = normalizePhone(phone, country);
       const normalizedIdNumber = normalizeId(idNumber);
 
-      console.log('🔍 Verificando duplicados...');
-      console.log('Email normalizado:', normalizedEmail);
-      console.log('Teléfono normalizado:', normalizedPhone);
-      console.log('Cédula normalizada:', normalizedIdNumber);
+      // Verificando duplicados...
 
       // ========== VALIDACIONES DE DUPLICADOS ==========
       
@@ -362,10 +359,7 @@ export default function RegisterScreen() {
       const { data: emailExists, error: emailCheckError } = await supabase
         .rpc('check_email_exists', { email_to_check: normalizedEmail });
 
-      console.log('📧 Verificación email:', { emailExists, emailCheckError });
-
       if (emailCheckError) {
-        console.error('❌ Error verificando email:', emailCheckError);
         setToast({ message: 'Error al verificar disponibilidad del email. Por favor intenta nuevamente.', type: 'error' });
         if (toastTimeout.current) clearTimeout(toastTimeout.current);
         toastTimeout.current = setTimeout(() => setToast(null), 3000);
@@ -374,7 +368,6 @@ export default function RegisterScreen() {
       }
 
       if (emailExists) {
-        console.log('⚠️ Email ya existe');
         setToast({ message: 'Este correo electrónico ya está registrado. Verifica tu email o recupera tu contraseña.', type: 'error' });
         if (toastTimeout.current) clearTimeout(toastTimeout.current);
         toastTimeout.current = setTimeout(() => setToast(null), 4000);
@@ -386,10 +379,7 @@ export default function RegisterScreen() {
       const { data: phoneExists, error: phoneCheckError } = await supabase
         .rpc('check_phone_exists', { phone_to_check: normalizedPhone });
 
-      console.log('📱 Verificación teléfono:', { phoneExists, phoneCheckError });
-
       if (phoneCheckError) {
-        console.error('❌ Error verificando teléfono:', phoneCheckError);
         setToast({ message: 'Error al verificar disponibilidad del teléfono. Por favor intenta nuevamente.', type: 'error' });
         if (toastTimeout.current) clearTimeout(toastTimeout.current);
         toastTimeout.current = setTimeout(() => setToast(null), 3000);
@@ -398,7 +388,6 @@ export default function RegisterScreen() {
       }
 
       if (phoneExists) {
-        console.log('⚠️ Teléfono ya existe');
         setToast({ message: 'Este número de teléfono ya está asociado a otra cuenta. Cada usuario debe tener un número único.', type: 'error' });
         if (toastTimeout.current) clearTimeout(toastTimeout.current);
         toastTimeout.current = setTimeout(() => setToast(null), 4000);
@@ -410,10 +399,7 @@ export default function RegisterScreen() {
       const { data: idExists, error: idCheckError } = await supabase
         .rpc('check_id_exists', { id_to_check: normalizedIdNumber });
 
-      console.log('🪪 Verificación cédula:', { idExists, idCheckError });
-
       if (idCheckError) {
-        console.error('❌ Error verificando cédula:', idCheckError);
         setToast({ message: 'Error al verificar disponibilidad de la cédula/DNI. Por favor intenta nuevamente.', type: 'error' });
         if (toastTimeout.current) clearTimeout(toastTimeout.current);
         toastTimeout.current = setTimeout(() => setToast(null), 3000);
@@ -422,15 +408,12 @@ export default function RegisterScreen() {
       }
 
       if (idExists) {
-        console.log('⚠️ Cédula ya existe');
         setToast({ message: 'Esta cédula/DNI ya está asociada a otra cuenta. Si crees que es un error, contacta a soporte.', type: 'error' });
         if (toastTimeout.current) clearTimeout(toastTimeout.current);
         toastTimeout.current = setTimeout(() => setToast(null), 4000);
         setLoading(false);
         return;
       }
-
-      console.log('✅ Todas las validaciones pasaron, creando cuenta...');
 
       // ========== CREAR CUENTA ==========
       
@@ -439,7 +422,8 @@ export default function RegisterScreen() {
         password,
         options: { 
           data: { full_name: fullName, user_type: userType },
-          emailRedirectTo: 'https://working-go.com/auth/email-verified'
+          // TEMPORALMENTE DESACTIVADO - Verificación por email
+          // emailRedirectTo: 'https://working-go.com/auth/email-verified'
         }
       });
 
@@ -482,12 +466,13 @@ export default function RegisterScreen() {
             p_display_name: displayName,
             p_profession: finalProfession.charAt(0).toUpperCase() + finalProfession.slice(1).toLowerCase(),
             p_bio: bio || '',
-            p_city: city,
+            p_country: country,
             p_state: province,
+            p_department: department || null,
+            p_city: city,
             p_barrio: barrio,
             p_phone: normalizedPhone,
             p_id_number: normalizedIdNumber,
-            p_country: country,
             p_hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
             p_years_experience: yearsExperience ? parseInt(yearsExperience) : null
           });
@@ -500,8 +485,10 @@ export default function RegisterScreen() {
               display_name: displayName,
               profession: finalProfession.charAt(0).toUpperCase() + finalProfession.slice(1).toLowerCase(),
               bio: bio || '',
-              city: city,
+              country: country,
               state: province,
+              department: department || null,
+              city: city,
               barrio: barrio,
               zip_code: '',
               hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
@@ -521,7 +508,28 @@ export default function RegisterScreen() {
           }
         }
         
-        // Guardar datos adicionales en localStorage para actualizar después de confirmar email
+        // ACTUALIZAR tabla users con todos los datos personales
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            phone: normalizedPhone,
+            id_number: normalizedIdNumber,
+            country: country,
+            province: province,
+            department: department || null,
+            city: city,
+            barrio: barrio,
+          })
+          .eq('id', userId);
+        
+        if (updateError) {
+          console.error('Error actualizando datos de usuario:', updateError);
+        }
+        
+        // Refrescar perfiles para que los datos aparezcan inmediatamente
+        await refreshProfiles();
+        
+        // Guardar datos adicionales en localStorage para actualizar después de confirmar email (por si acaso)
         if (typeof window !== 'undefined') {
           localStorage.setItem('pending_user_data', JSON.stringify({
             user_id: userId,
@@ -534,8 +542,23 @@ export default function RegisterScreen() {
           }));
         }
         
+        // TEMPORALMENTE DESACTIVADO - Verificación por email
         // Redirigir a pantalla de confirmación de email
-        router.replace({ pathname: '/auth/email-confirmation', params: { email: normalizedEmail } });
+        // router.replace({ pathname: '/auth/email-confirmation', params: { email: normalizedEmail } });
+        
+        // Redirigir directo a la app sin verificación de email
+        // Esperar a que la sesión se establezca correctamente
+        Alert.alert('¡Registro exitoso!', 'Tu cuenta ha sido creada correctamente.', [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Dar tiempo para que AuthContext detecte la sesión
+              setTimeout(() => {
+                router.replace('/(tabs)');
+              }, 500);
+            }
+          }
+        ]);
         return;
       }
     } catch (err: any) {
