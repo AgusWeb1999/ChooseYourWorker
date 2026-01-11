@@ -73,6 +73,16 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
       const mapped: Job[] = (data || []).map((item: any) => {
         const isContactVisible = ['accepted', 'in_progress', 'waiting_client_approval', 'completed'].includes(item.status);
         const review = reviewsMap.get(item.id);
+        
+        // Debug logging para entender por qué no se ve el teléfono
+        console.log('🔍 Debug Job:', {
+          id: item.id,
+          status: item.status,
+          isContactVisible,
+          clientData: item.client,
+          clientPhone: item.client?.phone
+        });
+        
         return {
           id: item.id,
           created_at: item.created_at,

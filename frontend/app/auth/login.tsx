@@ -74,6 +74,14 @@ export default function LoginScreen() {
       } else if (error.message.includes('Email not confirmed')) {
         errorMessage = 'Debés confirmar tu email antes de iniciar sesión. Revisá tu bandeja de entrada.';
         fieldErrors = { email: 'Email no confirmado' };
+        
+        // Redirigir a pantalla de confirmación después de mostrar el error
+        setTimeout(() => {
+          router.push({ 
+            pathname: '/auth/email-confirmation', 
+            params: { email } 
+          });
+        }, 2000);
       } else if (error.message.includes('User not found')) {
         errorMessage = 'Usuario no encontrado';
         fieldErrors = { email: 'Usuario no existe' };

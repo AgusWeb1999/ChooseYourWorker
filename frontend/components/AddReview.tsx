@@ -66,23 +66,28 @@ export default function AddReview({
       if (error) {
         console.error('Error al publicar reseña:', error);
         Alert.alert('Error', error.message || 'No se pudo publicar la reseña');
+        setLoading(false);
         return;
       }
       
-      Alert.alert('¡Éxito!', 'Tu reseña ha sido publicada', [
-        { 
-          text: 'OK', 
-          onPress: () => {
-            setRating(0);
-            setComment('');
-            onSuccess();
-            onClose();
-          }
-        }
-      ]);
+      // Éxito - resetear estado y cerrar
+      console.log('✅ Reseña publicada exitosamente');
+      setRating(0);
+      setComment('');
+      setLoading(false);
+      
+      // Cerrar modal y refrescar datos
+      onSuccess();
+      onClose();
+      
+      // Mostrar mensaje de éxito después de cerrar el modal
+      setTimeout(() => {
+        Alert.alert('¡Éxito!', 'Tu reseña ha sido publicada');
+      }, 300);
+      
     } catch (error: any) {
+      console.error('Error inesperado al publicar reseña:', error);
       Alert.alert('Error', error.message || 'Ocurrió un error al publicar la reseña');
-    } finally {
       setLoading(false);
     }
   }

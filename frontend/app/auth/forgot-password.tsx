@@ -32,9 +32,17 @@ export default function ForgotPasswordScreen() {
       return;
     }
     // Construir redirectTo dinámicamente según entorno
-    let frontendUrl = process.env.EXPO_PUBLIC_FRONTEND_URL || 'https://working-go.com';
-    // El path debe coincidir con tu ruta de reset-password
-    let redirectTo = `${frontendUrl}/auth/reset-password`;
+    let redirectTo: string;
+    if (Platform.OS === 'web') {
+      // En web, usar la URL actual del navegador
+      redirectTo = `${window.location.origin}/auth/reset-password`;
+    } else {
+      // En app nativa, usar deep link
+      redirectTo = 'workinggo://auth/reset-password';
+    }
+    
+    console.log('📧 Enviando email de reset a:', email, 'con redirect:', redirectTo);
+    
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo,
     });

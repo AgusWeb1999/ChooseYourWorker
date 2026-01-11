@@ -15,6 +15,7 @@ import { Picker } from '@react-native-picker/picker';
 import { supabase } from '../src/lib/supabase';
 import { getCountriesList, CountryCode, COUNTRIES } from '../utils/countryValidation';
 import { getBarriosPorCiudad, Barrio } from '../utils/barrios';
+import SecuritySettings from './SecuritySettings';
 
 // --- INYECCIÓN DE CSS PARA WEB (Elimina el foco azul y bordes extra) ---
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -442,6 +443,15 @@ export default function EditUserProfile({ userProfile, userEmail, onSave, onCanc
           <TextInput style={styles.inputUnified} value={idNumber} onChangeText={setIdNumber} keyboardType="numeric" />
           <Text style={styles.label}>Celular *</Text>
           <TextInput style={styles.inputUnified} value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="Ej: 099 123 456" />
+
+          {/* Configuración de seguridad */}
+          {userEmail && (
+            <SecuritySettings 
+              currentEmail={userEmail} 
+              userId={userProfile.id}              
+              setToast={setToast}            
+            />
+          )}
 
           <View style={styles.buttonRow}>
             {onCancel && (

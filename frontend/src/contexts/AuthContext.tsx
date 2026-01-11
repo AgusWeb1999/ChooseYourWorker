@@ -88,20 +88,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('🔍 Fetching user profile for:', authUid);
     
     // Intentar buscar por id primero (sincronizado con auth.users)
+    // Usar maybeSingle() en lugar de single() para evitar error 406
     let { data, error } = await supabase
       .from('users')
       .select('*')
       .eq('id', authUid)
-      .single();
+      .maybeSingle();
 
     // Si no funciona, intentar por auth_uid (por compatibilidad)
-    if (error) {
+    if (!data && !error) {
       console.log('⚠️ No encontrado por id, intentando por auth_uid...');
       const result = await supabase
         .from('users')
         .select('*')
         .eq('auth_uid', authUid)
-        .single();
+        .maybeSingle();
       
       data = result.data;
       error = result.error;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Platform, Dimensions } from 'react-native';
 import { supabase } from '../../src/lib/supabase';
@@ -87,12 +87,52 @@ function getOtpExpiredError() {
 export default function ResetPasswordScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  // Permitir tanto access_token como token
-  const access_token = params.access_token || params.token;
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState(getOtpExpiredError());
+  const [errorMsg, setErrorMsg] = useState('');
+  const [sessionChecked, setSessionChecked] = useState(false);
+
+  // Verificar sesión al cargar
+  useEffect(() => {
+    checkSession();
+  }, []);
+
+  async function checkSession() {
+    try {
+      console.log('🔄 Iniciando proceso de reset de contraseña...');
+      
+      // IMPORTANTE: Primero cerrar cualquier sesión existente
+      // para que el token del link pueda establecer una nueva sesión
+      await supabase.auth.signOut();
+      console.log('🚪 Sesión anterior cerrada');
+      
+      // Pequeña pausa para asegurar que se limpió la sesión
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Ahora verificar si hay un token en la URL
+      // Supabase automáticamente procesa el hash fragment (#access_token=...)
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('🔐 Sesión después de procesar token:', session ? 'Sí (válida)' : 'No (expirada)');
+      
+      if (!session) {
+        // Si no hay sesión después de procesar el token, el link expiró
+        const otpError = getOtpExpiredError();
+        if (otpError) {
+          setErrorMsg(otpError);
+        } else {
+          setErrorMsg('El enlace de recuperación ya fue usado o expiró. Solicitá uno nuevo.');
+        }
+      } else {
+        console.log('✅ Token válido, listo para cambiar contraseña');
+      }
+      setSessionChecked(true);
+    } catch (err) {
+      console.error('❌ Error verificando sesión:', err);
+      setErrorMsg('Error al verificar tu sesión. Intenta solicitar un nuevo enlace.');
+      setSessionChecked(true);
+    }
+  }
 
   // Responsive helpers
   const screenWidth = Dimensions.get('window').width;
@@ -121,28 +161,63 @@ export default function ResetPasswordScreen() {
       setErrorMsg(pwError);
       return;
     }
-    if (!access_token) {
-      setErrorMsg('Token de acceso inválido o ausente. Intenta desde el link de tu email.');
-      return;
-    }
+    
     setLoading(true);
     try {
-      // updateUser({ password }, { accessToken }) no es válido en supabase-js v2
-      // Debe usarse solo updateUser({ password }) si el usuario está autenticado con el token
-      // Pero en el flujo de reset, el usuario ya está autenticado por el link
-      const { error } = await supabase.auth.updateUser({ password });
-      setLoading(false);
-      if (error) {
-        setErrorMsg('No se pudo actualizar la contraseña. Intenta de nuevo.');
-      } else {
-        Alert.alert('¡Listo!', 'Tu contraseña fue actualizada. Ahora puedes iniciar sesión.', [
-          { text: 'OK', onPress: () => router.replace('/auth/login') }
-        ]);
+      // Verificar sesión actual
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        setErrorMsg('Tu sesión expiró. Solicita un nuevo enlace de recuperación.');
+        setLoading(false);
+        return;
       }
-    } catch (e) {
+      
+      console.log('🔐 Actualizando contraseña...');
+      
+      // Actualizar contraseña
+      const { data, error } = await supabase.auth.updateUser({ password });
+      
       setLoading(false);
-      setErrorMsg('No se pudo actualizar la contraseña. Intenta de nuevo.');
+      
+      if (error) {
+        console.error('❌ Error actualizando contraseña:', error);
+        if (error.message.includes('same as the old password')) {
+          setErrorMsg('La nueva contraseña debe ser diferente a la anterior.');
+        } else {
+          setErrorMsg('No se pudo actualizar la contraseña. Intenta de nuevo.');
+        }
+      } else {
+        console.log('✅ Contraseña actualizada exitosamente');
+        
+        // Cerrar sesión después de cambiar contraseña (buena práctica)
+        await supabase.auth.signOut();
+        
+        Alert.alert(
+          '¡Contraseña actualizada!', 
+          'Tu contraseña fue actualizada exitosamente. Ahora puedes iniciar sesión con tu nueva contraseña.',
+          [
+            { 
+              text: 'Iniciar sesión', 
+              onPress: () => router.replace('/auth/login') 
+            }
+          ]
+        );
+      }
+    } catch (e: any) {
+      console.error('❌ Error inesperado:', e);
+      setLoading(false);
+      setErrorMsg('Ocurrió un error inesperado. Intenta de nuevo.');
     }
+  }
+
+  // Mostrar loading mientras verifica sesión
+  if (!sessionChecked) {
+    return (
+      <View style={[styles.container, isSmallScreen && { padding: 12 }]}>
+        <Text style={[styles.subtitle, isSmallScreen && { fontSize: 14 }]}>Verificando enlace...</Text>
+      </View>
+    );
   }
 
   return (
@@ -152,14 +227,14 @@ export default function ResetPasswordScreen() {
       {errorMsg ? <Text style={styles.errorMsg}>{errorMsg}</Text> : null}
       <TextInput
         style={[styles.input, isSmallScreen && { maxWidth: '100%', padding: 12, fontSize: 15 }]}
-        placeholder="Nueva contraseña"
+        placeholder="Nueva contraseña (mín. 8 caracteres)"
         secureTextEntry
         value={password}
         onChangeText={setPassword}
         autoCapitalize="none"
         textContentType="newPassword"
         returnKeyType="next"
-        editable={!errorMsg}
+        editable={!errorMsg && !loading}
       />
       <TextInput
         style={[styles.input, isSmallScreen && { maxWidth: '100%', padding: 12, fontSize: 15 }]}
@@ -170,11 +245,27 @@ export default function ResetPasswordScreen() {
         autoCapitalize="none"
         textContentType="newPassword"
         returnKeyType="done"
-        editable={!errorMsg}
+        editable={!errorMsg && !loading}
       />
-      <TouchableOpacity style={[styles.button, isSmallScreen && { maxWidth: '100%', padding: 12 }]} onPress={handleReset} disabled={loading || !!errorMsg} activeOpacity={0.8}>
-        <Text style={[styles.buttonText, isSmallScreen && { fontSize: 16 }]}>{loading ? 'Actualizando...' : 'Actualizar contraseña'}</Text>
+      <TouchableOpacity 
+        style={[styles.button, isSmallScreen && { maxWidth: '100%', padding: 12 }, (loading || !!errorMsg) && { opacity: 0.5 }]} 
+        onPress={handleReset} 
+        disabled={loading || !!errorMsg} 
+        activeOpacity={0.8}
+      >
+        <Text style={[styles.buttonText, isSmallScreen && { fontSize: 16 }]}>
+          {loading ? 'Actualizando...' : 'Actualizar contraseña'}
+        </Text>
       </TouchableOpacity>
+      
+      {errorMsg && (
+        <TouchableOpacity 
+          style={[styles.button, { backgroundColor: '#64748b', marginTop: 12 }]} 
+          onPress={() => router.replace('/auth/forgot-password')}
+        >
+          <Text style={styles.buttonText}>Solicitar nuevo enlace</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }

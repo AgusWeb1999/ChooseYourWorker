@@ -110,7 +110,64 @@ Puedes eliminar la carpeta `_old_scripts/` si ya verificaste que todo funciona.
 
 ---
 
-## 🔔 Configurar Webhooks (Pagos)
+## � Sistema de Notificaciones por Email
+
+WorkingGo incluye un sistema completo de notificaciones por email usando **Resend**.
+
+### Características
+
+- ✅ Notificación cuando un trabajador recibe una propuesta
+- ✅ Notificación de mensajes sin leer (después de 30 minutos)
+- ✅ Cron job automático cada 15 minutos
+- ✅ Plantillas HTML profesionales y responsive
+- ✅ Log para evitar spam de emails
+
+### Configuración Rápida
+
+1. **Obtener API Key de Resend:**
+   - Crear cuenta en [resend.com](https://resend.com)
+   - Verificar tu dominio
+   - Generar API Key
+
+2. **Configurar `.env`:**
+   ```env
+   RESEND_API_KEY=re_tu_api_key_aqui
+   EMAIL_FROM=WorkingGo <notificaciones@tudominio.com>
+   NOTIFICATIONS_PORT=3002
+   ```
+
+3. **Instalar dependencias:**
+   ```bash
+   npm install
+   ```
+
+4. **Crear tabla de log en Supabase:**
+   ```bash
+   # Ejecutar en Supabase SQL Editor:
+   cat create-email-notifications-table.sql
+   ```
+
+5. **Iniciar servidor:**
+   ```bash
+   # Solo notificaciones:
+   npm run start:notifications
+   
+   # Todos los servicios:
+   npm run start:all
+   ```
+
+### Documentación Completa
+
+Ver **`NOTIFICACIONES-EMAIL.md`** para:
+- Guía detallada de configuración
+- Endpoints disponibles
+- Personalización de plantillas
+- Integración con la app
+- Troubleshooting
+
+---
+
+## �🔔 Configurar Webhooks (Pagos)
 
 Este backend incluye servidores para Mercado Pago (`server-mercadopago.js`) y PayPal (`server-paypal.js`).
 

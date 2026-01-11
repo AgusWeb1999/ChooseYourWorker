@@ -241,7 +241,7 @@ export default function ChatScreen() {
     try {
       setSending(true);
 
-      const { error } = await supabase.from('messages').insert({
+      const { error, data } = await supabase.from('messages').insert({
         conversation_id: conversationId,
         sender_id: user.id,
         content: newMessage.trim(),
@@ -249,9 +249,12 @@ export default function ChatScreen() {
 
       if (error) {
         console.error('Error sending message:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
         Alert.alert('Error', 'No se pudo enviar el mensaje');
         return;
       }
+
+      console.log('✅ Message sent successfully:', data);
 
       setNewMessage('');
       setMessageCount(prev => prev + 1);

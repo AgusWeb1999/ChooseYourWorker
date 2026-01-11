@@ -422,8 +422,10 @@ export default function RegisterScreen() {
         password,
         options: { 
           data: { full_name: fullName, user_type: userType },
-          // TEMPORALMENTE DESACTIVADO - Verificación por email
-          // emailRedirectTo: 'https://working-go.com/auth/email-verified'
+          // ✅ VERIFICACIÓN DE EMAIL HABILITADA con Resend
+          emailRedirectTo: Platform.OS === 'web' 
+            ? `${window.location.origin}/auth/email-verified`
+            : 'workinggo://auth/email-verified'
         }
       });
 
@@ -542,23 +544,17 @@ export default function RegisterScreen() {
           }));
         }
         
-        // TEMPORALMENTE DESACTIVADO - Verificación por email
+        // ✅ VERIFICACIÓN DE EMAIL HABILITADA
         // Redirigir a pantalla de confirmación de email
-        // router.replace({ pathname: '/auth/email-confirmation', params: { email: normalizedEmail } });
+        console.log('✅ Usuario registrado, redirigiendo a confirmación de email');
         
-        // Redirigir directo a la app sin verificación de email
-        // Esperar a que la sesión se establezca correctamente
-        Alert.alert('¡Registro exitoso!', 'Tu cuenta ha sido creada correctamente.', [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Dar tiempo para que AuthContext detecte la sesión
-              setTimeout(() => {
-                router.replace('/(tabs)');
-              }, 500);
-            }
-          }
-        ]);
+        // Cerrar sesión temporalmente hasta que confirme el email
+        await supabase.auth.signOut();
+        
+        router.replace({ 
+          pathname: '/auth/email-confirmation', 
+          params: { email: normalizedEmail } 
+        });
         return;
       }
     } catch (err: any) {

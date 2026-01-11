@@ -4,9 +4,11 @@
   "main": "index.js",
   "scripts": {
     "start": "node server-mercadopago.js",
-    "start:both": "npm start",
+    "start:notifications": "node server-notifications.js",
+    "start:all": "concurrently \"npm start\" \"npm run start:notifications\"",
     "dev": "nodemon server-mercadopago.js",
-    "dev:both": "npm run dev",
+    "dev:notifications": "nodemon server-notifications.js",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:notifications\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -19,7 +21,9 @@
     "@paypal/checkout-server-sdk": "^1.0.3",
     "express": "^4.18.2",
     "dotenv": "^16.3.1",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "resend": "^3.2.0",
+    "node-cron": "^3.0.3"
   },
   "devDependencies": {
     "nodemon": "^3.0.1",

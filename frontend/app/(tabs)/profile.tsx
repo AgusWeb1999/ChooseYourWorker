@@ -218,6 +218,7 @@ export default function ProfileScreen() {
           <EditProfessionalProfile 
             professionalProfile={professionalProfile}
             userProfile={userProfile}
+            userEmail={user?.email || ''}
             onSave={handleProfileSaved} 
             onCancel={() => setEditModalVisible(false)} 
           />

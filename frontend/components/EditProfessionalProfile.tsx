@@ -2,6 +2,7 @@
 interface EditProfessionalProfileProps {
   professionalProfile: any;
   userProfile: any; // Necesario para obtener el teléfono
+  userEmail: string; // Email del usuario para SecuritySettings
   onSave: () => void;
   onCancel?: () => void;
 }
@@ -12,6 +13,7 @@ import { Picker } from '@react-native-picker/picker';
 import { supabase } from '../src/lib/supabase';
 import { getCountriesList, CountryCode, COUNTRIES } from '../utils/countryValidation';
 import { getBarriosPorCiudad, Barrio } from '../utils/barrios';
+import SecuritySettings from './SecuritySettings';
 
 // --- INYECCIÓN DE CSS PARA WEB ---
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -140,6 +142,7 @@ const forbiddenWords = [
 export default function EditProfessionalProfile({ 
   professionalProfile,
   userProfile,
+  userEmail,
   onSave, 
   onCancel 
 }: EditProfessionalProfileProps) {
@@ -637,6 +640,13 @@ export default function EditProfessionalProfile({
               />
             </View>
           </View>
+
+          {/* Configuración de seguridad */}
+          <SecuritySettings 
+            currentEmail={userEmail} 
+            userId={userProfile.id}
+            setToast={setToast}
+          />
 
           <View style={styles.buttonRow}>
             {onCancel && (

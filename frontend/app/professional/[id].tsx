@@ -229,6 +229,7 @@ export default function ProfessionalProfileScreen() {
       // Notificar al profesional si existe su user_id
       if ((professional as any).user_id) {
         try {
+          // Notificación in-app
           await supabase.from('notifications').insert({
             type: 'solicitud_enviada',
             user_id: (professional as any).user_id,
@@ -239,6 +240,10 @@ export default function ProfessionalProfileScreen() {
             related_id: data?.id,
             related_type: 'hire',
           });
+
+          // Nota: El email se envía automáticamente via trigger de base de datos
+          // No necesita llamada manual al backend
+          console.log('✅ Notificación enviada. Email se enviará automáticamente.');
         } catch (notifyError) {
           console.warn('No se pudo enviar la notificación de solicitud:', notifyError);
         }
