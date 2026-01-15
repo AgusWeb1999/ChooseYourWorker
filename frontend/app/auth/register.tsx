@@ -417,12 +417,12 @@ export default function RegisterScreen() {
 
       // ========== CREAR CUENTA ==========
       
+      // ========== CREAR CUENTA (sin auto-confirmación de email) ==========
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: normalizedEmail,
         password,
         options: { 
           data: { full_name: fullName, user_type: userType },
-          // ✅ VERIFICACIÓN DE EMAIL HABILITADA con Resend
           emailRedirectTo: Platform.OS === 'web' 
             ? `${window.location.origin}/auth/email-verified`
             : 'workinggo://auth/email-verified'
@@ -452,68 +452,16 @@ export default function RegisterScreen() {
       if (authData.user) {
         const userId = authData.user.id;
         
-        // El trigger de base de datos ya creó el registro base en users
-        // Solo actualizamos los campos adicionales que no están en el trigger
+        console.log('✅ Usuario creado en auth:', userId);
+        console.log('📧 Email:', normalizedEmail);
         
-        // Esperar un momento para que el trigger complete
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Esperar un momento para que el trigger de auth complete y cree el registro en users
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Si es profesional, crear registro en professionals con TODOS los datos necesarios
-        if (userType === 'worker') {
-          const finalProfession = profession === 'Otro' ? customProfession : profession;
-          
-          // Intentar usar RPC call para insertar con permisos elevados
-          const { error: profError } = await supabase.rpc('create_professional_profile', {
-            p_user_id: userId,
-            p_display_name: displayName,
-            p_profession: finalProfession.charAt(0).toUpperCase() + finalProfession.slice(1).toLowerCase(),
-            p_bio: bio || '',
-            p_country: country,
-            p_state: province,
-            p_department: department || null,
-            p_city: city,
-            p_barrio: barrio,
-            p_phone: normalizedPhone,
-            p_id_number: normalizedIdNumber,
-            p_hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
-            p_years_experience: yearsExperience ? parseInt(yearsExperience) : null
-          });
-          
-          // Si el RPC falla, intentar insert directo (fallback)
-          if (profError) {
-            console.log('RPC failed, trying direct insert:', profError);
-            const { error: insertError } = await supabase.from('professionals').insert({
-              user_id: userId,
-              display_name: displayName,
-              profession: finalProfession.charAt(0).toUpperCase() + finalProfession.slice(1).toLowerCase(),
-              bio: bio || '',
-              country: country,
-              state: province,
-              department: department || null,
-              city: city,
-              barrio: barrio,
-              zip_code: '',
-              hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
-              years_experience: yearsExperience ? parseInt(yearsExperience) : null,
-              phone: normalizedPhone,
-              rating: 0,
-              rating_count: 0,
-              total_reviews: 0,
-              avatar_url: null,
-              completed_hires_count: 0
-            });
-            
-            if (insertError) {
-              console.error('Error creating professional profile:', insertError);
-              // No lanzamos error aquí, permitimos que continúe
-            }
-          }
-        }
-        
-        // ACTUALIZAR tabla users con todos los datos personales
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({
+        try {
+          // ACTUALIZAR tabla users con todos los datos personales
+          console.log('📝 Actualizando datos de usuario...');
+          const updateData: any = {
             phone: normalizedPhone,
             id_number: normalizedIdNumber,
             country: country,
@@ -521,36 +469,77 @@ export default function RegisterScreen() {
             department: department || null,
             city: city,
             barrio: barrio,
-          })
-          .eq('id', userId);
-        
-        if (updateError) {
-          console.error('Error actualizando datos de usuario:', updateError);
+            email_verified: false, // ⚠️ Pendiente de verificación
+            is_active: false, // ⚠️ Inactivo hasta verificar email
+          };
+          
+          const { error: updateError } = await supabase
+            .from('users')
+            .update(updateData)
+            .eq('id', userId);
+          
+          if (updateError) {
+            console.error('❌ Error actualizando usuario:', updateError);
+            throw new Error('Error al guardar tus datos. Por favor intenta de nuevo.');
+          }
+          
+          console.log('✅ Usuario actualizado correctamente');
+          
+          // SI ES PROFESIONAL: Crear perfil profesional usando función RPC
+          if (userType === 'worker') {
+            console.log('👷 Creando perfil profesional con RPC...');
+            
+            const finalProfession = profession === 'Otro' ? customProfession : profession;
+            const professionCapitalized = finalProfession.charAt(0).toUpperCase() + finalProfession.slice(1).toLowerCase();
+            
+            const { data: rpcData, error: profError } = await supabase
+              .rpc('create_professional_profile', {
+                p_user_id: userId,
+                p_display_name: displayName,
+                p_profession: professionCapitalized,
+                p_bio: bio || null,
+                p_hourly_rate: hourlyRate ? parseFloat(hourlyRate) : 0,
+                p_years_experience: yearsExperience ? parseInt(yearsExperience) : 0,
+                p_phone: normalizedPhone,
+                p_city: city,
+                p_state: province,
+                p_country: country,
+                p_province: province,
+                p_department: department || null,
+                p_barrio: barrio
+              });
+            
+            if (profError) {
+              console.error('❌ Error RPC creando perfil profesional:', profError);
+              throw new Error('Error al crear tu perfil profesional. Por favor intenta de nuevo.');
+            }
+            
+            if (rpcData && !rpcData.success) {
+              console.error('❌ Error en función RPC:', rpcData.error);
+              throw new Error(rpcData.error || 'Error al crear tu perfil profesional.');
+            }
+            
+            console.log('✅ Perfil profesional creado exitosamente:', rpcData);
+          }
+        } catch (dbError: any) {
+          console.error('❌ Error en BD:', dbError);
+          Alert.alert('Error', dbError.message || 'Ocurrió un error al crear tu cuenta. Por favor intenta de nuevo.');
+          setLoading(false);
+          return;
         }
         
-        // Refrescar perfiles para que los datos aparezcan inmediatamente
-        await refreshProfiles();
+        console.log('📧 Email de verificación enviado automáticamente por Supabase');
         
-        // Guardar datos adicionales en localStorage para actualizar después de confirmar email (por si acaso)
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('pending_user_data', JSON.stringify({
-            user_id: userId,
-            phone: normalizedPhone,
-            id_number: normalizedIdNumber,
-            country,
-            province,
-            city,
-            barrio
-          }));
-        }
+        // Mostrar alerta sobre verificación de email
+        Alert.alert(
+          '✅ Registro exitoso',
+          `Tu cuenta fue creada exitosamente.\n\nTe enviamos un email de verificación a ${normalizedEmail}.\n\n⚠️ IMPORTANTE: Revisa tu carpeta de SPAM o correo no deseado.`,
+          [{ text: 'Entendido', style: 'default' }]
+        );
         
-        // ✅ VERIFICACIÓN DE EMAIL HABILITADA
+        console.log('➡️ Redirigiendo a confirmación de email...');
+        
         // Redirigir a pantalla de confirmación de email
-        console.log('✅ Usuario registrado, redirigiendo a confirmación de email');
-        
-        // Cerrar sesión temporalmente hasta que confirme el email
-        await supabase.auth.signOut();
-        
         router.replace({ 
           pathname: '/auth/email-confirmation', 
           params: { email: normalizedEmail } 

@@ -56,7 +56,17 @@ export default function EmailConfirmationScreen() {
           ? <>Te enviamos un email a <Text style={styles.email}>{email}</Text> con un enlace para activar tu cuenta.</>
           : 'Te enviamos un email de confirmación con un enlace para activar tu cuenta.'}
       </Text>
-      <Text style={styles.text}>Por favor revisa tu bandeja de entrada y spam, y sigue las instrucciones.</Text>
+      <Text style={styles.text}>
+        Por favor revisa tu bandeja de entrada y <Text style={styles.important}>también tu carpeta de SPAM o correo no deseado</Text>.
+      </Text>
+      
+      {/* Mensaje destacado sobre SPAM */}
+      <View style={styles.warningBox}>
+        <Text style={styles.warningIcon}>⚠️</Text>
+        <Text style={styles.warningText}>
+          <Text style={styles.warningBold}>Importante:</Text> El correo puede llegar a tu carpeta de SPAM. Si no lo encuentras en tu bandeja principal, revisa la carpeta de correo no deseado o promociones.
+        </Text>
+      </View>
       
       <Text style={styles.subtitle}>¿No recibiste el correo?</Text>
       <TouchableOpacity style={styles.button} onPress={handleResend} disabled={loading || resent}>
@@ -80,6 +90,22 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: 'bold', color: '#1e3a5f', marginBottom: 16, textAlign: 'center' },
   text: { fontSize: 16, color: '#374151', marginBottom: 12, textAlign: 'center', lineHeight: 24 },
   email: { color: '#1e3a5f', fontWeight: 'bold' },
+  important: { color: '#dc2626', fontWeight: 'bold' },
+  warningBox: { 
+    flexDirection: 'row',
+    backgroundColor: '#fef3c7', 
+    borderLeftWidth: 4,
+    borderLeftColor: '#f59e0b',
+    padding: 16, 
+    borderRadius: 8, 
+    marginTop: 16,
+    marginBottom: 8,
+    maxWidth: 500,
+    alignItems: 'flex-start'
+  },
+  warningIcon: { fontSize: 24, marginRight: 12, marginTop: 2 },
+  warningText: { fontSize: 14, color: '#92400e', lineHeight: 20, flex: 1 },
+  warningBold: { fontWeight: 'bold', color: '#78350f' },
   subtitle: { fontSize: 16, color: '#6b7280', marginTop: 20, marginBottom: 12, textAlign: 'center', fontWeight: '600' },
   button: { backgroundColor: '#1e3a5f', padding: 14, borderRadius: 10, marginTop: 10, minWidth: 200, alignItems: 'center' },
   buttonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },

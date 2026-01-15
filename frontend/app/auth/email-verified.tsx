@@ -187,9 +187,8 @@ export default function EmailVerifiedScreen() {
 
   async function checkVerification() {
     try {
-      // Esperar un momento para que Supabase complete la actualización
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
+      console.log('🔄 Iniciando verificación de email...');
+      
       // Obtener sesión actual
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -199,60 +198,85 @@ export default function EmailVerifiedScreen() {
         return;
       }
 
-      // Verificar el estado en la base de datos
-      const { data: userProfile, error } = await supabase
+      console.log('✅ Sesión activa detectada para usuario:', session.user.id);
+
+      // Obtener perfil de usuario
+      const { data: userProfile, error: userError } = await supabase
         .from('users')
-        .select('email_verified, is_professional, phone, id_number')
+        .select('email_verified, is_professional, is_active')
         .eq('id', session.user.id)
         .single();
 
-      if (error) {
-        console.error('Error verificando perfil:', error);
+      if (userError) {
+        console.error('❌ Error obteniendo perfil:', userError);
+        setError('Error al verificar tu cuenta. Por favor, intenta de nuevo.');
         setVerifying(false);
         return;
       }
 
-      console.log('✅ Perfil obtenido:', userProfile);
+      console.log('📊 Perfil obtenido:', {
+        email_verified: userProfile.email_verified,
+        is_professional: userProfile.is_professional,
+        is_active: userProfile.is_active
+      });
 
-      // Si ya está verificado en la BD
-      if (userProfile?.email_verified === true) {
-        setVerified(true);
+      // PASO 1: ACTIVAR CUENTA en tabla users
+      console.log('📝 Activando cuenta y verificando email en users...');
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          email_verified: true,
+          is_active: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', session.user.id);
+
+      if (updateError) {
+        console.error('❌ Error activando cuenta:', updateError);
+        setError('Error al activar tu cuenta. Por favor, contacta soporte.');
         setVerifying(false);
-
-        // Actualizar datos adicionales si existen en localStorage
-        const pendingData = localStorage.getItem('pending_user_data');
-        if (pendingData) {
-          const data = JSON.parse(pendingData);
-          await supabase
-            .from('users')
-            .update({
-              phone: data.phone,
-              id_number: data.id_number,
-              country: data.country,
-              province: data.province,
-              city: data.city,
-              barrio: data.barrio,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', session.user.id);
-          
-          localStorage.removeItem('pending_user_data');
-        }
-
-        // Refrescar perfiles
-        await refreshProfiles();
-
-        // Redirigir después de 2 segundos
-        setTimeout(() => {
-          router.replace('/(tabs)');
-        }, 2000);
-      } else {
-        // Aún no verificado en BD, esperar un poco más
-        console.log('⏳ Email aún no verificado en BD, reintentando...');
-        setTimeout(checkVerification, 1500);
+        return;
       }
+
+      console.log('✅ Cuenta activada en users (email_verified: true, is_active: true)');
+
+      // PASO 2: Si es profesional, activar también su perfil en tabla professionals
+      if (userProfile.is_professional) {
+        console.log('👷 Activando perfil profesional...');
+        
+        const { error: profUpdateError } = await supabase
+          .from('professionals')
+          .update({
+            is_verified: true,
+            is_active: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', session.user.id);
+        
+        if (profUpdateError) {
+          console.error('❌ Error activando perfil profesional:', profUpdateError);
+          // No es crítico, continuar de todas formas
+        } else {
+          console.log('✅ Perfil profesional activado (is_verified: true, is_active: true)');
+        }
+      }
+
+      // PASO 3: Marcar como verificado y refrescar
+      setVerified(true);
+      setVerifying(false);
+      
+      console.log('🔄 Refrescando perfiles en AuthContext...');
+      await refreshProfiles();
+
+      // PASO 4: Redirigir
+      console.log('✅ Verificación completada, redirigiendo a home...');
+      setTimeout(() => {
+        router.replace('/(tabs)');
+      }, 2000);
+      
     } catch (err) {
-      console.error('Error en verificación:', err);
+      console.error('❌ Error general en verificación:', err);
+      setError('Ocurrió un error inesperado. Por favor, intenta iniciar sesión.');
       setVerifying(false);
     }
   }
