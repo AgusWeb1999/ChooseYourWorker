@@ -14,6 +14,7 @@ import {
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { HireModal } from '../../components/HireModal';
 
 interface Message {
   id: string;
@@ -30,6 +31,19 @@ interface OtherUser {
   profession?: string | null;
 }
 
+interface Hire {
+  id: string;
+  client_id: string;
+  professional_id: string;
+  status: 'pending' | 'in_progress' | 'waiting_client_approval' | 'completed' | 'cancelled' | 'rejected';
+  started_at: string;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  created_at: string;
+  updated_at: string;
+  proposal_message?: string;
+}
+
 export default function ChatScreen() {
   const { id: otherUserId } = useLocalSearchParams<{ id: string }>();
   const { user, userProfile, isPremium } = useAuth();
@@ -42,6 +56,11 @@ export default function ChatScreen() {
   const [otherUser, setOtherUser] = useState<OtherUser | null>(null);
   const [messageCount, setMessageCount] = useState(0);
   const [otherUserIsPremium, setOtherUserIsPremium] = useState(false);
+  const [showHireModal, setShowHireModal] = useState(false);
+  const [pendingHire, setPendingHire] = useState<Hire | null>(null);
+  const [activeHire, setActiveHire] = useState<Hire | null>(null);
+  const [professionalId, setProfessionalId] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
   
   const MESSAGE_LIMIT_FREE = 10;
   
@@ -57,6 +76,13 @@ export default function ChatScreen() {
       initializeChat();
     }
   }, [user, otherUserId]);
+
+  useEffect(() => {
+    // Verificar si el otro usuario es profesional y obtener hire state
+    if (userProfile && otherUserId && !userProfile.is_professional) {
+      fetchProfessionalIdAndHireState();
+    }
+  }, [userProfile, otherUserId]);
 
   useEffect(() => {
     if (!conversationId) return;
@@ -150,7 +176,7 @@ export default function ChatScreen() {
     // 1. Buscamos en la tabla PROFESSIONALS (que ahora es pública y tiene el estado premium)
     const { data: professional } = await supabase
       .from('professionals')
-      .select('user_id, display_name, profession, is_premium, subscription_end_date')
+      .select('id, user_id, display_name, profession, is_premium, subscription_end_date')
       .eq('user_id', otherUserId)
       .maybeSingle();
 
@@ -160,6 +186,7 @@ export default function ChatScreen() {
         display_name: professional.display_name,
         profession: professional.profession,
       });
+      setProfessionalId(professional.id); // Guardar el professional_id
 
       // Validar si es premium (bandera + fecha válida)
       const now = new Date();
@@ -185,6 +212,105 @@ export default function ChatScreen() {
       }
       // Un usuario normal (cliente) no suele ser "Premium" en este contexto
       setOtherUserIsPremium(false);
+      setProfessionalId(null);
+    }
+  }
+
+  async function fetchProfessionalIdAndHireState() {
+    if (!userProfile?.id || !otherUserId) return;
+
+    try {
+      // Obtener el professional_id
+      const { data: professional } = await supabase
+        .from('professionals')
+        .select('id')
+        .eq('user_id', otherUserId)
+        .maybeSingle();
+
+      if (professional) {
+        const profId = professional.id;
+        setProfessionalId(profId);
+
+        // Verificar hire state
+        const { data: hireData, error: hireError } = await supabase
+          .from('hires')
+          .select('*')
+          .eq('client_id', userProfile.id)
+          .eq('professional_id', profId)
+          .in('status', ['pending', 'in_progress', 'waiting_client_approval'])
+          .order('created_at', { ascending: false })
+          .maybeSingle();
+
+        if (!hireError && hireData) {
+          if (hireData.status === 'pending') {
+            setPendingHire(hireData);
+            setActiveHire(null);
+          } else {
+            setActiveHire(hireData);
+            setPendingHire(null);
+          }
+        } else {
+          setPendingHire(null);
+          setActiveHire(null);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching professional hire state:', error);
+    }
+  }
+
+  async function handleSendProposal(message: string) {
+    if (!userProfile?.id || !professionalId) {
+      Alert.alert('Error', 'No se pudo identificar el usuario o profesional');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const { data: existingHire, error: existingError } = await supabase
+        .from('hires')
+        .select('*')
+        .eq('client_id', userProfile.id)
+        .eq('professional_id', professionalId)
+        .in('status', ['pending', 'in_progress', 'waiting_client_approval'])
+        .order('created_at', { ascending: false })
+        .maybeSingle();
+
+      if (!existingError && existingHire) {
+        Alert.alert(
+          'Propuesta ya enviada',
+          'Ya tienes una propuesta pendiente o un trabajo en progreso con este profesional.'
+        );
+        setActionLoading(false);
+        setShowHireModal(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('hires')
+        .insert({
+          client_id: userProfile.id,
+          professional_id: professionalId,
+          status: 'pending',
+          proposal_message: message,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating hire:', error);
+        Alert.alert('Error', 'No se pudo enviar la propuesta');
+      } else {
+        Alert.alert('¡Éxito!', 'Tu propuesta ha sido enviada al profesional');
+        setPendingHire(data);
+        setShowHireModal(false);
+        fetchProfessionalIdAndHireState();
+      }
+    } catch (error) {
+      console.error('Error sending proposal:', error);
+      Alert.alert('Error', 'Ocurrió un error al enviar la propuesta');
+    } finally {
+      setActionLoading(false);
     }
   }
 
@@ -346,6 +472,42 @@ export default function ChatScreen() {
         </Text>
       </View>
 
+      {/* Botón de Contratación - Solo para clientes y si el otro usuario es profesional */}
+      {!userProfile?.is_professional && professionalId && (
+        <View style={styles.hireButtonContainer}>
+          {!pendingHire && !activeHire ? (
+            <TouchableOpacity 
+              style={styles.hireButton}
+              onPress={() => setShowHireModal(true)}
+              disabled={actionLoading}
+            >
+              {actionLoading ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <>
+                  <Text style={styles.hireButtonIcon}>💼</Text>
+                  <Text style={styles.hireButtonText}>Enviar Propuesta</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          ) : pendingHire ? (
+            <View style={styles.hireStatusCard}>
+              <Text style={styles.hireStatusTitle}>⏳ Propuesta enviada</Text>
+              <Text style={styles.hireStatusText}>
+                Tu propuesta está pendiente de que {otherUser?.display_name} la acepte o rechace.
+              </Text>
+            </View>
+          ) : activeHire ? (
+            <View style={styles.hireStatusCard}>
+              <Text style={styles.hireStatusTitle}>📋 Trabajo en Progreso</Text>
+              <Text style={styles.hireStatusText}>
+                Trabajo en progreso con {otherUser?.display_name}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      )}
+
       <View style={styles.contentLimiter}>
         <ScrollView
           ref={scrollViewRef}
@@ -464,6 +626,20 @@ export default function ChatScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Modal de Contratación */}
+      {professionalId && otherUser && (
+        <HireModal
+          visible={showHireModal}
+          professional={{
+            id: professionalId,
+            name: otherUser.display_name,
+            specialty: otherUser.profession || 'Profesional',
+          }}
+          onConfirm={handleSendProposal}
+          onCancel={() => setShowHireModal(false)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -673,5 +849,55 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     textAlign: 'left',
+  },
+  hireButtonContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  hireButton: {
+    backgroundColor: '#34C759',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    alignSelf: 'flex-start',
+  },
+  hireButtonIcon: {
+    fontSize: 16,
+  },
+  hireButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  hireStatusCard: {
+    padding: 16,
+    backgroundColor: '#f0f9ff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  hireStatusTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1e3a8a',
+    marginBottom: 8,
+  },
+  hireStatusText: {
+    fontSize: 14,
+    color: '#1e40af',
   },
 });

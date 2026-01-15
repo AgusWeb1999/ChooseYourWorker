@@ -74,13 +74,17 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
         const isContactVisible = ['accepted', 'in_progress', 'waiting_client_approval', 'completed'].includes(item.status);
         const review = reviewsMap.get(item.id);
         
-        // Debug logging para entender por qué no se ve el teléfono
-        console.log('🔍 Debug Job:', {
+        // Debug logging MÁS detallado para entender el problema
+        console.log('🔍 Debug Job COMPLETO:', {
           id: item.id,
           status: item.status,
+          client_id: item.client_id,
           isContactVisible,
-          clientData: item.client,
-          clientPhone: item.client?.phone
+          'client OBJECT': item.client,
+          'client.phone DIRECTO': item.client?.phone,
+          'client keys': item.client ? Object.keys(item.client) : 'NO CLIENT',
+          'phone type': typeof item.client?.phone,
+          'phone value': item.client?.phone ? `"${item.client.phone}"` : 'NULL/UNDEFINED'
         });
         
         return {

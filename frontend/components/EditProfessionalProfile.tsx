@@ -195,6 +195,23 @@ export default function EditProfessionalProfile({
   const [cityModalVisible, setCityModalVisible] = useState(false);
   const [barrioModalVisible, setBarrioModalVisible] = useState(false);
 
+  // Actualizar estados cuando cambien los props (importante para la carga inicial)
+  useEffect(() => {
+    if (professionalProfile) {
+      setDisplayName(professionalProfile.display_name || '');
+      setProfession(professionalProfile.profession || '');
+      setBio(professionalProfile.bio || '');
+      setPhone(professionalProfile.phone || userProfile?.phone || '');
+      setHourlyRate(professionalProfile.hourly_rate ? String(professionalProfile.hourly_rate) : '');
+      setYearsExperience(professionalProfile.years_experience ? String(professionalProfile.years_experience) : '');
+      setCountry(professionalProfile.country || userProfile?.country || 'UY');
+      setProvince(professionalProfile.province || professionalProfile.state || userProfile?.province || '');
+      setDepartment(professionalProfile.department || userProfile?.department || '');
+      setCity(professionalProfile.city || userProfile?.city || '');
+      setBarrio(professionalProfile.barrio || userProfile?.barrio || '');
+    }
+  }, [professionalProfile, userProfile]);
+
   // 1. Cargar Provincias: No resetear en carga inicial
   useEffect(() => {
     fetchProvinces(country).then((data) => {

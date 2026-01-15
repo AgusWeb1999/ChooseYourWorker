@@ -140,19 +140,47 @@ export default function EditUserProfile({ userProfile, userEmail, onSave, onCanc
   const [cityModalVisible, setCityModalVisible] = useState(false);
   const [barrioModalVisible, setBarrioModalVisible] = useState(false);
 
+  // Actualizar estados cuando cambie userProfile (importante para la carga inicial)
+  useEffect(() => {
+    if (userProfile) {
+      setFullName(userProfile.full_name || '');
+      setDateOfBirth(userProfile.date_of_birth || '');
+      setIdNumber(userProfile.id_number || '');
+      setPhone(userProfile.phone || '');
+      setZipCode(userProfile.zip_code || '');
+      setCountry(userProfile.country || 'UY');
+      setProvince(userProfile.province || userProfile.state || '');
+      setDepartment(userProfile.department || '');
+      setCity(userProfile.city || '');
+      setBarrio(userProfile.barrio || '');
+    }
+  }, [userProfile]);
+
   // 1. Cargar provincias
   useEffect(() => {
     const loadProvinces = async () => {
       const provinces = await fetchProvinces(country);
       setProvinceList(provinces);
-      // Solo resetear si NO es carga inicial y el usuario cambió el país
+      
+      // CRÍTICO: Solo resetear campos si el usuario cambió manualmente el país
+      // No resetear en la primera carga
       if (!isInitialLoad) {
-        setProvince(''); setDepartment(''); setCity('');
+        // El usuario cambió el país manualmente, resetear los campos dependientes
+        setProvince('');
+        setDepartment('');
+        setCity('');
+        setBarrio('');
       }
-      setIsInitialLoad(false);
     };
     loadProvinces();
   }, [country]);
+
+  // Marcar que ya no es carga inicial después de que todos los useEffects hayan corrido
+  useEffect(() => {
+    if (provinceList.length > 0) {
+      setIsInitialLoad(false);
+    }
+  }, [provinceList]);
 
   // 2. Cargar departamentos (AR) o Ciudades (UY)
   useEffect(() => {

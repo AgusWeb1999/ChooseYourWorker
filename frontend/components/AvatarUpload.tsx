@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, TouchableOpacity, Image, Text, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, TouchableOpacity, Image, Text, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../src/lib/supabase';
 
@@ -56,7 +56,6 @@ export default function AvatarUpload({
     try {
       setUploading(true);
 
-
       // Crear nombre único para el archivo
       const validExts = ['jpg', 'jpeg', 'png', 'webp'];
       let fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
@@ -73,24 +72,41 @@ export default function AvatarUpload({
 
       console.log('📤 Subiendo imagen:', filePath);
 
-      // Convertir URI a ArrayBuffer para React Native
+      // Obtener los datos de la imagen
+      console.log('📥 Obteniendo datos de:', uri);
       const response = await fetch(uri);
-      const arrayBuffer = await response.arrayBuffer();
-      const fileData = new Uint8Array(arrayBuffer);
+      const blob = await response.blob();
+      
+      console.log('📦 Blob obtenido - tipo:', blob.type, 'tamaño:', blob.size);
 
-      // Subir a Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, fileData, { 
-          cacheControl: '3600',
-          upsert: false,
-          contentType
-        });
-
-      if (uploadError) {
-        console.error('Error uploading:', uploadError);
-        throw uploadError;
+      // Subir usando fetch directo con FormData para evitar problemas de headers
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No hay sesión activa');
       }
+
+      const formData = new FormData();
+      formData.append('', blob, fileName);
+
+      const uploadResponse = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/avatars/${filePath}`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'x-upsert': 'false',
+          },
+          body: formData,
+        }
+      );
+
+      if (!uploadResponse.ok) {
+        const error = await uploadResponse.json();
+        throw new Error(error.message || 'Error al subir imagen');
+      }
+
+      const uploadData = await uploadResponse.json();
 
       console.log('✅ Imagen subida:', uploadData);
 

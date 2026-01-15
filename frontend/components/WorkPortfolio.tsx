@@ -127,15 +127,26 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
       // Convertir URI a ArrayBuffer
       const response = await fetch(uri);
       const arrayBuffer = await response.arrayBuffer();
-      const fileData = new Uint8Array(arrayBuffer);
+      
+      // Determinar el MIME type correcto
+      const mimeMap: Record<string, string> = {
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        png: 'image/png',
+        webp: 'image/webp',
+      };
+      const contentType = mimeMap[fileExt] || 'image/jpeg';
+      
+      // Crear un Blob con el MIME type correcto para compatibilidad web
+      const blob = new Blob([arrayBuffer], { type: contentType });
 
       // Subir a Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('portfolio')
-        .upload(filePath, fileData, { 
+        .upload(filePath, blob, { 
           cacheControl: '3600',
           upsert: false,
-          contentType: `image/${fileExt}`
+          contentType
         });
 
       if (uploadError) {

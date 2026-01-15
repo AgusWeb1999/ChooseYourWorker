@@ -146,7 +146,6 @@ export default function LoginScreen() {
                     resizeMode="contain"
                   />
                 </View>
-                <Text style={styles.title}>WorkingGo</Text>
                 <Text style={styles.subtitle}>Iniciá sesión en tu cuenta</Text>
                 {errorMsg ? (
                   <View style={styles.errorBox}>
@@ -246,7 +245,6 @@ export default function LoginScreen() {
                   resizeMode="contain"
                 />
               </View>
-              <Text style={styles.title}>WorkingGo</Text>
               <Text style={styles.subtitle}>Iniciá sesión en tu cuenta</Text>
               {errorMsg ? (
                 <View style={styles.errorBox}>
