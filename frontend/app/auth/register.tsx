@@ -285,19 +285,7 @@ export default function RegisterScreen() {
         newErrors.email = 'Email inválido';
       }
     }
-    
-    // Validación de contraseña más robusta (igual que en cambio de contraseña)
-    if (!password) {
-      newErrors.password = 'La contraseña es requerida';
-    } else if (password.length < 8) {
-      newErrors.password = 'La contraseña debe tener al menos 8 caracteres';
-    } else if (!/[A-Z]/.test(password)) {
-      newErrors.password = 'Debe contener al menos una mayúscula';
-    } else if (!/[a-z]/.test(password)) {
-      newErrors.password = 'Debe contener al menos una minúscula';
-    } else if (!/[0-9]/.test(password)) {
-      newErrors.password = 'Debe contener al menos un número';
-    }
+    if (!password || password.length < 6) newErrors.password = 'Mínimo 6 caracteres';
     const phoneVal = validatePhone(phone, country);
     if (!phoneVal.valid) newErrors.phone = phoneVal.error || 'Teléfono inválido';
     const idVal = validateId(idNumber, country);
@@ -429,27 +417,23 @@ export default function RegisterScreen() {
 
       // ========== CREAR CUENTA ==========
       
-      // ========== CREAR CUENTA (con metadata completa para el trigger) ==========
+      console.log('📧 Creando cuenta para:', { email: normalizedEmail, userType });
+      
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: normalizedEmail,
         password,
         options: { 
-          data: { 
-            full_name: fullName,
-            user_type: userType,
-            phone: normalizedPhone,
-            id_number: normalizedIdNumber,
-            country: country,
-            province: province,
-            department: department || null,
-            city: city,
-            barrio: barrio,
-            is_professional: userType === 'worker'
-          },
+          data: { full_name: fullName, user_type: userType },
           emailRedirectTo: Platform.OS === 'web' 
             ? `${window.location.origin}/auth/email-verified`
             : 'workinggo://auth/email-verified'
         }
+      });
+      
+      console.log('📧 Respuesta de signUp:', { 
+        user: authData?.user?.id, 
+        session: !!authData?.session,
+        error: authError?.message 
       });
 
       if (authError) {
@@ -475,74 +459,123 @@ export default function RegisterScreen() {
       if (authData.user) {
         const userId = authData.user.id;
         
-        console.log('✅ Usuario creado en auth:', userId);
-        console.log('📧 Email:', normalizedEmail);
-        console.log('✅ Los datos se guardarán automáticamente via trigger');
+        // El trigger de base de datos ya creó el registro base en users
+        // Solo actualizamos los campos adicionales que no están en el trigger
         
-        try {
-          // SI ES PROFESIONAL: Crear perfil profesional usando función RPC
-          if (userType === 'worker') {
-            console.log('👷 Creando perfil profesional con RPC...');
+        // Esperar un momento para que el trigger complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Si es profesional, crear registro en professionals
+        if (userType === 'worker') {
+          console.log('👷 Creando perfil de profesional...');
+          const finalProfession = profession === 'Otro' ? customProfession : profession;
+          
+          // Intentar usar la función RPC primero (más seguro)
+          const { error: profError } = await supabase.rpc('create_professional_profile', {
+            p_user_id: userId,
+            p_display_name: displayName,
+            p_profession: finalProfession.charAt(0).toUpperCase() + finalProfession.slice(1).toLowerCase(),
+            p_bio: bio || '',
+            p_country: country,
+            p_state: province,
+            p_department: department || null,
+            p_city: city,
+            p_barrio: barrio,
+            p_phone: normalizedPhone,
+            p_hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
+            p_years_experience: yearsExperience ? parseInt(yearsExperience) : null
+          });
+          
+          if (profError) {
+            console.log('❌ Error en RPC create_professional_profile:', profError);
+            console.log('⚠️ Intentando método alternativo (insert directo)...');
             
-            const finalProfession = profession === 'Otro' ? customProfession : profession;
-            const professionCapitalized = finalProfession.charAt(0).toUpperCase() + finalProfession.slice(1).toLowerCase();
+            // Fallback: insert directo si la RPC falla
+            const { error: insertError } = await supabase.from('professionals').insert({
+              user_id: userId,
+              display_name: displayName,
+              profession: finalProfession.charAt(0).toUpperCase() + finalProfession.slice(1).toLowerCase(),
+              bio: bio || '',
+              country: country,
+              state: province,
+              department: department || null,
+              city: city,
+              barrio: barrio,
+              zip_code: '',
+              hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
+              years_experience: yearsExperience ? parseInt(yearsExperience) : null,
+              phone: normalizedPhone,
+              rating: 0,
+              rating_count: 0,
+              total_reviews: 0,
+              avatar_url: null,
+              completed_hires_count: 0
+            });
             
-            const professionalData = {
-              p_user_id: userId,
-              p_display_name: displayName,
-              p_profession: professionCapitalized,
-              p_bio: bio || null,
-              p_hourly_rate: hourlyRate ? parseFloat(hourlyRate) : 0,
-              p_years_experience: yearsExperience ? parseInt(yearsExperience) : 0,
-              p_phone: normalizedPhone,
-              p_city: city,
-              p_state: province,
-              p_country: country,
-              p_province: province,
-              p_department: department || null,
-              p_barrio: barrio
-            };
-            
-            console.log('📊 Datos a guardar en professionals:', professionalData);
-            
-            const { data: rpcData, error: profError } = await supabase
-              .rpc('create_professional_profile', professionalData);
-            
-            if (profError) {
-              console.error('❌ Error RPC creando perfil profesional:', profError);
-              throw new Error('Error al crear tu perfil profesional. Por favor intenta de nuevo.');
+            if (insertError) {
+              console.error('❌ Error en insert directo de profesional:', insertError);
+            } else {
+              console.log('✅ Perfil profesional creado con insert directo');
             }
-            
-            if (rpcData && !rpcData.success) {
-              console.error('❌ Error en función RPC:', rpcData.error);
-              throw new Error(rpcData.error || 'Error al crear tu perfil profesional.');
-            }
-            
-            console.log('✅ Perfil profesional creado exitosamente:', rpcData);
+          } else {
+            console.log('✅ Perfil profesional creado con RPC');
           }
-        } catch (dbError: any) {
-          console.error('❌ Error en BD:', dbError);
-          Alert.alert('Error', dbError.message || 'Ocurrió un error al crear tu cuenta. Por favor intenta de nuevo.');
-          setLoading(false);
-          return;
         }
         
-        console.log('📧 Email de verificación enviado automáticamente por Supabase');
+        // ACTUALIZAR tabla users con todos los datos personales
+        console.log('📝 Actualizando datos de usuario...');
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            phone: normalizedPhone,
+            id_number: normalizedIdNumber,
+            country: country,
+            province: province,
+            department: department || null,
+            city: city,
+            barrio: barrio,
+          })
+          .eq('id', userId);
         
-        // Mostrar alerta sobre verificación de email
+        if (updateError) {
+          console.error('❌ Error actualizando datos de usuario:', updateError);
+        } else {
+          console.log('✅ Datos de usuario actualizados correctamente');
+        }
+        
+        // Guardar datos del usuario en localStorage para usarlos después de confirmar email
+        if (Platform.OS === 'web') {
+          const pendingUserData = {
+            userId,
+            email: normalizedEmail,
+            fullName,
+            userType,
+            phone: normalizedPhone,
+            idNumber: normalizedIdNumber,
+            country,
+            province,
+            department,
+            city,
+            barrio,
+            ...(userType === 'worker' ? {
+              displayName,
+              profession: profession === 'Otro' ? customProfession : profession,
+              bio,
+              hourlyRate,
+              yearsExperience
+            } : {})
+          };
+          localStorage.setItem('pending_user_data', JSON.stringify(pendingUserData));
+        }
+        
+        // Cerrar sesión y redirigir a confirmación de email
+        await supabase.auth.signOut();
+        
         Alert.alert(
-          '✅ Registro exitoso',
-          `Tu cuenta fue creada exitosamente.\n\nTe enviamos un email de verificación a ${normalizedEmail}.\n\n⚠️ IMPORTANTE: Revisa tu carpeta de SPAM o correo no deseado.`,
-          [{ text: 'Entendido', style: 'default' }]
+          '¡Cuenta creada!',
+          'Te hemos enviado un correo de confirmación. Por favor, verifica tu email antes de continuar.',
+          [{ text: 'OK', onPress: () => router.replace('/auth/email-confirmation' as any) }]
         );
-        
-        console.log('➡️ Redirigiendo a confirmación de email...');
-        
-        // Redirigir a pantalla de confirmación de email
-        router.replace({ 
-          pathname: '/auth/email-confirmation', 
-          params: { email: normalizedEmail } 
-        });
         return;
       }
     } catch (err: any) {
@@ -753,24 +786,8 @@ export default function RegisterScreen() {
             <TextInput style={[styles.inputUnified, errors.email && styles.inputError]} placeholder="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" placeholderTextColor="#9ca3af" />
             {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
-            <TextInput style={[styles.inputUnified, errors.password && styles.inputError]} placeholder="Contraseña (mín. 8 caracteres, mayúscula, minúscula, número)" value={password} onChangeText={setPassword} secureTextEntry placeholderTextColor="#9ca3af" />
+            <TextInput style={[styles.inputUnified, errors.password && styles.inputError]} placeholder="Contraseña" value={password} onChangeText={setPassword} secureTextEntry placeholderTextColor="#9ca3af" />
             {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
-            {!errors.password && password.length > 0 && password.length < 8 && (
-              <View style={{marginTop: 4}}>
-                <Text style={{fontSize: 12, color: '#f59e0b'}}>
-                  • Mín. 8 caracteres {password.length < 8 ? '❌' : '✓'}
-                </Text>
-                <Text style={{fontSize: 12, color: '#f59e0b'}}>
-                  • Una mayúscula {!/[A-Z]/.test(password) ? '❌' : '✓'}
-                </Text>
-                <Text style={{fontSize: 12, color: '#f59e0b'}}>
-                  • Una minúscula {!/[a-z]/.test(password) ? '❌' : '✓'}
-                </Text>
-                <Text style={{fontSize: 12, color: '#f59e0b'}}>
-                  • Un número {!/[0-9]/.test(password) ? '❌' : '✓'}
-                </Text>
-              </View>
-            )}
 
             <TextInput style={[styles.inputUnified, errors.phone && styles.inputError]} placeholder="Teléfono" value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholderTextColor="#9ca3af" />
             {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
