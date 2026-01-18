@@ -117,9 +117,8 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
     try {
       setUploading(true);
 
-      // Crear nombre único para el archivo
-      const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
-      const fileName = `portfolio-${Date.now()}.${fileExt}`;
+      // Crear nombre único para el archivo (forzar .jpg para consistencia)
+      const fileName = `portfolio-${Date.now()}.jpg`;
       const filePath = `${professionalId}/${fileName}`;
 
       console.log('📤 Subiendo imagen del portafolio:', filePath);
@@ -128,17 +127,8 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
       const response = await fetch(uri);
       const arrayBuffer = await response.arrayBuffer();
       
-      // Determinar el MIME type correcto
-      const mimeMap: Record<string, string> = {
-        jpg: 'image/jpeg',
-        jpeg: 'image/jpeg',
-        png: 'image/png',
-        webp: 'image/webp',
-      };
-      const contentType = mimeMap[fileExt] || 'image/jpeg';
-      
-      // Crear un Blob con el MIME type correcto para compatibilidad web
-      const blob = new Blob([arrayBuffer], { type: contentType });
+      // Crear un Blob con JPEG para consistencia
+      const blob = new Blob([arrayBuffer], { type: 'image/jpeg' });
 
       // Subir a Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
@@ -146,7 +136,7 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
         .upload(filePath, blob, { 
           cacheControl: '3600',
           upsert: false,
-          contentType
+          contentType: 'image/jpeg'
         });
 
       if (uploadError) {
