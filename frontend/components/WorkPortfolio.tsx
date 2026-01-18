@@ -14,6 +14,8 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../src/lib/supabase';
+import PortfolioImageWithFallback from './PortfolioImageWithFallback';
+
 interface WorkPortfolioProps {
   professionalId: string;
   editable?: boolean;
@@ -32,10 +34,25 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
   const [uploading, setUploading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+  const toastTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState<{ visible: boolean; imageId: string; imageUrl: string }>({
+    visible: false,
+    imageId: '',
+    imageUrl: ''
+  });
 
   useEffect(() => {
     loadPortfolioImages();
   }, [professionalId]);
+
+  useEffect(() => {
+    // Limpiar toast timeout cuando el componente se desmonte
+    return () => {
+      if (toastTimeout.current) clearTimeout(toastTimeout.current);
+    };
+  }, []);
 
   async function loadPortfolioImages() {
     try {
@@ -47,9 +64,11 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setImages(data || []);
+      
+      const validImages = data || [];
+      setImages(validImages);
     } catch (error: any) {
-      console.error('Error loading portfolio:', error);
+      // Error al cargar portafolio
     } finally {
       setLoading(false);
     }
@@ -62,11 +81,10 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
 
     try {
       // Verificar límite de imágenes
-      if (images.length >= 5) {
-        Alert.alert(
-          'Límite alcanzado',
-          'Puedes subir un máximo de 5 imágenes. Elimina alguna para añadir nuevas.'
-        );
+      if (images.length >= 15) {
+        setToast({ message: 'Puedes subir un máximo de 15 imágenes. Elimina alguna para añadir nuevas.', type: 'error' });
+        if (toastTimeout.current) clearTimeout(toastTimeout.current);
+        toastTimeout.current = setTimeout(() => setToast(null), 3000);
         return;
       }
 
@@ -80,7 +98,9 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
           if (file) {
             // Validar tamaño (máx 10MB)
             if (file.size > 10 * 1024 * 1024) {
-              Alert.alert('Archivo muy grande', 'El archivo debe ser menor a 10MB');
+              setToast({ message: 'El archivo debe ser menor a 10MB', type: 'error' });
+              if (toastTimeout.current) clearTimeout(toastTimeout.current);
+              toastTimeout.current = setTimeout(() => setToast(null), 3000);
               return;
             }
             await uploadImageFromFile(file);
@@ -95,10 +115,9 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (status !== 'granted') {
-        Alert.alert(
-          'Permiso denegado',
-          'Necesitamos acceso a tu galería para subir fotos de tus trabajos'
-        );
+        setToast({ message: 'Necesitamos acceso a tu galería para subir fotos', type: 'error' });
+        if (toastTimeout.current) clearTimeout(toastTimeout.current);
+        toastTimeout.current = setTimeout(() => setToast(null), 3000);
         return;
       }
 
@@ -122,17 +141,17 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
           fileExt = asset.uri.split('.').pop()?.toLowerCase() || '';
         }
         if (!allowedTypes.includes(fileExt)) {
-          Alert.alert(
-            'Formato no soportado',
-            'Solo puedes subir imágenes en formato JPG, JPEG, PNG o WEBP.'
-          );
+          setToast({ message: 'Solo puedes subir imágenes en formato JPG, JPEG, PNG o WEBP.', type: 'error' });
+          if (toastTimeout.current) clearTimeout(toastTimeout.current);
+          toastTimeout.current = setTimeout(() => setToast(null), 3000);
           return;
         }
         await uploadImage(asset.uri);
       }
     } catch (error: any) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'No se pudo seleccionar la imagen');
+      setToast({ message: 'No se pudo seleccionar la imagen', type: 'error' });
+      if (toastTimeout.current) clearTimeout(toastTimeout.current);
+      toastTimeout.current = setTimeout(() => setToast(null), 3000);
     }
   }
 
@@ -140,30 +159,27 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
     try {
       setUploading(true);
 
-      // Crear nombre único para el archivo (forzar .jpg para consistencia)
-      const fileName = `portfolio-${Date.now()}.jpg`;
+      // Crear nombre único con UUID para evitar conflictos
+      const fileUuid = crypto.randomUUID();
+      const fileName = `${fileUuid}.jpg`;
       const filePath = `${professionalId}/${fileName}`;
 
-      console.log('📤 Subiendo imagen del portafolio:', filePath);
+      // Convertir File a ArrayBuffer y luego a Uint8Array (no Blob)
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
 
-      // Crear un Blob con JPEG para consistencia
-      const blob = new Blob([file], { type: 'image/jpeg' });
-
-      // Subir a Supabase Storage
+      // Subir a Supabase Storage usando Uint8Array
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('portfolio')
-        .upload(filePath, blob, { 
+        .upload(filePath, uint8Array, { 
           cacheControl: '3600',
           upsert: false,
           contentType: 'image/jpeg'
         });
 
       if (uploadError) {
-        console.error('Error uploading:', uploadError);
         throw uploadError;
       }
-
-      console.log('✅ Imagen subida:', uploadData);
 
       // Obtener URL pública
       const { data: publicUrlData } = supabase.storage
@@ -171,6 +187,11 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
         .getPublicUrl(filePath);
 
       const publicUrl = publicUrlData.publicUrl;
+      
+      // Validar que la URL es válida antes de guardar
+      if (!publicUrl || !publicUrl.startsWith('http')) {
+        throw new Error('No se pudo generar una URL válida para la imagen');
+      }
 
       // Guardar en la tabla portfolio_images
       const { error: insertError } = await supabase
@@ -182,17 +203,17 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
         });
 
       if (insertError) {
-        console.error('Error saving to database:', insertError);
         throw insertError;
       }
 
-      Alert.alert('¡Éxito!', 'Imagen agregada a tu portafolio');
+      setToast({ message: 'Imagen agregada a tu portafolio', type: 'success' });
       await loadPortfolioImages();
     } catch (error: any) {
-      console.error('Error uploading image:', error);
-      Alert.alert('Error', 'No se pudo subir la imagen. Intenta de nuevo.');
+      setToast({ message: 'No se pudo subir la imagen. Intenta de nuevo.', type: 'error' });
     } finally {
       setUploading(false);
+      if (toastTimeout.current) clearTimeout(toastTimeout.current);
+      toastTimeout.current = setTimeout(() => setToast(null), 3000);
     }
   }
 
@@ -200,34 +221,28 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
     try {
       setUploading(true);
 
-      // Crear nombre único para el archivo (forzar .jpg para consistencia)
-      const fileName = `portfolio-${Date.now()}.jpg`;
+      // Crear nombre único con UUID para evitar conflictos
+      const fileUuid = crypto.randomUUID();
+      const fileName = `${fileUuid}.jpg`;
       const filePath = `${professionalId}/${fileName}`;
 
-      console.log('📤 Subiendo imagen del portafolio:', filePath);
-
-      // Convertir URI a ArrayBuffer
+      // Convertir URI a ArrayBuffer y luego a Uint8Array
       const response = await fetch(uri);
       const arrayBuffer = await response.arrayBuffer();
-      
-      // Crear un Blob con JPEG para consistencia
-      const blob = new Blob([arrayBuffer], { type: 'image/jpeg' });
+      const uint8Array = new Uint8Array(arrayBuffer);
 
-      // Subir a Supabase Storage
+      // Subir a Supabase Storage usando Uint8Array
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('portfolio')
-        .upload(filePath, blob, { 
+        .upload(filePath, uint8Array, { 
           cacheControl: '3600',
           upsert: false,
           contentType: 'image/jpeg'
         });
 
       if (uploadError) {
-        console.error('Error uploading:', uploadError);
         throw uploadError;
       }
-
-      console.log('✅ Imagen subida:', uploadData);
 
       // Obtener URL pública
       const { data: publicUrlData } = supabase.storage
@@ -235,6 +250,11 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
         .getPublicUrl(filePath);
 
       const publicUrl = publicUrlData.publicUrl;
+      
+      // Validar que la URL es válida antes de guardar
+      if (!publicUrl || !publicUrl.startsWith('http')) {
+        throw new Error('No se pudo generar una URL válida para la imagen');
+      }
 
       // Guardar en la tabla portfolio_images
       const { error: insertError } = await supabase
@@ -246,60 +266,56 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
         });
 
       if (insertError) {
-        console.error('Error saving to database:', insertError);
         throw insertError;
       }
 
-      Alert.alert('¡Éxito!', 'Imagen agregada a tu portafolio');
+      setToast({ message: 'Imagen agregada a tu portafolio', type: 'success' });
       await loadPortfolioImages();
     } catch (error: any) {
-      console.error('Error uploading image:', error);
-      Alert.alert('Error', 'No se pudo subir la imagen. Intenta de nuevo.');
+      setToast({ message: 'No se pudo subir la imagen. Intenta de nuevo.', type: 'error' });
     } finally {
       setUploading(false);
+      if (toastTimeout.current) clearTimeout(toastTimeout.current);
+      toastTimeout.current = setTimeout(() => setToast(null), 3000);
     }
   }
 
   async function deleteImage(imageId: string, imageUrl: string) {
-    Alert.alert(
-      'Eliminar imagen',
-      '¿Estás seguro de que deseas eliminar esta imagen?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // Extraer el path del storage desde la URL
-              const urlParts = imageUrl.split('/portfolio/');
-              if (urlParts.length > 1) {
-                const filePath = urlParts[1];
-                
-                // Eliminar del storage
-                await supabase.storage
-                  .from('portfolio')
-                  .remove([filePath]);
-              }
+    setDeleteConfirmModal({ visible: true, imageId, imageUrl });
+  }
 
-              // Eliminar de la base de datos
-              const { error } = await supabase
-                .from('portfolio_images')
-                .delete()
-                .eq('id', imageId);
+  async function confirmDelete() {
+    const { imageId, imageUrl } = deleteConfirmModal;
+    setDeleteConfirmModal({ visible: false, imageId: '', imageUrl: '' });
 
-              if (error) throw error;
+    try {
+      // Extraer el path del storage desde la URL
+      const urlParts = imageUrl.split('/portfolio/');
+      if (urlParts.length > 1) {
+        const filePath = urlParts[1];
+        
+        // Eliminar del storage
+        await supabase.storage
+          .from('portfolio')
+          .remove([filePath]);
+      }
 
-              Alert.alert('¡Listo!', 'Imagen eliminada');
-              await loadPortfolioImages();
-            } catch (error: any) {
-              console.error('Error deleting image:', error);
-              Alert.alert('Error', 'No se pudo eliminar la imagen');
-            }
-          }
-        }
-      ]
-    );
+      // Eliminar de la base de datos
+      const { error } = await supabase
+        .from('portfolio_images')
+        .delete()
+        .eq('id', imageId);
+
+      if (error) throw error;
+
+      setToast({ message: 'Imagen eliminada correctamente', type: 'success' });
+      await loadPortfolioImages();
+    } catch (error: any) {
+      setToast({ message: 'Error al eliminar la imagen', type: 'error' });
+    } finally {
+      if (toastTimeout.current) clearTimeout(toastTimeout.current);
+      toastTimeout.current = setTimeout(() => setToast(null), 3000);
+    }
   }
 
   if (loading) {
@@ -344,7 +360,7 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
         showsVerticalScrollIndicator={false}
       >
         {/* Botón para agregar imagen */}
-        {editable && images.length < 5 && (
+        {editable && images.length < 15 && (
           <TouchableOpacity 
             style={[styles.addButton, { width: imageSize, height: imageSize }]}
             onPress={pickImage}
@@ -363,31 +379,63 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
         )}
 
         {/* Grid de imágenes */}
-        {images.map((image) => (
-          <Pressable
-            key={image.id}
-            style={[styles.imageContainer, { width: imageSize, height: imageSize }]}
-            onPress={() => {
-              setSelectedImage(image.image_url);
-              setModalVisible(true);
-            }}
-            android_ripple={{ color: '#e0e0e0' }}
-          >
-            <Image 
-              source={{ uri: image.image_url }} 
-              style={styles.image}
-              resizeMode="cover"
-            />
-            {editable && (
-              <TouchableOpacity 
-                style={styles.deleteButton}
-                onPress={() => deleteImage(image.id, image.image_url)}
-              >
-                <Text style={styles.deleteIcon}>×</Text>
-              </TouchableOpacity>
-            )}
-          </Pressable>
-        ))}
+        {images
+          .filter(image => {
+            // Ocultar imágenes que fallaron o tienen URL inválida
+            if (failedImages.has(image.id)) return false;
+            const imageUrl = image.image_url?.trim();
+            return imageUrl && imageUrl.startsWith('http');
+          })
+          .map((image) => {
+          const imageUrl = image.image_url!.trim();
+          
+          // No renderizar si está en failedImages (doble verificación)
+          if (failedImages.has(image.id)) {
+            return null;
+          }
+          
+          return (
+            <View
+              key={image.id}
+              style={[styles.imageContainer, { width: imageSize, height: imageSize }]}
+            >
+              <PortfolioImageWithFallback
+                imageUrl={imageUrl}
+                imageId={image.id}
+                style={styles.image}
+                resizeMode="cover"
+                onError={() => {
+                  setFailedImages(prev => {
+                    const newSet = new Set(prev);
+                    newSet.add(image.id);
+                    return newSet;
+                  });
+                }}
+              />
+              <Pressable
+                style={StyleSheet.absoluteFill}
+                onPress={() => {
+                  setSelectedImage(imageUrl);
+                  setModalVisible(true);
+                }}
+              />
+              {editable && (
+                <TouchableOpacity 
+                  style={styles.deleteButton}
+                  onPress={(e: any) => {
+                    e?.stopPropagation?.();
+                    e?.preventDefault?.();
+                    deleteImage(image.id, imageUrl);
+                  }}
+                  activeOpacity={0.8}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={styles.deleteIcon}>×</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          );
+        })}
       </ScrollView>
 
       {/* Modal para imagen ampliada */}
@@ -400,8 +448,9 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
         <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
           <View style={styles.modalContent}>
             {selectedImage && (
-              <Image
-                source={{ uri: selectedImage }}
+              <PortfolioImageWithFallback
+                imageUrl={selectedImage}
+                imageId="modal-preview"
                 style={styles.modalImage}
                 resizeMode="contain"
               />
@@ -413,6 +462,47 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
       {images.length === 0 && !editable && (
         <View style={styles.emptyState}>
           <Text style={styles.emptyText}>No hay imágenes en el portafolio</Text>
+        </View>
+      )}
+
+      {/* Modal de confirmación de eliminación */}
+      <Modal
+        visible={deleteConfirmModal.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDeleteConfirmModal({ visible: false, imageId: '', imageUrl: '' })}
+      >
+        <Pressable 
+          style={styles.confirmModalOverlay} 
+          onPress={() => setDeleteConfirmModal({ visible: false, imageId: '', imageUrl: '' })}
+        >
+          <Pressable style={styles.confirmModalContent} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.confirmModalTitle}>Eliminar imagen</Text>
+            <Text style={styles.confirmModalMessage}>
+              ¿Estás seguro de que deseas eliminar esta imagen?
+            </Text>
+            <View style={styles.confirmModalButtons}>
+              <TouchableOpacity 
+                style={[styles.confirmModalButton, styles.confirmModalButtonCancel]}
+                onPress={() => setDeleteConfirmModal({ visible: false, imageId: '', imageUrl: '' })}
+              >
+                <Text style={styles.confirmModalButtonTextCancel}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.confirmModalButton, styles.confirmModalButtonDelete]}
+                onPress={confirmDelete}
+              >
+                <Text style={styles.confirmModalButtonTextDelete}>Eliminar</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Toast Notification */}
+      {toast && (
+        <View style={[styles.toast, toast.type === 'success' ? styles.toastSuccess : styles.toastError]}>
+          <Text style={styles.toastText}>{toast.message}</Text>
         </View>
       )}
     </View>
@@ -520,6 +610,22 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  brokenImageContainer: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  brokenImageText: {
+    fontSize: 32,
+    marginBottom: 4,
+  },
+  brokenImageSubtext: {
+    fontSize: 10,
+    color: '#999',
+    textAlign: 'center',
+  },
   deleteButton: {
     position: 'absolute',
     top: 5,
@@ -535,6 +641,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+    zIndex: 10,
   },
   deleteIcon: {
     color: '#fff',
@@ -552,5 +659,87 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#999',
     textAlign: 'center',
+  },
+  toast: {
+    position: 'absolute',
+    bottom: 40,
+    left: 20,
+    right: 20,
+    padding: 16,
+    borderRadius: 12,
+    zIndex: 1000,
+    elevation: 5,
+  },
+  toastSuccess: {
+    backgroundColor: '#10b981',
+  },
+  toastError: {
+    backgroundColor: '#ef4444',
+  },
+  toastText: {
+    color: '#fff',
+    textAlign: 'center',
+    fontWeight: '700',
+  },
+  confirmModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  confirmModalContent: {
+    width: '85%',
+    maxWidth: 400,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  confirmModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1e3a8a',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  confirmModalMessage: {
+    fontSize: 16,
+    color: '#475569',
+    marginBottom: 24,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  confirmModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  confirmModalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmModalButtonCancel: {
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+  },
+  confirmModalButtonDelete: {
+    backgroundColor: '#ef4444',
+  },
+  confirmModalButtonTextCancel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  confirmModalButtonTextDelete: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
   },
 });
