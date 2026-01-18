@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Modal, Pressable } from 'react-native';
 import { 
   View, 
@@ -55,6 +55,8 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
     }
   }
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   async function pickImage() {
     if (!editable) return;
 
@@ -68,6 +70,27 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
         return;
       }
 
+      // En web, usar file input HTML
+      if (Platform.OS === 'web') {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp';
+        input.onchange = async (e: any) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            // Validar tamaño (máx 10MB)
+            if (file.size > 10 * 1024 * 1024) {
+              Alert.alert('Archivo muy grande', 'El archivo debe ser menor a 10MB');
+              return;
+            }
+            await uploadImageFromFile(file);
+          }
+        };
+        input.click();
+        return;
+      }
+
+      // En mobile, usar expo-image-picker
       // Pedir permisos
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
@@ -110,6 +133,66 @@ export default function WorkPortfolio({ professionalId, editable = true }: WorkP
     } catch (error: any) {
       console.error('Error picking image:', error);
       Alert.alert('Error', 'No se pudo seleccionar la imagen');
+    }
+  }
+
+  async function uploadImageFromFile(file: File) {
+    try {
+      setUploading(true);
+
+      // Crear nombre único para el archivo (forzar .jpg para consistencia)
+      const fileName = `portfolio-${Date.now()}.jpg`;
+      const filePath = `${professionalId}/${fileName}`;
+
+      console.log('📤 Subiendo imagen del portafolio:', filePath);
+
+      // Crear un Blob con JPEG para consistencia
+      const blob = new Blob([file], { type: 'image/jpeg' });
+
+      // Subir a Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('portfolio')
+        .upload(filePath, blob, { 
+          cacheControl: '3600',
+          upsert: false,
+          contentType: 'image/jpeg'
+        });
+
+      if (uploadError) {
+        console.error('Error uploading:', uploadError);
+        throw uploadError;
+      }
+
+      console.log('✅ Imagen subida:', uploadData);
+
+      // Obtener URL pública
+      const { data: publicUrlData } = supabase.storage
+        .from('portfolio')
+        .getPublicUrl(filePath);
+
+      const publicUrl = publicUrlData.publicUrl;
+
+      // Guardar en la tabla portfolio_images
+      const { error: insertError } = await supabase
+        .from('portfolio_images')
+        .insert({
+          professional_id: professionalId,
+          image_url: publicUrl,
+          description: ''
+        });
+
+      if (insertError) {
+        console.error('Error saving to database:', insertError);
+        throw insertError;
+      }
+
+      Alert.alert('¡Éxito!', 'Imagen agregada a tu portafolio');
+      await loadPortfolioImages();
+    } catch (error: any) {
+      console.error('Error uploading image:', error);
+      Alert.alert('Error', 'No se pudo subir la imagen. Intenta de nuevo.');
+    } finally {
+      setUploading(false);
     }
   }
 
