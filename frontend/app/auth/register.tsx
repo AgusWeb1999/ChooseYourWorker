@@ -417,13 +417,39 @@ export default function RegisterScreen() {
 
       // ========== CREAR CUENTA ==========
       
-      console.log('📧 Creando cuenta para:', { email: normalizedEmail, userType });
+      // Calcular profesión final para trabajadores
+      const finalProfession = userType === 'worker' 
+        ? (profession === 'Otro' ? customProfession : profession)
+        : null;
+      
+      console.log('📧 Creando cuenta para:', { email: normalizedEmail, userType, profession: finalProfession });
       
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: normalizedEmail,
         password,
         options: { 
-          data: { full_name: fullName, user_type: userType },
+          data: { 
+            // Datos básicos (todos los usuarios)
+            full_name: fullName, 
+            user_type: userType,
+            is_professional: userType === 'worker',
+            // Datos personales y de ubicación (todos los usuarios)
+            phone: normalizedPhone,
+            id_number: normalizedIdNumber,
+            country: country,
+            province: province,
+            department: department || null,
+            city: city,
+            barrio: barrio,
+            // Datos de profesional (solo si es worker)
+            ...(userType === 'worker' ? {
+              display_name: displayName,
+              profession: finalProfession,
+              bio: bio || '',
+              hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
+              years_experience: yearsExperience ? parseInt(yearsExperience) : null
+            } : {})
+          },
           emailRedirectTo: Platform.OS === 'web' 
             ? `${window.location.origin}/auth/email-verified`
             : 'workinggo://auth/email-verified'
@@ -534,6 +560,7 @@ export default function RegisterScreen() {
             department: department || null,
             city: city,
             barrio: barrio,
+            is_professional: userType === 'worker'
           })
           .eq('id', userId);
         
@@ -571,11 +598,22 @@ export default function RegisterScreen() {
         // Cerrar sesión y redirigir a confirmación de email
         await supabase.auth.signOut();
         
-        Alert.alert(
-          '¡Cuenta creada!',
-          'Te hemos enviado un correo de confirmación. Por favor, verifica tu email antes de continuar.',
-          [{ text: 'OK', onPress: () => router.replace('/auth/email-confirmation' as any) }]
-        );
+        console.log('✅ Cuenta creada exitosamente, redirigiendo a confirmación de email...');
+        
+        // Redirigir inmediatamente con el email como parámetro
+        router.replace({ 
+          pathname: '/auth/email-confirmation' as any, 
+          params: { email: normalizedEmail } 
+        });
+        
+        // Mostrar alerta después de redirigir (no bloqueante)
+        setTimeout(() => {
+          Alert.alert(
+            '¡Cuenta creada!',
+            'Te hemos enviado un correo de confirmación. Por favor, verifica tu email antes de continuar.'
+          );
+        }, 100);
+        
         return;
       }
     } catch (err: any) {

@@ -7,7 +7,25 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+DECLARE
+  v_full_name text;
+  v_is_professional boolean;
 BEGIN
+  -- Extraer y validar full_name
+  v_full_name := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'full_name', '')), '');
+  
+  -- Si full_name está vacío, usar el email como fallback
+  IF v_full_name IS NULL OR v_full_name = '' THEN
+    v_full_name := SPLIT_PART(NEW.email, '@', 1);
+  END IF;
+  
+  -- Determinar si es profesional
+  v_is_professional := COALESCE(
+    (NEW.raw_user_meta_data->>'is_professional')::boolean,
+    (NEW.raw_user_meta_data->>'user_type' = 'worker'),
+    false
+  );
+
   INSERT INTO public.users (
     id,
     auth_uid,
@@ -27,21 +45,25 @@ BEGIN
     NEW.id,
     NEW.id,
     NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
-    NEW.raw_user_meta_data->>'phone',
-    NEW.raw_user_meta_data->>'id_number',
-    NEW.raw_user_meta_data->>'country',
-    NEW.raw_user_meta_data->>'province',
-    NEW.raw_user_meta_data->>'department',
-    NEW.raw_user_meta_data->>'city',
-    NEW.raw_user_meta_data->>'barrio',
+    v_full_name,
+    NULLIF(TRIM(NEW.raw_user_meta_data->>'phone'), ''),
+    NULLIF(TRIM(NEW.raw_user_meta_data->>'id_number'), ''),
+    NULLIF(TRIM(NEW.raw_user_meta_data->>'country'), ''),
+    NULLIF(TRIM(NEW.raw_user_meta_data->>'province'), ''),
+    NULLIF(TRIM(NEW.raw_user_meta_data->>'department'), ''),
+    NULLIF(TRIM(NEW.raw_user_meta_data->>'city'), ''),
+    NULLIF(TRIM(NEW.raw_user_meta_data->>'barrio'), ''),
     COALESCE(NEW.email_confirmed_at IS NOT NULL, false),
     true,
-    COALESCE((NEW.raw_user_meta_data->>'is_professional')::boolean, false)
+    v_is_professional
   )
   ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
-    full_name = COALESCE(EXCLUDED.full_name, users.full_name),
+    full_name = CASE 
+      WHEN EXCLUDED.full_name IS NOT NULL AND EXCLUDED.full_name <> '' 
+      THEN EXCLUDED.full_name 
+      ELSE users.full_name 
+    END,
     phone = COALESCE(EXCLUDED.phone, users.phone),
     id_number = COALESCE(EXCLUDED.id_number, users.id_number),
     country = COALESCE(EXCLUDED.country, users.country),
@@ -53,6 +75,12 @@ BEGIN
     updated_at = now();
 
   RETURN NEW;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Log error details para debugging
+    RAISE LOG 'Error in handle_new_user trigger: % %', SQLERRM, SQLSTATE;
+    RAISE LOG 'User ID: %, Email: %, Metadata: %', NEW.id, NEW.email, NEW.raw_user_meta_data;
+    RAISE;
 END;
 $$;
 
