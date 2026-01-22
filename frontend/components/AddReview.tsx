@@ -33,6 +33,7 @@ export default function AddReview({
 }: AddReviewProps) {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
+  const [costo, setCosto] = useState(''); // Nuevo campo para el costo
   const [loading, setLoading] = useState(false);
 
   console.log('🟢 AddReview renderizado:', { 
@@ -50,8 +51,13 @@ export default function AddReview({
       return;
     }
 
+    // Validar costo si se ingresa (opcional, pero debe ser número positivo)
+    if (costo && isNaN(Number(costo))) {
+      Alert.alert('Error', 'El campo "¿Cuánto te salió?" debe ser un número válido o dejarse vacío.');
+      return;
+    }
+
     setLoading(true);
-    
     try {
       const { error } = await supabase
         .from('reviews')
@@ -61,6 +67,7 @@ export default function AddReview({
           hire_id: hireId,
           rating,
           comment: comment.trim() || null,
+          costo: costo ? Number(costo) : null,
         }, { onConflict: 'hire_id' });
 
       if (error) {
@@ -69,22 +76,16 @@ export default function AddReview({
         setLoading(false);
         return;
       }
-      
       // Éxito - resetear estado y cerrar
-      console.log('✅ Reseña publicada exitosamente');
       setRating(0);
       setComment('');
+      setCosto('');
       setLoading(false);
-      
-      // Cerrar modal y refrescar datos
       onSuccess();
       onClose();
-      
-      // Mostrar mensaje de éxito después de cerrar el modal
       setTimeout(() => {
         Alert.alert('¡Éxito!', 'Tu reseña ha sido publicada');
       }, 300);
-      
     } catch (error: any) {
       console.error('Error inesperado al publicar reseña:', error);
       Alert.alert('Error', error.message || 'Ocurrió un error al publicar la reseña');
@@ -149,6 +150,20 @@ export default function AddReview({
               </Text>
             )}
 
+
+            <Text style={styles.label}>¿Cuánto te salió? (opcional)</Text>
+            <TextInput
+              style={styles.costoInput}
+              placeholder="Ej: 1500"
+              placeholderTextColor="#999"
+              value={costo}
+              onChangeText={setCosto}
+              keyboardType="numeric"
+              maxLength={10}
+              autoCorrect={false}
+              autoCapitalize="none"
+            />
+
             <Text style={styles.label}>Comentario (opcional)</Text>
             <TextInput
               style={styles.textArea}
@@ -186,6 +201,14 @@ export default function AddReview({
 }
 
 const styles = StyleSheet.create({
+  costoInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 14,
+    fontSize: 16,
+    marginBottom: 8,
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
