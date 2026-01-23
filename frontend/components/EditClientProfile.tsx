@@ -188,7 +188,10 @@ export default function EditUserProfile({ userProfile, userEmail, onSave, onCanc
       if (country === 'UY') {
         fetchCities(country, province, '').then((cities) => {
           setCityList(cities);
-          // No resetear city si ya está cargada la lista y coincide
+          // Restaurar city del perfil si existe en la lista
+          if (userProfile?.province === province && userProfile?.city && cities.some((c:any) => String(c.id) === String(userProfile.city))) {
+            setCity(userProfile.city);
+          }
         });
       } else {
         fetchDepartments(country, province).then((departments) => {
