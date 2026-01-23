@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Allow: /index.html
+Disallow: /admin/
+Disallow: /auth/
+Disallow: /*.json$
+Disallow: /*.sql$
+Sitemap: https://workinggo.com/sitemap.xml
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
