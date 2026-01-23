@@ -1,0 +1,101 @@
+# 🎯 Setup de SEO - WorkingGo
+
+## ✅ Lo que hicimos
+
+Creamos una **landing page pública optimizada para SEO** que Google puede indexar correctamente.
+
+### Archivos creados/modificados:
+
+1. **`index.html`** (landing page pública)
+   - Meta tags optimizados
+   - Estructura semántica HTML5
+   - Contenido con keywords para Google
+   - Links a la app (app.workinggo.com)
+   
+2. **`robots.txt`** 
+   - Indica a Google qué puede crawlear
+   - Excluye rutas privadas (/admin, /auth)
+   
+3. **`sitemap.xml`**
+   - Lista de URLs para Google indexar
+   - Actualiza prioridades y frecuencia
+
+## 🚀 Próximos pasos (Configuración de dominios)
+
+### 1. **Actualizar el archivo `CNAME`**
+
+El archivo `CNAME` actual probablemente apunta solo a `workinggo.com`. 
+
+**GitHub Pages solo permite UN dominio por repo**, así que tienes dos opciones:
+
+**Opción A (Recomendada):**
+- `workinggo.com` → sirve la landing (este repo)
+- `app.workinggo.com` → redirige a la app Expo
+
+**Opción B:**
+- Usar subdirectorio: `workinggo.com/app` para la app
+
+### 2. **Configurar dominios en registrador (GoDaddy, Namecheap, etc)**
+
+Si usas `workinggo.com` para landing + `app.workinggo.com` para app:
+
+```
+A record:      workinggo.com → 185.199.108.153 (GitHub Pages)
+CNAME record:  app → tu-servidor-expo.vercel.app (o donde hostees)
+```
+
+### 3. **Verificar en Google Search Console**
+
+```
+1. Ve a https://search.google.com/search-console
+2. Añade sitio: workinggo.com
+3. Sube el sitemap: https://workinggo.com/sitemap.xml
+4. Solicita indexación
+```
+
+## 📊 Cómo verificar que funciona
+
+```bash
+# Verificar que Google ve el sitio
+curl -I https://workinggo.com
+
+# Verificar meta tags
+curl https://workinggo.com | grep "<meta"
+
+# Verificar robots.txt
+curl https://workinggo.com/robots.txt
+```
+
+## 🔍 Palabras clave que ahora aparecerán
+
+La landing page contiene y prioriza:
+- ✅ Sanitario Montevideo
+- ✅ Mudanzas
+- ✅ Albañil
+- ✅ Pintor
+- ✅ Mecánico
+- ✅ Electricista
+- ✅ Plomero
+- ✅ Servicios profesionales
+
+## 📈 Impacto esperado
+
+**Antes:** Google veía "Iniciá sesión..."  
+**Ahora:** Google ve contenido valioso con servicios + keywords
+
+**Resultado:** Cuando alguien busca "sanitario montevideo" → aparecerá WorkingGo
+
+## ⚠️ Notas importantes
+
+1. **No subas cambios de código a esta landing**
+   - La landing es HTML puro, se actualiza en este repo
+   - La app Expo está en `frontend/` → deploya aparte
+
+2. **Verifica que los links funcionan**
+   - `https://workinggo.com` → landing pública ✅
+   - `https://workinggo.com/auth/login` → NO funciona (es app Expo)
+   - `https://app.workinggo.com/auth/login` → ✅ funciona (app)
+
+3. **Google tarda 1-2 semanas en reindexar**
+   - Puedes acelerar con Google Search Console
+   - Solicita la indexación manual
