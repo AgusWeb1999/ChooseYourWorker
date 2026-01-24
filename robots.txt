@@ -5,7 +5,7 @@ Disallow: /admin/
 Disallow: /auth/
 Disallow: /*.json$
 Disallow: /*.sql$
-Sitemap: https://workinggo.com/sitemap.xml
+Sitemap: https://working-go.com/sitemap.xml
 
 User-agent: Googlebot
 Allow: /
