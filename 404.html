@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="refresh" content="0; url=/" />
+    <script>
+      // Redirige a index.html y mantiene la ruta original para el router SPA
+      var l = window.location;
+      var path = l.pathname + l.search + l.hash;
+      window.location.replace('/?redirect=' + encodeURIComponent(path));
+    </script>
+  </head>
+  <body>
+    <p>Redirigiendo...</p>
+  </body>
+</html>
