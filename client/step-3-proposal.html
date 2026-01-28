@@ -7,6 +7,7 @@
   <meta name="description" content="Revisión de la propuesta del profesional seleccionado." />
   <link rel="icon" href="../favicon.ico" />
   <link rel="canonical" href="https://working-go.com/client/step-3" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -316,6 +317,57 @@
       alert('En desarrollo: Mostrar más opciones');
       // En producción, aquí buscarías más propuestas del backend
     });
+  </script>
+  <script src="supabase-config.js"></script>
+  <script>
+    // Función mejorada para traer datos reales de Supabase
+    async function loadRealProposal() {
+      try {
+        // Obtener datos del problema del cliente desde sessionStorage
+        const clientIssue = JSON.parse(sessionStorage.getItem('clientIssue') || '{}');
+        
+        if (!clientIssue.category) {
+          console.warn('No category found, using mock data');
+          return;
+        }
+
+        // Traer profesionales de esa categoría desde Supabase
+        const professionals = await window.WorkingGoSupabase.fetchProfessionalsByCategory(clientIssue.category);
+        
+        if (professionals && professionals.length > 0) {
+          // Seleccionar el mejor (primero en la lista, ordenado por rating)
+          const bestProfessional = professionals[0];
+
+          // Crear propuesta con datos reales
+          const realProposal = {
+            name: bestProfessional.display_name || 'Profesional',
+            category: bestProfessional.category,
+            rating: bestProfessional.rating || 4.8,
+            reviews: bestProfessional.reviews_count || 42,
+            bio: bestProfessional.bio || bestProfessional.description || 'Profesional verificado en WorkingGo',
+            availability: 'Mañana o próxima semana',
+            priceMin: Math.floor((bestProfessional.hourly_rate || 500) * 0.9),
+            priceMax: Math.ceil((bestProfessional.hourly_rate || 500) * 1.2),
+            city: bestProfessional.city || 'Montevideo'
+          };
+
+          // Re-renderizar con datos reales
+          renderProposal(realProposal);
+
+          // Guardar el profesional seleccionado
+          sessionStorage.setItem('selectedProfessional', JSON.stringify(bestProfessional));
+          sessionStorage.setItem('currentProposal', JSON.stringify(realProposal));
+        }
+      } catch (error) {
+        console.error('Error loading real proposal:', error);
+        // Mantener mock data si hay error
+      }
+    }
+
+    // Cargar datos reales cuando se carga la página
+    if (window.WorkingGoSupabase && window.WorkingGoSupabase.client) {
+      loadRealProposal();
+    }
   </script>
 </body>
 </html>
