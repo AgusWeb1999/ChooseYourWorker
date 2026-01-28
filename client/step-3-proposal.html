@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Propuesta de profesional - WorkingGo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Revisión de la propuesta del profesional seleccionado." />
+  <link rel="icon" href="../favicon.ico" />
+  <link rel="canonical" href="https://working-go.com/client/step-3" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f9fafb;
+      color: #1f2937;
+    }
+    .header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8c 100%);
+      color: white;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .logo-small {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+    .progress-bar {
+      height: 4px;
+      background: #e5e7eb;
+      border-radius: 2px;
+      margin-bottom: 2rem;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981, #059669);
+      width: 75%;
+      transition: width 0.3s;
+    }
+    .step-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1e3a5f;
+      margin-bottom: 0.5rem;
+    }
+    .step-subtitle {
+      font-size: 16px;
+      color: #6b7280;
+      margin-bottom: 2rem;
+    }
+    .proposal-card {
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    .professional-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .professional-avatar {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8c 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 32px;
+      margin-right: 1rem;
+    }
+    .professional-info h3 {
+      font-size: 20px;
+      margin-bottom: 0.25rem;
+      color: #1f2937;
+    }
+    .professional-info p {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 0.5rem;
+    }
+    .rating {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 14px;
+    }
+    .star {
+      color: #fbbf24;
+    }
+    .proposal-details {
+      margin-bottom: 1.5rem;
+    }
+    .detail-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .detail-item:last-child {
+      border-bottom: none;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #374151;
+      font-size: 14px;
+    }
+    .detail-value {
+      text-align: right;
+    }
+    .detail-value-main {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1e3a5f;
+    }
+    .detail-value-sub {
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .price-badge {
+      background: #f0fdf4;
+      color: #10b981;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 16px;
+    }
+    .success-message {
+      background: #f0fdf4;
+      border-left: 4px solid #10b981;
+      padding: 1rem;
+      border-radius: 6px;
+      margin-bottom: 2rem;
+      color: #059669;
+      display: none;
+    }
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    .btn-secondary {
+      background: white;
+      color: #374151;
+      border: 2px solid #e5e7eb;
+    }
+    .btn-secondary:hover {
+      border-color: #10b981;
+      color: #10b981;
+    }
+    .no-match {
+      background: #fef2f2;
+      border: 2px solid #fecaca;
+      border-radius: 12px;
+      padding: 2rem;
+      text-align: center;
+    }
+    .no-match-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #991b1b;
+      margin-bottom: 0.5rem;
+    }
+    .no-match-text {
+      color: #7f1d1d;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo-small">🔧 WorkingGo</div>
+    <h1 style="font-size: 20px; font-weight: 600;">Propuesta de profesional</h1>
+  </div>
+
+  <div class="container">
+    <!-- Barra de progreso -->
+    <div class="progress-bar">
+      <div class="progress-fill"></div>
+    </div>
+
+    <!-- Título del paso -->
+    <h2 class="step-title">Encontramos a alguien</h2>
+    <p class="step-subtitle">Este es el mejor match para tu problema</p>
+
+    <!-- Mensaje de éxito (inicialmente oculto) -->
+    <div class="success-message" id="successMessage">
+      ✓ ¡Propuesta aceptada! Ahora necesitamos crear tu cuenta.
+    </div>
+
+    <!-- Propuesta de profesional -->
+    <div class="proposal-card" id="proposalCard">
+      <!-- Será llenado por JavaScript -->
+    </div>
+
+    <!-- Card de no hay match (inicialmente oculta) -->
+    <div class="no-match" id="noMatchCard" style="display: none;">
+      <div class="no-match-title">👀 Buscando...</div>
+      <div class="no-match-text">
+        Todavía no encontramos al profesional ideal, pero no te preocupes. Te avisaremos cuando aparezca alguien disponible.
+      </div>
+      <button class="btn btn-secondary" onclick="window.location.href='./step-1-describe.html';">
+        Volver al inicio
+      </button>
+    </div>
+
+    <!-- Botones -->
+    <div class="button-group" id="buttonGroup">
+      <button type="button" class="btn btn-primary" id="acceptBtn">
+        Aceptar propuesta
+      </button>
+      <button type="button" class="btn btn-secondary" id="anotherBtn">
+        Ver otra opción
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Simulación de propuesta de profesional
+    const mockProposal = {
+      id: 'prof_123',
+      name: 'Juan González',
+      category: 'Sanitario',
+      avatar: '👨‍🔧',
+      rating: 4.8,
+      reviews: 47,
+      availability: 'Mañana a las 10 AM',
+      priceMin: 80,
+      priceMax: 150,
+      bio: 'Especialista en reparaciones de baños y cocinas'
+    };
+
+    function renderProposal(proposal) {
+      const card = document.getElementById('proposalCard');
+      card.innerHTML = `
+        <div class="professional-header">
+          <div class="professional-avatar">${proposal.avatar}</div>
+          <div class="professional-info">
+            <h3>${proposal.name}</h3>
+            <p>${proposal.category} | ${proposal.bio}</p>
+            <div class="rating">
+              ${'⭐'.repeat(Math.floor(proposal.rating))}
+              <span>(${proposal.rating} - ${proposal.reviews} reseñas)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="proposal-details">
+          <div class="detail-item">
+            <span class="detail-label">📍 Disponibilidad</span>
+            <div class="detail-value">
+              <div class="detail-value-main">${proposal.availability}</div>
+            </div>
+          </div>
+
+          <div class="detail-item">
+            <span class="detail-label">💰 Rango de precio</span>
+            <div class="price-badge">$${proposal.priceMin} - $${proposal.priceMax}</div>
+          </div>
+
+          <div class="detail-item">
+            <span class="detail-label">📝 Experiencia</span>
+            <div class="detail-value">
+              <div class="detail-value-main">${proposal.reviews} trabajos</div>
+              <div class="detail-value-sub">realizados en WorkingGo</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Renderizar propuesta
+    renderProposal(mockProposal);
+
+    // Manejador de aceptar
+    document.getElementById('acceptBtn').addEventListener('click', () => {
+      // Guardar datos de la propuesta
+      localStorage.setItem('workinggo_proposal', JSON.stringify(mockProposal));
+
+      // Ir al siguiente paso (registro mínimo)
+      window.location.href = './step-4-register.html';
+    });
+
+    // Manejador de ver otra opción
+    document.getElementById('anotherBtn').addEventListener('click', () => {
+      alert('En desarrollo: Mostrar más opciones');
+      // En producción, aquí buscarías más propuestas del backend
+    });
+  </script>
+</body>
+</html>
