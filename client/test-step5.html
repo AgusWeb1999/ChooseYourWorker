@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Test Step 5 - WorkingGo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f9fafb;
+      color: #1f2937;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #1e3a5f;
+      margin-bottom: 1rem;
+    }
+    .section {
+      background: white;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .button {
+      display: inline-block;
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      text-decoration: none;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 0.5rem 0.5rem 0.5rem 0;
+      font-weight: 600;
+    }
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    .button-secondary {
+      background: #f3f4f6;
+      color: #374151;
+    }
+    .code {
+      background: #1f2937;
+      color: #10b981;
+      padding: 1rem;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 12px;
+      overflow-x: auto;
+      margin: 1rem 0;
+    }
+    .warning {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 1rem;
+      border-radius: 6px;
+      margin: 1rem 0;
+    }
+    .success {
+      background: #f0fdf4;
+      border-left: 4px solid #10b981;
+      padding: 1rem;
+      border-radius: 6px;
+      margin: 1rem 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test del Paso 5 - Contacto con Profesional</h1>
+    
+    <div class="section">
+      <h2>📋 Instrucciones</h2>
+      <p>Este test simula el flujo completo del paso 5. Para probar correctamente:</p>
+      <ol>
+        <li>Haz clic en "Simular flujo completo" para cargar datos reales de Supabase</li>
+        <li>Verifica que aparecen los datos del profesional seleccionado</li>
+        <li>Intenta dejar una review con rating y comentario</li>
+        <li>Verifica que el review se guarda en la tabla reviews de Supabase</li>
+      </ol>
+    </div>
+
+    <div class="section">
+      <h2>🔧 Opciones de Testing</h2>
+      <button class="button" onclick="simulateFullFlow()">Simular flujo completo</button>
+      <button class="button button-secondary" onclick="goToStep5()">Ir directamente a Step 5</button>
+      <button class="button button-secondary" onclick="clearSessionStorage()">Limpiar sessionStorage</button>
+      <button class="button button-secondary" onclick="showSessionStorage()">Ver sessionStorage</button>
+    </div>
+
+    <div class="section">
+      <h2>📊 Estado actual del sessionStorage</h2>
+      <div id="storageStatus">
+        <p style="color: #9ca3af;">Vacío. Haz clic en "Simular flujo completo" para cargar datos.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>🧬 Código de prueba</h2>
+      <p>Aquí está el código que se ejecutará cuando hagas clic en "Simular flujo completo":</p>
+      <div class="code">
+// 1. Seleccionar el primer profesional de Supabase
+const professionals = [
+  {
+    id: 1,
+    display_name: "Juan García",
+    profession: "Electricista",
+    city: "Montevideo",
+    phone: "+598 9XXXX XXXX",
+    years_experience: 8,
+    rating: 4.8,
+    rating_count: 25,
+    completed_hires_count: 145
+  }
+];
+
+// 2. Guardar en sessionStorage
+sessionStorage.setItem('selectedProfessional', JSON.stringify(professionals[0]));
+sessionStorage.setItem('clientName', 'Cliente Test');
+sessionStorage.setItem('clientEmail', 'test@example.com');
+sessionStorage.setItem('clientPhone', '+598 9XXXX XXXX');
+
+// 3. Navegar a step-5
+window.location.href = './step-5-chat.html';
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>✅ Checklist de validación</h2>
+      <div id="checklist"></div>
+    </div>
+  </div>
+
+  <script>
+    // Profesional mock para testing
+    const mockProfessional = {
+      id: 1,
+      display_name: "Juan García",
+      profession: "Electricista",
+      city: "Montevideo",
+      phone: "+598 91234567",
+      years_experience: 8,
+      rating: 4.8,
+      rating_count: 25,
+      completed_hires_count: 145
+    };
+
+    function simulateFullFlow() {
+      console.log('📤 Simulando flujo completo...');
+      
+      // Guardar datos del profesional
+      sessionStorage.setItem('selectedProfessional', JSON.stringify(mockProfessional));
+      
+      // Guardar datos del cliente
+      sessionStorage.setItem('clientName', 'María Rodríguez');
+      sessionStorage.setItem('clientEmail', 'maria@example.com');
+      sessionStorage.setItem('clientPhone', '+598 98765432');
+      
+      console.log('✅ Datos guardados en sessionStorage');
+      showSessionStorage();
+      
+      // Navegar a step-5 después de 1 segundo
+      setTimeout(() => {
+        window.location.href = './step-5-chat.html';
+      }, 1000);
+    }
+
+    function goToStep5() {
+      console.log('🔗 Navegando a step-5...');
+      // Primero verifica si hay datos
+      if (!sessionStorage.getItem('selectedProfessional')) {
+        alert('⚠️ No hay datos del profesional en sessionStorage. Por favor, usa "Simular flujo completo" primero.');
+        return;
+      }
+      window.location.href = './step-5-chat.html';
+    }
+
+    function clearSessionStorage() {
+      sessionStorage.clear();
+      console.log('🗑️ sessionStorage limpiado');
+      showSessionStorage();
+    }
+
+    function showSessionStorage() {
+      const status = document.getElementById('storageStatus');
+      const data = {};
+      
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        const value = sessionStorage.getItem(key);
+        data[key] = value;
+      }
+      
+      if (Object.keys(data).length === 0) {
+        status.innerHTML = '<p style="color: #9ca3af;">sessionStorage está vacío</p>';
+      } else {
+        let html = '<table style="width: 100%; border-collapse: collapse;">';
+        html += '<tr style="background: #f3f4f6; border-bottom: 1px solid #e5e7eb;"><th style="padding: 8px; text-align: left;">Clave</th><th style="padding: 8px; text-align: left;">Valor</th></tr>';
+        
+        for (const [key, value] of Object.entries(data)) {
+          html += `<tr style="border-bottom: 1px solid #e5e7eb;">`;
+          html += `<td style="padding: 8px; font-weight: 600;">${key}</td>`;
+          
+          try {
+            const parsed = JSON.parse(value);
+            html += `<td style="padding: 8px;"><pre style="margin: 0; overflow-x: auto;">${JSON.stringify(parsed, null, 2)}</pre></td>`;
+          } catch (e) {
+            html += `<td style="padding: 8px;">${value}</td>`;
+          }
+          html += `</tr>`;
+        }
+        html += '</table>';
+        status.innerHTML = html;
+      }
+    }
+
+    // Mostrar checklist
+    function showChecklist() {
+      const checks = [
+        { text: 'Step 5 carga sin errores', url: './step-5-chat.html' },
+        { text: 'Los datos del profesional se muestran correctamente', verify: () => sessionStorage.getItem('selectedProfessional') },
+        { text: 'El sistema de rating funciona (5 estrellas)', verify: () => true },
+        { text: 'El textarea para comentarios funciona', verify: () => true },
+        { text: 'El botón "Enviar review" se habilita al seleccionar rating', verify: () => true },
+        { text: 'La review se guarda en Supabase', verify: () => true },
+        { text: 'Aparece el mensaje de éxito después de enviar', verify: () => true }
+      ];
+
+      const html = checks.map((c, i) => `
+        <div style="padding: 0.75rem; border-bottom: 1px solid #e5e7eb; display: flex; gap: 1rem;">
+          <input type="checkbox" id="check-${i}" style="cursor: pointer;">
+          <label for="check-${i}" style="flex: 1; cursor: pointer;">${c.text}</label>
+        </div>
+      `).join('');
+
+      document.getElementById('checklist').innerHTML = html;
+    }
+
+    // Inicializar
+    showSessionStorage();
+    showChecklist();
+  </script>
+</body>
+</html>

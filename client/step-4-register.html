@@ -306,7 +306,15 @@
         }
       }
 
-      // Guardar en localStorage
+      // Guardar en sessionStorage (para step-5)
+      sessionStorage.setItem('clientName', fullName);
+      if (contactType === 'email') {
+        sessionStorage.setItem('clientEmail', email);
+      } else {
+        sessionStorage.setItem('clientPhone', phone);
+      }
+
+      // También guardar en localStorage para persistencia
       const userData = {
         fullName,
         contactType,
