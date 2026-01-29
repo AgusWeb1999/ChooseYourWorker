@@ -17,7 +17,7 @@
     console.log('✅ Config Supabase establecida en window');
   </script>
   
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onload="initSupabaseOnLoad()"></script>
   
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -396,6 +396,7 @@
     
     let supabaseClient = null;
     let supabaseReady = false;
+    let initInterval = null;
     
     function initSupabase() {
       console.log('🔄 initSupabase: Verificando disponibilidad...', {
@@ -409,7 +410,7 @@
       }
       
       if (!window.supabase) {
-        console.warn('⏳ Supabase aún no cargado desde CDN, esperando...');
+        console.warn('⏳ Supabase aún no cargado desde CDN');
         return false;
       }
 
@@ -420,6 +421,7 @@
         );
         supabaseReady = true;
         console.log('✅ Supabase cliente inicializado correctamente');
+        if (initInterval) clearInterval(initInterval);
         return true;
       } catch (error) {
         console.error('❌ Error al crear cliente Supabase:', error.message);
@@ -427,26 +429,24 @@
       }
     }
     
-    // Intentar inicializar inmediatamente
-    initSupabase();
-    
-    // Si no está listo, usar un listener para cuando se cargue el script
-    if (!supabaseReady) {
-      console.log('⏳ Esperando a que Supabase se cargue desde CDN...');
-      
-      // Reintentar cada 100ms hasta 5 segundos
-      let attempts = 0;
-      const initInterval = setInterval(() => {
-        attempts++;
-        if (initSupabase()) {
-          clearInterval(initInterval);
-          console.log('✅ Supabase se cargó exitosamente después de', attempts * 100, 'ms');
-        } else if (attempts > 50) {
-          clearInterval(initInterval);
-          console.error('❌ Supabase no se pudo cargar en 5 segundos');
-        }
-      }, 100);
+    // Callback ejecutado cuando el script de Supabase se carga
+    function initSupabaseOnLoad() {
+      console.log('✅ Script de Supabase cargado desde CDN');
+      initSupabase();
     }
+    
+    // Reintentar cada 200ms hasta 10 segundos si no está listo
+    let attempts = 0;
+    initInterval = setInterval(() => {
+      attempts++;
+      if (initSupabase()) {
+        clearInterval(initInterval);
+        console.log('✅ Supabase listo después de', attempts * 200, 'ms');
+      } else if (attempts > 50) {
+        clearInterval(initInterval);
+        console.error('❌ Supabase no se pudo cargar en 10 segundos');
+      }
+    }, 200);
 
     // ========================================
     // ESTADO GLOBAL DEL FLUJO STEP-3

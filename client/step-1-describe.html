@@ -7,6 +7,16 @@
   <meta name="description" content="Describe el problema que necesitas resolver. WorkingGo encuentra al profesional ideal para ti." />
   <link rel="icon" href="../favicon.ico" />
   <link rel="canonical" href="https://working-go.com/client/step-1" />
+  
+  <!-- Configuración Supabase (inline) -->
+  <script>
+    window.SUPABASE_CONFIG = {
+      url: 'https://oeabhlewxekejmgrucrz.supabase.co',
+      anonKey: 'sb_publishable_tyR1xlVRs68DuqQQf_r-cw_TcW3IuZ5'
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onload="initSupabaseOnLoad()"></script>
+  
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -154,6 +164,39 @@
       font-size: 14px;
       color: #0c4a6e;
     }
+    .category-selector {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .category-button {
+      padding: 0.75rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+      font-weight: 500;
+      color: #374151;
+      text-align: center;
+    }
+    .category-button:hover {
+      border-color: #10b981;
+      background: #f0fdf4;
+    }
+    .category-button.selected {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border-color: #10b981;
+    }
+    .category-loading {
+      text-align: center;
+      padding: 1rem;
+      color: #6b7280;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
@@ -179,6 +222,14 @@
 
     <!-- Formulario -->
     <form id="stepForm">
+      <!-- Seleccionar categoría -->
+      <div class="form-group">
+        <label for="categoryGroup">¿Qué tipo de profesional necesitas? *</label>
+        <div class="category-selector" id="categorySelector">
+          <div class="category-loading">Cargando categorías...</div>
+        </div>
+        <input type="hidden" id="selectedCategory" required />
+      </div>
       <!-- Descripción del problema -->
       <div class="form-group">
         <label for="description">Describe tu problema o lo que necesitas *</label>
@@ -220,6 +271,145 @@
   </div>
 
   <script>
+    // ========================================
+    // INICIALIZAR SUPABASE
+    // ========================================
+    let supabaseClient = null;
+    let supabaseReady = false;
+    let initInterval = null;
+
+    function initSupabase() {
+      if (!window.SUPABASE_CONFIG || !window.supabase) {
+        return false;
+      }
+
+      try {
+        supabaseClient = window.supabase.createClient(
+          window.SUPABASE_CONFIG.url,
+          window.SUPABASE_CONFIG.anonKey
+        );
+        supabaseReady = true;
+        console.log('✅ Supabase inicializado en step-1');
+        if (initInterval) clearInterval(initInterval);
+        loadCategories();
+        return true;
+      } catch (error) {
+        console.error('❌ Error al inicializar Supabase:', error.message);
+        return false;
+      }
+    }
+
+    function initSupabaseOnLoad() {
+      console.log('✅ Script de Supabase cargado');
+      initSupabase();
+    }
+
+    // Reintentar cada 200ms
+    let attempts = 0;
+    initInterval = setInterval(() => {
+      attempts++;
+      if (initSupabase()) {
+        clearInterval(initInterval);
+      } else if (attempts > 50) {
+        clearInterval(initInterval);
+        console.error('❌ Supabase no se pudo cargar');
+        showCategorieFallback();
+      }
+    }, 200);
+
+    // ========================================
+    // CARGAR CATEGORÍAS DESDE SUPABASE
+    // ========================================
+    let availableCategories = [];
+
+    async function loadCategories() {
+      if (!supabaseClient) {
+        console.warn('⏳ Esperando Supabase...');
+        setTimeout(loadCategories, 300);
+        return;
+      }
+
+      try {
+        console.log('🔄 Cargando categorías de profesionales...');
+        
+        const { data, error } = await supabaseClient
+          .from('professionals')
+          .select('profession')
+          .eq('is_active', true)
+          .order('profession', { ascending: true });
+
+        if (error) {
+          console.error('❌ Error al cargar profesiones:', error);
+          showCategorieFallback();
+          return;
+        }
+
+        // Obtener profesiones únicas
+        const uniqueProfessions = [...new Set(data.map(p => p.profession).filter(Boolean))];
+        availableCategories = uniqueProfessions;
+
+        console.log('✅ Categorías cargadas:', uniqueProfessions);
+        renderCategories(uniqueProfessions);
+      } catch (error) {
+        console.error('❌ Error cargando categorías:', error);
+        showCategorieFallback();
+      }
+    }
+
+    function renderCategories(categories) {
+      const selector = document.getElementById('categorySelector');
+      selector.innerHTML = '';
+
+      if (categories.length === 0) {
+        selector.innerHTML = '<div class="category-loading">No hay categorías disponibles</div>';
+        return;
+      }
+
+      categories.forEach(category => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'category-button';
+        button.textContent = category;
+        button.dataset.category = category;
+
+        button.addEventListener('click', (e) => {
+          e.preventDefault();
+          selectCategory(category, button);
+        });
+
+        selector.appendChild(button);
+      });
+    }
+
+    function selectCategory(category, buttonElement) {
+      // Remover selección anterior
+      document.querySelectorAll('.category-button').forEach(btn => {
+        btn.classList.remove('selected');
+      });
+
+      // Marcar nueva selección
+      buttonElement.classList.add('selected');
+      document.getElementById('selectedCategory').value = category;
+      console.log('✅ Categoría seleccionada:', category);
+    }
+
+    function showCategorieFallback() {
+      // Si Supabase falla, mostrar categorías por defecto
+      const fallbackCategories = [
+        'Sanitario',
+        'Electricista',
+        'Plomero',
+        'Albañil',
+        'Pintor',
+        'Carpintero'
+      ];
+      console.warn('⚠️ Usando categorías por defecto');
+      renderCategories(fallbackCategories);
+    }
+
+    // ========================================
+    // RESTO DEL CÓDIGO
+    // ========================================
     // Contador de caracteres
     const textarea = document.getElementById('description');
     const charCount = document.getElementById('charCount');
@@ -269,27 +459,47 @@
       e.preventDefault();
 
       const description = textarea.value.trim();
+      const selectedCategory = document.getElementById('selectedCategory').value;
+
       if (!description) {
         alert('Por favor describe tu problema');
+        return;
+      }
+
+      if (!selectedCategory) {
+        alert('Por favor selecciona una categoría de profesional');
         return;
       }
 
       // Guardar en localStorage para el siguiente paso
       const issueData = {
         description,
+        category: selectedCategory,
         attachmentFile: attachmentInput.files[0] || null,
         createdAt: new Date().toISOString(),
       };
 
       localStorage.setItem('workinggo_issue_draft', JSON.stringify({
         description: issueData.description,
+        category: issueData.category,
         createdAt: issueData.createdAt,
+      }));
+
+      // Guardar en sessionStorage también para el flujo
+      sessionStorage.setItem('clientIssue', JSON.stringify({
+        problem: issueData.description,
+        category: issueData.category,
       }));
 
       // Si hay archivo, guardarlo también
       if (issueData.attachmentFile) {
         localStorage.setItem('workinggo_attachment_name', issueData.attachmentFile.name);
       }
+
+      console.log('✅ Paso 1 completado:', {
+        problema: issueData.description.substring(0, 50) + '...',
+        categoria: issueData.category,
+      });
 
       // Ir al siguiente paso
       window.location.href = './step-2-timing.html';
