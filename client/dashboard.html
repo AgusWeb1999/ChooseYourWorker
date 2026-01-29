@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Dashboard - WorkingGo Client Flow</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+      padding: 2rem;
+      color: #1f2937;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #1e3a5f;
+      margin-bottom: 0.5rem;
+      font-size: 2.5rem;
+    }
+    .subtitle {
+      color: #6b7280;
+      margin-bottom: 2rem;
+      font-size: 1.1rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border-left: 4px solid #10b981;
+    }
+    .card.warning {
+      border-left-color: #f59e0b;
+    }
+    .card.error {
+      border-left-color: #ef4444;
+    }
+    .card h2 {
+      font-size: 1.3rem;
+      margin-bottom: 1rem;
+      color: #1e3a5f;
+    }
+    .card p {
+      color: #6b7280;
+      line-height: 1.6;
+      margin-bottom: 0.5rem;
+    }
+    .status {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-top: 1rem;
+    }
+    .status.ok {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    .status.warning {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .status.error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .flow-diagram {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .flow-steps {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .step {
+      flex: 1;
+      min-width: 120px;
+      text-align: center;
+      padding: 1.5rem 1rem;
+      background: #f9fafb;
+      border-radius: 8px;
+      border: 2px solid #e5e7eb;
+    }
+    .step.active {
+      background: #f0fdf4;
+      border-color: #10b981;
+    }
+    .step-number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #1e3a5f;
+      margin-bottom: 0.5rem;
+    }
+    .step-title {
+      font-weight: 600;
+      color: #374151;
+      font-size: 0.95rem;
+    }
+    .arrow {
+      color: #10b981;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    .test-links {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .test-links h2 {
+      color: #1e3a5f;
+      margin-bottom: 1.5rem;
+    }
+    .link-group {
+      margin-bottom: 1.5rem;
+    }
+    .link-group h3 {
+      font-size: 1rem;
+      color: #374151;
+      margin-bottom: 0.5rem;
+    }
+    a {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+      transition: all 0.2s;
+    }
+    a:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    .checklist {
+      list-style: none;
+      padding: 0;
+    }
+    .checklist li {
+      padding: 0.5rem 0;
+      color: #6b7280;
+    }
+    .checklist li:before {
+      content: "✅ ";
+      font-weight: bold;
+      color: #10b981;
+      margin-right: 0.5rem;
+    }
+    .checklist li.pending:before {
+      content: "⏳ ";
+      color: #f59e0b;
+    }
+    .checklist li.error:before {
+      content: "❌ ";
+      color: #ef4444;
+    }
+    .code-block {
+      background: #1f2937;
+      color: #e5e7eb;
+      padding: 1rem;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      overflow-x: auto;
+      margin: 1rem 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 WorkingGo - Cliente Flow Dashboard</h1>
+    <p class="subtitle">Estado actual del nuevo flujo de clientes (v2)</p>
+
+    <div class="flow-diagram">
+      <h2 style="margin-bottom: 1.5rem; color: #1e3a5f;">Flujo de Cliente Redeseñado</h2>
+      <div class="flow-steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <div class="step-title">Describir</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <div class="step-title">Urgencia</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="step active">
+          <div class="step-number">3</div>
+          <div class="step-title">Propuesta</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="step">
+          <div class="step-number">4</div>
+          <div class="step-title">Registro</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="step">
+          <div class="step-number">5</div>
+          <div class="step-title">Chat</div>
+        </div>
+      </div>
+      <p style="margin-top: 1.5rem; color: #6b7280; font-size: 0.95rem;">
+        ✅ Sin listados de profesionales • ✅ Matching automático • ✅ Registro solo si acepta
+      </p>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>✅ Flujo Funcional</h2>
+        <ul class="checklist">
+          <li>Step 1: Describir problema</li>
+          <li>Step 2: Indicar urgencia</li>
+          <li>Step 3: Propuesta automática</li>
+          <li>Step 4: Registro mínimo</li>
+          <li>Step 5: Chat en vivo</li>
+        </ul>
+        <span class="status ok">COMPLETADO</span>
+      </div>
+
+      <div class="card">
+        <h2>✅ Datos Dinámicos</h2>
+        <ul class="checklist">
+          <li>Supabase conectado</li>
+          <li>Avatar según categoría</li>
+          <li>Datos persistidos (sessionStorage)</li>
+          <li>Nombre cargado dinámicamente</li>
+        </ul>
+        <span class="status ok">COMPLETADO</span>
+      </div>
+
+      <div class="card warning">
+        <h2>⚠️ Supabase Real</h2>
+        <p>Está usando <strong>fallback/mock</strong> porque las credenciales no están actualizadas.</p>
+        <p style="margin-top: 1rem; font-size: 0.9rem;"><strong>Acción:</strong> Ve a SUPABASE-CONFIG.md</p>
+        <span class="status warning">PENDIENTE</span>
+      </div>
+
+      <div class="card">
+        <h2>📊 Estado Actual</h2>
+        <p><strong>Profesional Mostrado:</strong> Carlos Rodríguez</p>
+        <p><strong>Datos:</strong> Mock/Fallback</p>
+        <p><strong>Servidor:</strong> http://localhost:8000</p>
+        <span class="status ok">FUNCIONANDO</span>
+      </div>
+
+      <div class="card">
+        <h2>🧪 Testing</h2>
+        <ul class="checklist">
+          <li>test-flow.html para flujo completo</li>
+          <li>test-supabase.html para conexión</li>
+          <li>Logs detallados en consola</li>
+        </ul>
+        <span class="status ok">ACTIVO</span>
+      </div>
+
+      <div class="card">
+        <h2>🎨 SEO & Landing</h2>
+        <ul class="checklist">
+          <li>Meta tags optimizados</li>
+          <li>JSON-LD schema</li>
+          <li>Responsive design</li>
+        </ul>
+        <span class="status ok">COMPLETADO</span>
+      </div>
+    </div>
+
+    <div class="test-links">
+      <h2>🚀 Links de Testing</h2>
+      
+      <div class="link-group">
+        <h3>1️⃣ Flujo Completo (Recomendado)</h3>
+        <a href="http://localhost:8000/client/test-flow.html" target="_blank">
+          Abrir test-flow.html
+        </a>
+        <p style="color: #6b7280; font-size: 0.9rem; margin-top: 0.5rem;">
+          Simula pasar por todos los pasos. Haz clic en "Llenar Step 1 & 2 Data" para empezar.
+        </p>
+      </div>
+
+      <div class="link-group">
+        <h3>2️⃣ Testing Supabase</h3>
+        <a href="http://localhost:8000/client/test-supabase.html" target="_blank">
+          Abrir test-supabase.html
+        </a>
+        <p style="color: #6b7280; font-size: 0.9rem; margin-top: 0.5rem;">
+          Verifica conexión a Supabase y lista profesionales.
+        </p>
+      </div>
+
+      <div class="link-group">
+        <h3>3️⃣ Landing Page</h3>
+        <a href="http://localhost:8000/" target="_blank">
+          Abrir inicio
+        </a>
+        <p style="color: #6b7280; font-size: 0.9rem; margin-top: 0.5rem;">
+          Landing page con SEO mejorado.
+        </p>
+      </div>
+
+      <div class="link-group">
+        <h3>4️⃣ Flujo Directo</h3>
+        <a href="http://localhost:8000/client/step-1-describe.html" target="_blank">
+          Step 1
+        </a>
+        <a href="http://localhost:8000/client/step-2-timing.html" target="_blank">
+          Step 2
+        </a>
+        <a href="http://localhost:8000/client/step-3-proposal.html" target="_blank">
+          Step 3
+        </a>
+        <a href="http://localhost:8000/client/step-4-register.html" target="_blank">
+          Step 4
+        </a>
+        <a href="http://localhost:8000/client/step-5-chat.html" target="_blank">
+          Step 5
+        </a>
+      </div>
+    </div>
+
+    <div style="background: white; border-radius: 12px; padding: 2rem; margin-top: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+      <h2 style="color: #1e3a5f; margin-bottom: 1rem;">📝 Próximas Tareas</h2>
+      <ul class="checklist">
+        <li class="pending">Actualizar SUPABASE_ANON_KEY con credenciales reales</li>
+        <li class="pending">Verificar tabla professionals en Supabase</li>
+        <li class="pending">Implementar autenticación real en Step 4</li>
+        <li class="pending">Conectar WebSocket para chat en vivo</li>
+        <li class="pending">Testing en mobile</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

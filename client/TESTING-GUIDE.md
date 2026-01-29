@@ -65,11 +65,73 @@ Categoría: "Sanitario"
 - ✅ Ciudad donde opera
 - ✅ Bio/descripción
 - ✅ Botón "Aceptar" y "Ver otra opción"
+- ✅ **NUEVO:** El botón "Ver otra opción" ahora carga profesionales REALES de la lista
+- ✅ **NUEVO:** Mostrar contador de opciones (Ej: "Opción 1 de 5")
+- ✅ **NUEVO:** Si no hay profesionales, mostrar mensaje "Buscando..."
 
 **Datos esperados:**
 - Profesionales suscritos en tu base de datos
 - Ordenados por rating (mejor primero)
 - Mostrar avatar por defecto si no hay foto
+- Fallback a lista mock si Supabase falla
+
+**Mejoras implementadas:**
+- 🔧 Corregido error de scope de `currentProfessionalIndex` (ahora es `window.step3State.currentProfessionalIndex`)
+- 🔄 "Ver otra opción" itera sobre todos los profesionales cargados, no solo los mock
+- 📊 Contador de opciones disponibles
+- ⚠️ Mejor manejo de errores y fallback
+
+---
+
+### **🧪 Testing Step 3 avanzado**
+**URL:** `http://localhost:8000/client/test-step-3.html`
+
+Esta página de testing permite validar que step-3 funcione correctamente:
+
+**Qué hace:**
+1. Configura un cliente con categoría y descripción
+2. Abre Step 3 en una nueva pestaña
+3. Verifica que `window.step3State` esté definido correctamente
+4. Verifica que los datos se carguen en sessionStorage
+5. Muestra logs de consola para debugging
+
+**Pasos para usar:**
+1. Abre `test-step-3.html` en el navegador
+2. Selecciona una categoría (Ej: "Sanitario")
+3. Ingresa una descripción del problema
+4. Click "Guardar datos del cliente"
+5. Click "Abrir Step 3" (se abrirá en nueva pestaña)
+6. Espera a que cargue (verá "Buscando...")
+7. Vuelve a `test-step-3.html` y click "Verificar estado"
+8. Deberías ver la lista de profesionales cargados
+
+**Console logs esperados:**
+```
+📍 Step-3: Buscando profesionales en categoría: Sanitario
+✅ Profesionales desde Supabase: 5
+✅ Propuesta inicial cargada: Carlos Rodríguez
+🔄 Siguiente opción: Miguel Torres (2/5)
+```
+
+---
+
+### **📦 Estado global de Step 3**
+
+El estado se guarda en `window.step3State`:
+
+```javascript
+{
+  allProfessionals: [
+    { id: 'prof_1', display_name: 'Carlos', rating: 4.9, ... },
+    { id: 'prof_2', display_name: 'Miguel', rating: 4.7, ... },
+    ...
+  ],
+  currentProfessionalIndex: 0,      // Índice actual
+  clientCategory: 'Sanitario',      // Categoría del cliente
+  isLoading: false,                 // Si está cargando
+  hasError: false                   // Si hubo error
+}
+```
 
 ---
 

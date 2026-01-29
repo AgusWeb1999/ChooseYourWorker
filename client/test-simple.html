@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Test Simple - Verificar Supabase</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f9fafb;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 2rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 1.5rem;
+    }
+    h1 {
+      color: #1e3a5f;
+      margin-bottom: 1rem;
+    }
+    h2 {
+      color: #2d5a8c;
+      margin-top: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .status {
+      padding: 1rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+      font-family: 'Monaco', 'Courier New', monospace;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .status.success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #6ee7b7;
+    }
+    .status.error {
+      background: #fee2e2;
+      color: #7f1d1d;
+      border: 1px solid #fca5a5;
+    }
+    .status.info {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #93c5fd;
+    }
+    button {
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #1e3a5f;
+      color: white;
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    button:hover {
+      background: #2d5a8c;
+    }
+    button.secondary {
+      background: #6b7280;
+    }
+    button.secondary:hover {
+      background: #4b5563;
+    }
+    .log {
+      background: #f3f4f6;
+      padding: 1rem;
+      border-radius: 6px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.85rem;
+    }
+    .log-entry {
+      margin-bottom: 0.5rem;
+      padding: 0.5rem;
+    }
+    .log-entry.info { color: #1e40af; }
+    .log-entry.success { color: #065f46; }
+    .log-entry.error { color: #7f1d1d; }
+    .loader {
+      border: 4px solid #e5e7eb;
+      border-top: 4px solid #1e3a5f;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 1rem 0;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test de Verificación - WorkingGo Client Flow</h1>
+    
+    <div class="card">
+      <h2>1️⃣ Estado de Dependencias</h2>
+      <div id="depStatus" class="status info">Cargando...</div>
+    </div>
+
+    <div class="card">
+      <h2>2️⃣ Configuración Supabase</h2>
+      <div id="configStatus" class="status info">Verificando...</div>
+    </div>
+
+    <div class="card">
+      <h2>3️⃣ Conexión a Supabase</h2>
+      <div id="connectionStatus" class="status info">Esperando...</div>
+      <button onclick="testConnection()">Probar Conexión</button>
+      <button class="secondary" onclick="testProfessionalsFetch()">Cargar Profesionales</button>
+    </div>
+
+    <div class="card">
+      <h2>4️⃣ Prueba de Datos</h2>
+      <div id="dataStatus" class="status info">No probado aún</div>
+      <button onclick="testCategoryFetch()">Test: Buscar por Categoría</button>
+      <button class="secondary" onclick="testAllFetch()">Test: Cargar Todos</button>
+    </div>
+
+    <div class="card">
+      <h2>5️⃣ Log de Consola</h2>
+      <div class="log" id="log"></div>
+      <button class="secondary" onclick="clearLog()">Limpiar Log</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // ==========================================
+    // CONFIGURACIÓN
+    // ==========================================
+    const SUPABASE_CONFIG = {
+      url: 'https://oeabhlewxekejmgrucrz.supabase.co',
+      anonKey: 'sb_publishable_tyR1xlVRs68DuqQQf_r-cw_TcW3IuZ5'
+    };
+
+    let supabaseClient = null;
+    const logs = [];
+
+    // ==========================================
+    // FUNCIONES DE LOG
+    // ==========================================
+    function addLog(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      logs.push({ message, type, timestamp });
+      updateLogDisplay();
+      console.log(`[${type.toUpperCase()}] ${message}`);
+    }
+
+    function updateLogDisplay() {
+      const logEl = document.getElementById('log');
+      logEl.innerHTML = logs.map(log => 
+        `<div class="log-entry ${log.type}"><strong>${log.timestamp}:</strong> ${log.message}</div>`
+      ).join('');
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function clearLog() {
+      logs.length = 0;
+      updateLogDisplay();
+    }
+
+    // ==========================================
+    // VERIFICAR DEPENDENCIAS
+    // ==========================================
+    window.addEventListener('load', () => {
+      addLog('Página cargada', 'info');
+      
+      // Check Supabase library
+      if (window.supabase) {
+        addLog('✅ Biblioteca Supabase cargada correctamente', 'success');
+        document.getElementById('depStatus').innerHTML = '<span class="status success">✅ Biblioteca Supabase v2 cargada</span>';
+      } else {
+        addLog('❌ No se cargó la biblioteca Supabase', 'error');
+        document.getElementById('depStatus').innerHTML = '<span class="status error">❌ Fallo al cargar Supabase</span>';
+      }
+
+      // Verify config
+      if (SUPABASE_CONFIG.url && SUPABASE_CONFIG.anonKey) {
+        addLog(`✅ Config disponible: ${SUPABASE_CONFIG.url.substring(0, 30)}...`, 'success');
+        document.getElementById('configStatus').innerHTML = `<span class="status success">✅ URL: ${SUPABASE_CONFIG.url}<br/>✅ Key: ${SUPABASE_CONFIG.anonKey.substring(0, 20)}...</span>`;
+      } else {
+        addLog('❌ Falta configuración de Supabase', 'error');
+        document.getElementById('configStatus').innerHTML = '<span class="status error">❌ Falta URL o clave</span>';
+      }
+    });
+
+    // ==========================================
+    // TEST DE CONEXIÓN
+    // ==========================================
+    async function testConnection() {
+      addLog('🔄 Iniciando conexión a Supabase...', 'info');
+      document.getElementById('connectionStatus').innerHTML = '<div class="loader"></div><p>Conectando...</p>';
+
+      try {
+        supabaseClient = window.supabase.createClient(
+          SUPABASE_CONFIG.url,
+          SUPABASE_CONFIG.anonKey
+        );
+        addLog('✅ Cliente Supabase inicializado', 'success');
+
+        // Test simple query
+        const { data, error } = await supabaseClient
+          .from('professionals')
+          .select('id')
+          .limit(1);
+
+        if (error) {
+          addLog(`❌ Error en consulta: ${error.message}`, 'error');
+          document.getElementById('connectionStatus').innerHTML = 
+            `<span class="status error">❌ Error: ${error.message}</span>`;
+        } else {
+          addLog('✅ Conexión exitosa a la base de datos', 'success');
+          document.getElementById('connectionStatus').innerHTML = 
+            `<span class="status success">✅ Conexión exitosa<br/>Tabla 'professionals' accesible</span>`;
+        }
+      } catch (error) {
+        addLog(`❌ Error: ${error.message}`, 'error');
+        document.getElementById('connectionStatus').innerHTML = 
+          `<span class="status error">❌ ${error.message}</span>`;
+      }
+    }
+
+    // ==========================================
+    // TEST DE CARGA DE PROFESIONALES
+    // ==========================================
+    async function testProfessionalsFetch() {
+      if (!supabaseClient) {
+        addLog('⚠️ Primero prueba la conexión', 'error');
+        return;
+      }
+
+      addLog('🔄 Cargando todos los profesionales...', 'info');
+      document.getElementById('dataStatus').innerHTML = '<div class="loader"></div><p>Cargando datos...</p>';
+
+      try {
+        const { data: professionals, error } = await supabaseClient
+          .from('professionals')
+          .select('*')
+          .limit(10);
+
+        if (error) {
+          addLog(`❌ Error al cargar: ${error.message}`, 'error');
+          document.getElementById('dataStatus').innerHTML = 
+            `<span class="status error">❌ Error: ${error.message}</span>`;
+        } else {
+          addLog(`✅ Se cargaron ${professionals.length} profesionales`, 'success');
+          
+          let html = `<span class="status success">✅ Se cargaron ${professionals.length} profesionales (primeros 10):<br/><br/>`;
+          professionals.forEach((p, i) => {
+            html += `${i + 1}. ${p.full_name} (${p.category}) - €${p.hourly_rate}/h<br/>`;
+          });
+          html += '</span>';
+          document.getElementById('dataStatus').innerHTML = html;
+        }
+      } catch (error) {
+        addLog(`❌ Excepción: ${error.message}`, 'error');
+        document.getElementById('dataStatus').innerHTML = 
+          `<span class="status error">❌ ${error.message}</span>`;
+      }
+    }
+
+    // ==========================================
+    // TEST DE BÚSQUEDA POR CATEGORÍA
+    // ==========================================
+    async function testCategoryFetch() {
+      if (!supabaseClient) {
+        addLog('⚠️ Primero prueba la conexión', 'error');
+        return;
+      }
+
+      const category = 'Sanitario';
+      addLog(`🔄 Buscando profesionales en categoría: ${category}...`, 'info');
+      document.getElementById('dataStatus').innerHTML = '<div class="loader"></div><p>Buscando...</p>';
+
+      try {
+        const { data: professionals, error } = await supabaseClient
+          .from('professionals')
+          .select('*')
+          .eq('category', category)
+          .limit(5);
+
+        if (error) {
+          addLog(`❌ Error: ${error.message}`, 'error');
+          document.getElementById('dataStatus').innerHTML = 
+            `<span class="status error">❌ Error: ${error.message}</span>`;
+        } else {
+          addLog(`✅ Se encontraron ${professionals.length} profesionales en ${category}`, 'success');
+          
+          let html = `<span class="status success">✅ ${professionals.length} profesionales en '${category}':<br/><br/>`;
+          if (professionals.length > 0) {
+            professionals.forEach((p, i) => {
+              html += `${i + 1}. <strong>${p.full_name}</strong><br/>`;
+              html += `   ⭐ ${p.rating || 'sin rating'} | ⏱️ ${p.years_experience || '0'} años<br/>`;
+              html += `   💰 €${p.hourly_rate}/h (€${p.hourly_rate * 8}/día)<br/>`;
+            });
+          } else {
+            html += 'Sin resultados';
+          }
+          html += '</span>';
+          document.getElementById('dataStatus').innerHTML = html;
+        }
+      } catch (error) {
+        addLog(`❌ Excepción: ${error.message}`, 'error');
+        document.getElementById('dataStatus').innerHTML = 
+          `<span class="status error">❌ ${error.message}</span>`;
+      }
+    }
+
+    // ==========================================
+    // TEST DE CARGA COMPLETA
+    // ==========================================
+    async function testAllFetch() {
+      if (!supabaseClient) {
+        addLog('⚠️ Primero prueba la conexión', 'error');
+        return;
+      }
+
+      addLog('🔄 Cargando estadísticas de profesionales...', 'info');
+      document.getElementById('dataStatus').innerHTML = '<div class="loader"></div><p>Analizando base de datos...</p>';
+
+      try {
+        const { data: all, error } = await supabaseClient
+          .from('professionals')
+          .select('category, hourly_rate');
+
+        if (error) {
+          addLog(`❌ Error: ${error.message}`, 'error');
+        } else {
+          addLog(`✅ Total de ${all.length} profesionales en la base`, 'success');
+          
+          // Agrupar por categoría
+          const byCategory = {};
+          all.forEach(p => {
+            if (!byCategory[p.category]) byCategory[p.category] = 0;
+            byCategory[p.category]++;
+          });
+
+          let html = `<span class="status success">✅ Estadísticas de profesionales:<br/><br/>`;
+          html += `Total: ${all.length}<br/><br/>`;
+          html += 'Por categoría:<br/>';
+          Object.entries(byCategory).forEach(([cat, count]) => {
+            html += `• ${cat}: ${count}<br/>`;
+          });
+          html += '</span>';
+          document.getElementById('dataStatus').innerHTML = html;
+        }
+      } catch (error) {
+        addLog(`❌ Excepción: ${error.message}`, 'error');
+        document.getElementById('dataStatus').innerHTML = 
+          `<span class="status error">❌ ${error.message}</span>`;
+      }
+    }
+  </script>
+</body>
+</html>

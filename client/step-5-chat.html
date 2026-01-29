@@ -190,10 +190,10 @@
 <body>
   <div class="header">
     <div class="header-content">
-      <div class="logo-small">🔧</div>
+      <div class="logo-small" id="professionalIcon">🔧</div>
       <div class="header-info">
-        <h1 id="professionalName">Juan González</h1>
-        <p id="professionalCategory">Sanitario</p>
+        <h1 id="professionalName">--</h1>
+        <p id="professionalCategory">--</p>
       </div>
     </div>
   </div>
@@ -213,8 +213,8 @@
 
     <!-- Área de mensajes -->
     <div class="messages-area" id="messagesArea">
-      <div class="system-message">
-        ✓ Aceptaste la propuesta de Juan González
+      <div class="system-message" id="systemMessage">
+        ✓ Aceptaste la propuesta de <span id="systemMessageName">--</span>
       </div>
 
       <div class="message-group">
@@ -254,15 +254,42 @@
   </div>
 
   <script>
-    // Datos de demostración
-    const professional = {
-      name: 'Juan González',
-      category: 'Sanitario',
-    };
+    // Cargar datos del profesional desde sessionStorage
+    function loadProfessionalData() {
+      const storedProposal = sessionStorage.getItem('selectedProposal');
+      if (!storedProposal) {
+        console.warn('No proposal found in sessionStorage, using defaults');
+        return {
+          name: 'Profesional',
+          category: 'Categoría',
+          icon: '🔧',
+        };
+      }
 
-    // Actualizar info del profesional
+      try {
+        const proposal = JSON.parse(storedProposal);
+        return {
+          name: proposal.name || 'Profesional',
+          category: proposal.category || 'Categoría',
+          icon: proposal.icon || '🔧',
+        };
+      } catch (e) {
+        console.error('Error parsing proposal data:', e);
+        return {
+          name: 'Profesional',
+          category: 'Categoría',
+          icon: '🔧',
+        };
+      }
+    }
+
+    const professional = loadProfessionalData();
+
+    // Actualizar interfaz con datos del profesional
     document.getElementById('professionalName').textContent = professional.name;
     document.getElementById('professionalCategory').textContent = professional.category;
+    document.getElementById('professionalIcon').textContent = professional.icon;
+    document.getElementById('systemMessageName').textContent = professional.name;
 
     // Manejador de envío de mensajes
     const messageInput = document.getElementById('messageInput');

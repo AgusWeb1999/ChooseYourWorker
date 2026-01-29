@@ -1,8 +1,12 @@
 // Configuración de Supabase para el flujo de clientes
 // https://supabase.io
+// 
+// IMPORTANTE: Necesitas actualizar SUPABASE_ANON_KEY con tu clave real de Supabase
+// Obtén la clave en: https://app.supabase.com -> Configuración -> API -> Anon public key
 
-const SUPABASE_URL = 'https://xlxvvglshqvuigzfqlof.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhseHZ2Z2xzaHF2dWlnemZxbG9mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6MTkxNjYzMzYwMH0.PLACEHOLDER';
+const SUPABASE_URL = 'https://oeabhlewxekejmgrucrz.supabase.co';
+// PLACEHOLDER - Reemplaza con tu clave real de Supabase
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9lYWJobGV3eGVrZWptZ3J1Y3J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTIzNTk4NjcsImV4cCI6MjAyNzkzNTg2N30.vY7O6KBvR0SfnbjIqVDtw0hI0MfHLfUpBJO4DQmVd0Q';
 
 // Crear cliente de Supabase
 const supabaseClient = (() => {
@@ -88,35 +92,58 @@ async function fetchProfessionalById(professionalId) {
 
 /**
  * Buscar profesionales por categoría/rubro
- * @param {string} category - Categoría del servicio
+ * @param {string} profession - Categoría/profesión del servicio (Sanitario, Electricista, etc.)
  * @returns {Promise<Array>} Array de profesionales en esa categoría
  */
-async function fetchProfessionalsByCategory(category) {
+async function fetchProfessionalsByCategory(profession) {
   try {
     if (!supabaseClient) throw new Error('Supabase no está inicializado');
     
+    // Normalizar profesión (capitalizar primero)
+    const normalizedProfession = profession
+      .trim()
+      .charAt(0)
+      .toUpperCase() + profession.trim().slice(1).toLowerCase();
+    
+    console.log(`🔍 Buscando profesionales con profession="${normalizedProfession}"`);
+    
+    // Traer TODOS los profesionales activos primero
     const { data, error } = await supabaseClient
       .from('professionals')
       .select(`
         id,
         user_id,
         display_name,
-        category,
-        description,
+        profession,
+        city,
+        state,
         hourly_rate,
+        rating,
+        rating_count,
         bio,
         avatar_url,
-        phone,
-        city,
-        rating,
-        reviews_count
+        is_active
       `)
-      .eq('category', category)
       .eq('is_active', true)
       .order('rating', { ascending: false });
     
     if (error) throw error;
-    return data || [];
+    
+    // Filtrar en JavaScript por si el campo profession tiene variaciones
+    const filtered = (data || []).filter(prof => {
+      if (!prof.profession) return false;
+      const profNormalized = prof.profession
+        .trim()
+        .charAt(0)
+        .toUpperCase() + prof.profession.trim().slice(1).toLowerCase();
+      return profNormalized === normalizedProfession;
+    });
+    
+    console.log(`✅ Encontrados ${filtered.length} profesionales con profession="${normalizedProfession}"`);
+    if (filtered.length > 0) {
+      console.log(`👤 Primero: ${filtered[0].display_name} (Rating: ${filtered[0].rating})`);
+    }
+    return filtered;
   } catch (error) {
     console.error('Error fetching professionals by category:', error);
     return [];
