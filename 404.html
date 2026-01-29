@@ -1,15 +1,41 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta http-equiv="refresh" content="0; url=/" />
     <script>
-      // Redirige a index.html y mantiene la ruta original para el router SPA
+      // Si es una ruta /client/, intenta cargar el archivo HTML
+      // Si no existe, entonces redirige a la home
       var l = window.location;
-      var path = l.pathname + l.search + l.hash;
-      window.location.replace('/?redirect=' + encodeURIComponent(path));
+      var path = l.pathname;
+      
+      // Si es parte del flujo cliente, intenta cargar el archivo HTML directo
+      if (path.includes('/client/')) {
+        // GitHub Pages debería servir el archivo HTML si existe
+        // Si no existe, este script se ejecutará de nuevo (loop prevention)
+        var url = path;
+        if (!url.endsWith('.html')) {
+          url += '.html';
+        }
+        // Intentar cargar el archivo
+        fetch(url)
+          .then(response => {
+            if (response.ok) {
+              window.location.replace(url);
+            } else {
+              // Si no existe, ir a home
+              window.location.replace('/');
+            }
+          })
+          .catch(() => {
+            // Si hay error, ir a home
+            window.location.replace('/');
+          });
+      } else {
+        // Para otras rutas, redirige a home con parámetro redirect
+        window.location.replace('/?redirect=' + encodeURIComponent(path));
+      }
     </script>
   </head>
   <body>
-    <p>Redirigiendo...</p>
+    <p>Cargando...</p>
   </body>
 </html>
