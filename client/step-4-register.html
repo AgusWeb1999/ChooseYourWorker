@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Crea tu cuenta - WorkingGo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Registro rápido para comenzar con tu propuesta." />
+  <link rel="icon" href="../favicon.ico" />
+  <link rel="canonical" href="https://working-go.com/client/step-4" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f9fafb;
+      color: #1f2937;
+    }
+    .header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8c 100%);
+      color: white;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .logo-small {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+    }
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+    .progress-bar {
+      height: 4px;
+      background: #e5e7eb;
+      border-radius: 2px;
+      margin-bottom: 2rem;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981, #059669);
+      width: 100%;
+      transition: width 0.3s;
+    }
+    .step-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1e3a5f;
+      margin-bottom: 0.5rem;
+    }
+    .step-subtitle {
+      font-size: 16px;
+      color: #6b7280;
+      margin-bottom: 2rem;
+    }
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 0.5rem;
+      font-size: 14px;
+    }
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 15px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    input:focus {
+      outline: none;
+      border-color: #10b981;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+    .input-helper {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-top: 0.25rem;
+    }
+    .toggle-group {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .toggle-btn {
+      flex: 1;
+      padding: 8px 12px;
+      border: 2px solid #e5e7eb;
+      background: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+    .toggle-btn.active {
+      border-color: #10b981;
+      background: #f0fdf4;
+      color: #10b981;
+    }
+    .terms-box {
+      background: #eff6ff;
+      border-left: 4px solid #0ea5e9;
+      padding: 1rem;
+      border-radius: 6px;
+      margin-bottom: 2rem;
+      font-size: 12px;
+      color: #0c4a6e;
+      line-height: 1.6;
+    }
+    .terms-link {
+      color: #0284c7;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    .button-group {
+      display: flex;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    .btn {
+      flex: 1;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+    }
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8c 100%);
+      color: white;
+      flex: 2;
+    }
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(30, 58, 95, 0.3);
+    }
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .error-message {
+      color: #dc2626;
+      font-size: 12px;
+      margin-top: 0.25rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo-small">🔧 WorkingGo</div>
+    <h1 style="font-size: 20px; font-weight: 600;">Casi listo</h1>
+  </div>
+
+  <div class="container">
+    <!-- Barra de progreso -->
+    <div class="progress-bar">
+      <div class="progress-fill"></div>
+    </div>
+
+    <!-- Título del paso -->
+    <h2 class="step-title">Confirma tu identidad</h2>
+    <p class="step-subtitle">Solo necesitamos algunos datos para comenzar</p>
+
+    <!-- Formulario -->
+    <form id="registerForm">
+      <!-- Nombre -->
+      <div class="form-group">
+        <label for="fullName">Nombre completo *</label>
+        <input
+          type="text"
+          id="fullName"
+          placeholder="Ej: María García"
+          required
+        />
+        <div class="error-message" id="nameError">El nombre es requerido</div>
+      </div>
+
+      <!-- Contacto: Email o Teléfono -->
+      <div class="form-group">
+        <label>¿Cómo prefieres ser contactado? *</label>
+        <div class="toggle-group">
+          <button type="button" class="toggle-btn active" data-contact="email">
+            📧 Email
+          </button>
+          <button type="button" class="toggle-btn" data-contact="phone">
+            📱 Teléfono
+          </button>
+        </div>
+      </div>
+
+      <!-- Email (mostrado por defecto) -->
+      <div class="form-group" id="emailGroup">
+        <label for="email">Email *</label>
+        <input
+          type="email"
+          id="email"
+          placeholder="tu@email.com"
+          required
+        />
+        <div class="input-helper">Usaremos esto para confirmaciones y soporte</div>
+        <div class="error-message" id="emailError">Email inválido</div>
+      </div>
+
+      <!-- Teléfono (oculto por defecto) -->
+      <div class="form-group" id="phoneGroup" style="display: none;">
+        <label for="phone">Teléfono *</label>
+        <input
+          type="tel"
+          id="phone"
+          placeholder="+598 9XXXX XXXX"
+          required
+        />
+        <div class="input-helper">Te contactaremos por WhatsApp o llamada</div>
+        <div class="error-message" id="phoneError">Teléfono inválido</div>
+      </div>
+
+      <!-- Términos -->
+      <div class="terms-box">
+        Al continuar, aceptas nuestros <span class="terms-link">Términos de Servicio</span> y <span class="terms-link">Política de Privacidad</span>.
+        <br><br>
+        No compartimos tu información con profesionales hasta que lo confirmes.
+      </div>
+
+      <!-- Botones -->
+      <div class="button-group">
+        <button type="button" class="btn btn-secondary" onclick="window.location.href='./step-3-proposal.html';">
+          Volver
+        </button>
+        <button type="submit" class="btn btn-primary">
+          Comenzar →
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    let contactType = 'email';
+
+    // Toggle entre email y teléfono
+    document.querySelectorAll('[data-contact]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+
+        // Desseleccionar todos
+        document.querySelectorAll('[data-contact]').forEach(b => b.classList.remove('active'));
+
+        // Seleccionar actual
+        btn.classList.add('active');
+        contactType = btn.getAttribute('data-contact');
+
+        // Mostrar/ocultar campos
+        if (contactType === 'email') {
+          document.getElementById('emailGroup').style.display = 'block';
+          document.getElementById('phoneGroup').style.display = 'none';
+          document.getElementById('email').required = true;
+          document.getElementById('phone').required = false;
+        } else {
+          document.getElementById('emailGroup').style.display = 'none';
+          document.getElementById('phoneGroup').style.display = 'block';
+          document.getElementById('email').required = false;
+          document.getElementById('phone').required = true;
+        }
+      });
+    });
+
+    // Envío del formulario
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const fullName = document.getElementById('fullName').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+
+      // Validación básica
+      if (!fullName) {
+        document.getElementById('nameError').style.display = 'block';
+        return;
+      }
+
+      if (contactType === 'email') {
+        if (!email || !email.includes('@')) {
+          document.getElementById('emailError').style.display = 'block';
+          return;
+        }
+      } else {
+        if (!phone || phone.length < 9) {
+          document.getElementById('phoneError').style.display = 'block';
+          return;
+        }
+      }
+
+      // Guardar en sessionStorage (para step-5)
+      sessionStorage.setItem('clientName', fullName);
+      if (contactType === 'email') {
+        sessionStorage.setItem('clientEmail', email);
+      } else {
+        sessionStorage.setItem('clientPhone', phone);
+      }
+
+      // También guardar en localStorage para persistencia
+      const userData = {
+        fullName,
+        contactType,
+        ...(contactType === 'email' ? { email } : { phone }),
+        createdAt: new Date().toISOString(),
+      };
+
+      localStorage.setItem('workinggo_user_data', JSON.stringify(userData));
+
+      // En producción, aquí harías una llamada a tu API para:
+      // 1. Crear usuario
+      // 2. Asociar issue
+      // 3. Obtener token de sesión
+      // const response = await fetch('/api/issues/{id}/confirm', {...})
+
+      // Ir al siguiente paso (chat)
+      window.location.href = './step-5-chat.html';
+    });
+  </script>
+</body>
+</html>

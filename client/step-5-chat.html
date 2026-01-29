@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Contacto con Profesional - WorkingGo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Datos de contacto del profesional seleccionado y formulario de review." />
+  <link rel="icon" href="../favicon.ico" />
+  <link rel="canonical" href="https://working-go.com/client/step-5" />
+  
+  <!-- Configuración Supabase -->
+  <script>
+    window.SUPABASE_CONFIG = {
+      url: 'https://oeabhlewxekejmgrucrz.supabase.co',
+      anonKey: 'sb_publishable_tyR1xlVRs68DuqQQf_r-cw_TcW3IuZ5'
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onload="initSupabaseOnLoad()"></script>
+  
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f9fafb;
+      color: #1f2937;
+    }
+    .header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8c 100%);
+      color: white;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .logo-small {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+    .progress-bar {
+      height: 4px;
+      background: #e5e7eb;
+      border-radius: 2px;
+      margin-bottom: 2rem;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981, #059669);
+      width: 100%;
+      transition: width 0.3s;
+    }
+    .success-message {
+      background: #f0fdf4;
+      border-left: 4px solid #10b981;
+      padding: 1rem;
+      border-radius: 6px;
+      margin-bottom: 2rem;
+      color: #059669;
+      font-weight: 600;
+    }
+    .professional-card {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .professional-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .professional-avatar {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8c 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 32px;
+      margin-right: 1rem;
+    }
+    .professional-info h2 {
+      font-size: 20px;
+      margin-bottom: 0.25rem;
+      color: #1f2937;
+    }
+    .professional-info p {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 0.5rem;
+    }
+    .contact-section {
+      margin-bottom: 1.5rem;
+    }
+    .contact-label {
+      font-weight: 600;
+      color: #374151;
+      font-size: 14px;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+    .contact-value {
+      background: #f9fafb;
+      padding: 0.75rem;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+      color: #1f2937;
+      font-size: 15px;
+    }
+    .contact-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      margin-top: 0.5rem;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .contact-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    .review-section {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .review-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1e3a5f;
+      margin-bottom: 1rem;
+    }
+    .review-instruction {
+      color: #6b7280;
+      margin-bottom: 1.5rem;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 0.5rem;
+      font-size: 14px;
+    }
+    .rating-stars {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .star {
+      font-size: 32px;
+      cursor: pointer;
+      transition: transform 0.2s;
+      opacity: 0.3;
+    }
+    .star:hover,
+    .star.selected {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      resize: vertical;
+      transition: border-color 0.2s;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: #10b981;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+    .button-group {
+      display: flex;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    .btn {
+      flex: 1;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+    }
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
+    .success-state {
+      display: none;
+      text-align: center;
+      padding: 2rem;
+      background: #f0fdf4;
+      border: 1px solid #dcfce7;
+      border-radius: 8px;
+      color: #059669;
+    }
+    .success-state.show {
+      display: block;
+    }
+    .success-icon {
+      font-size: 48px;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo-small">🔧 WorkingGo</div>
+    <h1 style="font-size: 20px; font-weight: 600;">¡Contacto Confirmado!</h1>
+  </div>
+
+  <div class="container">
+    <!-- Barra de progreso -->
+    <div class="progress-bar">
+      <div class="progress-fill"></div>
+    </div>
+
+    <!-- Mensaje de éxito -->
+    <div class="success-message">
+      ✓ Has iniciado contacto con <strong id="professionalNameSuccess">--</strong>. Te dejamos sus datos de contacto para que puedas llamarlo. ¡Igualmente le avisamos que tiene una solicitud de trabajo!
+    </div>
+
+    <!-- Tarjeta de datos del profesional -->
+    <div class="professional-card">
+      <div class="professional-header">
+        <div class="professional-avatar" id="professionalIcon">🔧</div>
+        <div class="professional-info">
+          <h2 id="professionalName">--</h2>
+          <p id="professionalCategory">--</p>
+          <p id="professionalExperience">--</p>
+        </div>
+      </div>
+
+      <!-- Datos de contacto -->
+      <div class="contact-section">
+        <label class="contact-label">📞 Teléfono</label>
+        <div class="contact-value" id="professionalPhone">--</div>
+        <a href="tel:" id="callButton" class="contact-button">
+          📞 Llamar ahora
+        </a>
+      </div>
+
+      <div class="contact-section">
+        <label class="contact-label">📍 Ubicación</label>
+        <div class="contact-value" id="professionalLocation">--</div>
+      </div>
+
+      <div class="contact-section">
+        <label class="contact-label">⭐ Rating</label>
+        <div class="contact-value" id="professionalRating">--</div>
+      </div>
+
+      <div class="contact-section">
+        <label class="contact-label">💼 Trabajos realizados</label>
+        <div class="contact-value" id="professionalJobs">--</div>
+      </div>
+    </div>
+
+    <!-- Sección de Review -->
+    <div class="review-section">
+      <div id="successState" class="success-state">
+        <div class="success-icon">✅</div>
+        <h3>¡Gracias por tu review!</h3>
+        <p>Tu opinión ayuda a mejorar la calidad del servicio en WorkingGo.</p>
+      </div>
+
+      <div id="reviewForm">
+        <h3 class="review-title">Deja tu opinión del servicio</h3>
+        <p class="review-instruction">
+          Tu feedback es importante para ayudarnos a mejorar y para que otros clientes tomen mejores decisiones.
+        </p>
+
+        <!-- Rating -->
+        <div class="form-group">
+          <label>¿Cómo fue el servicio? *</label>
+          <div class="rating-stars" id="ratingStars">
+            <span class="star" data-rating="1">⭐</span>
+            <span class="star" data-rating="2">⭐</span>
+            <span class="star" data-rating="3">⭐</span>
+            <span class="star" data-rating="4">⭐</span>
+            <span class="star" data-rating="5">⭐</span>
+          </div>
+          <input type="hidden" id="selectedRating" required />
+        </div>
+
+        <!-- Comentario -->
+        <div class="form-group">
+          <label for="reviewComment">Cuéntanos más sobre tu experiencia (opcional)</label>
+          <textarea
+            id="reviewComment"
+            placeholder="¿Qué te pareció el trabajo? ¿Volvería a contratarlo? Sé honesto y constructivo..."
+            maxlength="500"
+          ></textarea>
+          <div style="text-align: right; font-size: 12px; color: #9ca3af; margin-top: 0.25rem;">
+            <span id="charCount">0</span>/500
+          </div>
+        </div>
+
+        <!-- Botones -->
+        <div class="button-group">
+          <button type="button" class="btn btn-secondary" onclick="window.location.href='./step-1-describe.html';">
+            Otra solicitud
+          </button>
+          <button type="button" class="btn btn-primary" id="submitReviewBtn" disabled>
+            Enviar review
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========================================
+    // INICIALIZAR SUPABASE
+    // ========================================
+    let supabaseClient = null;
+    let supabaseReady = false;
+    let initInterval = null;
+
+    function initSupabase() {
+      if (!window.SUPABASE_CONFIG || !window.supabase) {
+        return false;
+      }
+
+      try {
+        supabaseClient = window.supabase.createClient(
+          window.SUPABASE_CONFIG.url,
+          window.SUPABASE_CONFIG.anonKey
+        );
+        supabaseReady = true;
+        console.log('✅ Supabase inicializado en step-5');
+        if (initInterval) clearInterval(initInterval);
+        return true;
+      } catch (error) {
+        console.error('❌ Error al inicializar Supabase:', error.message);
+        return false;
+      }
+    }
+
+    function initSupabaseOnLoad() {
+      console.log('✅ Script de Supabase cargado');
+      initSupabase();
+    }
+
+    let attempts = 0;
+    initInterval = setInterval(() => {
+      attempts++;
+      if (initSupabase()) {
+        clearInterval(initInterval);
+      } else if (attempts > 50) {
+        clearInterval(initInterval);
+        console.error('❌ Supabase no se pudo cargar');
+      }
+    }, 200);
+
+    // ========================================
+    // CARGAR DATOS DEL PROFESIONAL
+    // ========================================
+    function loadProfessionalData() {
+      const storedProfessional = sessionStorage.getItem('selectedProfessional');
+      if (!storedProfessional) {
+        console.warn('No professional found in sessionStorage');
+        return null;
+      }
+
+      try {
+        return JSON.parse(storedProfessional);
+      } catch (e) {
+        console.error('Error parsing professional data:', e);
+        return null;
+      }
+    }
+
+    function getAvatarForCategory(profession) {
+      const avatars = {
+        'sanitario': '🚰',
+        'electricista': '⚡',
+        'plomero': '🔧',
+        'albañil': '🏗️',
+        'pintor': '🎨',
+        'mecánico': '🔩',
+        'mudanzas': '📦',
+        'carpintero': '🪵',
+        'cerrajero': '🔑',
+        'gasista': '🔥',
+        'default': '👤'
+      };
+      
+      const key = profession ? profession.toLowerCase() : 'default';
+      return avatars[key] || avatars['default'];
+    }
+
+    function displayProfessionalData(professional) {
+      if (!professional) {
+        console.error('No professional data to display');
+        return;
+      }
+
+      const avatar = getAvatarForCategory(professional.profession);
+      const city = professional.city || 'No especificada';
+      const rating = parseFloat(professional.rating) || 0;
+      const ratingText = rating > 0 
+        ? `⭐ ${rating.toFixed(1)} (${professional.rating_count || 0} reseñas)` 
+        : '⭐ Sin calificaciones aún';
+
+      // Actualizar header
+      document.getElementById('professionalName').textContent = professional.display_name || 'Profesional';
+      document.getElementById('professionalNameSuccess').textContent = professional.display_name || 'Profesional';
+      document.getElementById('professionalCategory').textContent = professional.profession || 'Profesional';
+      document.getElementById('professionalIcon').textContent = avatar;
+      document.getElementById('professionalExperience').textContent = `${professional.years_experience || 0} años de experiencia`;
+
+      // Actualizar datos de contacto
+      document.getElementById('professionalPhone').textContent = professional.phone || 'No disponible';
+      document.getElementById('professionalLocation').textContent = city;
+      document.getElementById('professionalRating').textContent = ratingText;
+      document.getElementById('professionalJobs').textContent = `${professional.completed_hires_count || 0} trabajos realizados`;
+
+      // Botón de llamada
+      if (professional.phone) {
+        document.getElementById('callButton').href = `tel:${professional.phone}`;
+      }
+
+      console.log('✅ Datos del profesional cargados:', professional.display_name);
+    }
+
+    // Cargar datos al iniciar
+    const professional = loadProfessionalData();
+    displayProfessionalData(professional);
+
+    // ========================================
+    // SISTEMA DE RATING CON ESTRELLAS
+    // ========================================
+    const ratingStars = document.querySelectorAll('.rating-stars .star');
+    const selectedRatingInput = document.getElementById('selectedRating');
+    const submitReviewBtn = document.getElementById('submitReviewBtn');
+
+    ratingStars.forEach(star => {
+      star.addEventListener('click', () => {
+        const rating = star.dataset.rating;
+        selectedRatingInput.value = rating;
+
+        // Marcar estrellas
+        ratingStars.forEach(s => {
+          if (s.dataset.rating <= rating) {
+            s.classList.add('selected');
+          } else {
+            s.classList.remove('selected');
+          }
+        });
+
+        // Habilitar botón de envío
+        updateSubmitButton();
+        console.log('✅ Rating seleccionado:', rating);
+      });
+    });
+
+    // ========================================
+    // CONTADOR DE CARACTERES
+    // ========================================
+    const reviewComment = document.getElementById('reviewComment');
+    const charCount = document.getElementById('charCount');
+
+    reviewComment.addEventListener('input', () => {
+      charCount.textContent = reviewComment.value.length;
+      updateSubmitButton();
+    });
+
+    function updateSubmitButton() {
+      const hasRating = selectedRatingInput.value !== '';
+      submitReviewBtn.disabled = !hasRating;
+    }
+
+    // ========================================
+    // ENVIAR REVIEW
+    // ========================================
+    submitReviewBtn.addEventListener('click', async () => {
+      const rating = parseFloat(selectedRatingInput.value);
+      const comment = reviewComment.value.trim();
+
+      if (!rating) {
+        alert('Por favor selecciona una calificación');
+        return;
+      }
+
+      if (!professional || !professional.id) {
+        alert('Error: No hay datos del profesional');
+        return;
+      }
+
+      // Mostrar loading
+      submitReviewBtn.disabled = true;
+      submitReviewBtn.textContent = 'Enviando...';
+
+      try {
+        // Obtener datos del cliente desde sessionStorage
+        const clientData = {
+          name: sessionStorage.getItem('clientName') || 'Cliente anónimo',
+          email: sessionStorage.getItem('clientEmail') || 'no-especificado@example.com',
+          phone: sessionStorage.getItem('clientPhone') || 'no-especificado'
+        };
+
+        console.log('📤 Enviando review:', {
+          professional: professional.display_name,
+          rating,
+          comment: comment.substring(0, 50) + '...',
+          client: clientData.name
+        });
+
+        // Crear review en la tabla reviews
+        const { data: reviewData, error: reviewError } = await supabaseClient
+          .from('reviews')
+          .insert({
+            professional_id: professional.id,
+            client_name: clientData.name,
+            client_email: clientData.email,
+            client_phone: clientData.phone,
+            rating: rating,
+            comment: comment || null,
+            created_at: new Date().toISOString()
+          })
+          .select();
+
+        if (reviewError) {
+          throw new Error(`Error insertando review: ${reviewError.message}`);
+        }
+
+        console.log('✅ Review enviado correctamente');
+
+        // Mostrar mensaje de éxito
+        document.getElementById('reviewForm').style.display = 'none';
+        document.getElementById('successState').classList.add('show');
+
+        // Redirigir después de 3 segundos
+        setTimeout(() => {
+          window.location.href = './step-1-describe.html';
+        }, 3000);
+
+      } catch (error) {
+        console.error('❌ Error al enviar review:', error);
+        alert('Error al enviar el review. Por favor, intenta de nuevo.');
+        submitReviewBtn.disabled = false;
+        submitReviewBtn.textContent = 'Enviar review';
+      }
+    });
+  </script>
+</body>
+</html>

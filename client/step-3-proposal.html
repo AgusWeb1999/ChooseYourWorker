@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Propuesta de profesional - WorkingGo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Revisión de la propuesta de profesional seleccionado." />
+  <link rel="icon" href="../favicon.ico" />
+  <link rel="canonical" href="https://working-go.com/client/step-3" />
+  <!-- Configuración Supabase (inline) -->
+  <script>
+    // Configuración centralizada
+    window.SUPABASE_CONFIG = {
+      url: 'https://oeabhlewxekejmgrucrz.supabase.co',
+      anonKey: 'sb_publishable_tyR1xlVRs68DuqQQf_r-cw_TcW3IuZ5'
+    };
+    console.log('✅ Config Supabase establecida en window');
+  </script>
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onload="initSupabaseOnLoad()"></script>
+  
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f9fafb;
+      color: #1f2937;
+    }
+    .header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8c 100%);
+      color: white;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .logo-small {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+    .progress-bar {
+      height: 4px;
+      background: #e5e7eb;
+      border-radius: 2px;
+      margin-bottom: 2rem;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981, #059669);
+      width: 75%;
+      transition: width 0.3s;
+    }
+    .step-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1e3a5f;
+      margin-bottom: 0.5rem;
+    }
+    .step-subtitle {
+      font-size: 16px;
+      color: #6b7280;
+      margin-bottom: 2rem;
+    }
+    .proposal-card {
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    .professional-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .professional-avatar {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8c 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 32px;
+      margin-right: 1rem;
+    }
+    .professional-info h3 {
+      font-size: 20px;
+      margin-bottom: 0.25rem;
+      color: #1f2937;
+    }
+    .professional-info p {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 0.5rem;
+    }
+    .rating {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 14px;
+    }
+    .star {
+      color: #fbbf24;
+    }
+    .proposal-details {
+      margin-bottom: 1.5rem;
+    }
+    .detail-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .detail-item:last-child {
+      border-bottom: none;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #374151;
+      font-size: 14px;
+    }
+    .detail-value {
+      text-align: right;
+    }
+    .detail-value-main {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1e3a5f;
+    }
+    .detail-value-sub {
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .price-badge {
+      background: #f0fdf4;
+      color: #10b981;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 16px;
+    }
+    .success-message {
+      background: #f0fdf4;
+      border-left: 4px solid #10b981;
+      padding: 1rem;
+      border-radius: 6px;
+      margin-bottom: 2rem;
+      color: #059669;
+      display: none;
+    }
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    .btn-secondary {
+      background: white;
+      color: #374151;
+      border: 2px solid #e5e7eb;
+    }
+    .btn-secondary:hover {
+      border-color: #10b981;
+      color: #10b981;
+    }
+    .no-match {
+      background: #fef2f2;
+      border: 2px solid #fecaca;
+      border-radius: 12px;
+      padding: 2rem;
+      text-align: center;
+    }
+    .no-match-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #991b1b;
+      margin-bottom: 0.5rem;
+    }
+    .no-match-text {
+      color: #7f1d1d;
+      margin-bottom: 1rem;
+    }
+    .counter {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-top: 0.5rem;
+    }
+    /* Modal de opciones */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      overflow-y: auto;
+    }
+    .modal-overlay.show {
+      display: flex;
+      align-items: flex-end;
+    }
+    .modal-content {
+      background: white;
+      width: 100%;
+      border-radius: 16px 16px 0 0;
+      padding: 2rem;
+      max-height: 80vh;
+      overflow-y: auto;
+      animation: slideUp 0.3s ease-out;
+    }
+    @keyframes slideUp {
+      from {
+        transform: translateY(100%);
+      }
+      to {
+        transform: translateY(0);
+      }
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .modal-header h2 {
+      font-size: 20px;
+      color: #1e3a5f;
+      margin: 0;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #6b7280;
+    }
+    .options-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .option-item {
+      display: flex;
+      padding: 1rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: white;
+    }
+    .option-item:hover {
+      border-color: #10b981;
+      background: #f0fdf4;
+    }
+    .option-item.selected {
+      border-color: #10b981;
+      background: #f0fdf4;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+    }
+    .option-avatar {
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8c 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 24px;
+      margin-right: 1rem;
+      flex-shrink: 0;
+    }
+    .option-info {
+      flex: 1;
+    }
+    .option-name {
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 0.25rem;
+    }
+    .option-profession {
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 0.5rem;
+    }
+    .option-rating {
+      font-size: 13px;
+      color: #6b7280;
+    }
+    .option-price {
+      text-align: right;
+      font-weight: 600;
+      color: #10b981;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo-small">🔧 WorkingGo</div>
+    <h1 style="font-size: 20px; font-weight: 600;">Propuesta de profesional</h1>
+  </div>
+
+  <div class="container">
+    <!-- Barra de progreso -->
+    <div class="progress-bar">
+      <div class="progress-fill"></div>
+    </div>
+
+    <!-- Título del paso -->
+    <h2 class="step-title">Encontramos a alguien</h2>
+    <p class="step-subtitle">Este es el mejor match para tu problema</p>
+
+    <!-- Mensaje de éxito (inicialmente oculto) -->
+    <div class="success-message" id="successMessage">
+      ✓ ¡Propuesta aceptada! Ahora necesitamos crear tu cuenta.
+    </div>
+
+    <!-- Propuesta de profesional -->
+    <div class="proposal-card" id="proposalCard">
+      <div style="text-align: center; padding: 2rem;">
+        <div style="font-size: 48px; margin-bottom: 1rem;">⏳</div>
+        <div style="color: #6b7280;">Buscando el mejor profesional para ti...</div>
+      </div>
+    </div>
+
+    <!-- Card de no hay match (inicialmente oculta) -->
+    <div class="no-match" id="noMatchCard" style="display: none;">
+      <div class="no-match-title">👀 Buscando...</div>
+      <div class="no-match-text">
+        Todavía no encontramos al profesional ideal, pero no te preocupes. Te avisaremos cuando aparezca alguien disponible.
+      </div>
+      <button class="btn btn-secondary" onclick="window.location.href='./step-1-describe.html';">
+        Volver al inicio
+      </button>
+    </div>
+
+    <!-- Botones -->
+    <div class="button-group" id="buttonGroup">
+      <button type="button" class="btn btn-primary" id="acceptBtn">
+        Aceptar propuesta
+      </button>
+      <button type="button" class="btn btn-secondary" id="anotherBtn">
+        Ver otra opción
+      </button>
+      <div class="counter" id="counter" style="display: none;"></div>
+    </div>
+  </div>
+
+  <!-- Modal de opciones de profesionales -->
+  <div class="modal-overlay" id="optionsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Elige un profesional</h2>
+        <button class="modal-close" onclick="closeOptionsModal()">✕</button>
+      </div>
+      <div class="options-list" id="optionsList"></div>
+    </div>
+  </div>
+
+  <script>
+    // ========================================
+    // INICIALIZAR CLIENTE SUPABASE
+    // ========================================
+    
+    let supabaseClient = null;
+    let supabaseReady = false;
+    let initInterval = null;
+    
+    function initSupabase() {
+      console.log('🔄 initSupabase: Verificando disponibilidad...', {
+        hasConfig: !!window.SUPABASE_CONFIG,
+        hasSupabase: !!window.supabase
+      });
+      
+      if (!window.SUPABASE_CONFIG) {
+        console.error('❌ No se cargó SUPABASE_CONFIG');
+        return false;
+      }
+      
+      if (!window.supabase) {
+        console.warn('⏳ Supabase aún no cargado desde CDN');
+        return false;
+      }
+
+      try {
+        supabaseClient = window.supabase.createClient(
+          window.SUPABASE_CONFIG.url,
+          window.SUPABASE_CONFIG.anonKey
+        );
+        supabaseReady = true;
+        console.log('✅ Supabase cliente inicializado correctamente');
+        if (initInterval) clearInterval(initInterval);
+        return true;
+      } catch (error) {
+        console.error('❌ Error al crear cliente Supabase:', error.message);
+        return false;
+      }
+    }
+    
+    // Callback ejecutado cuando el script de Supabase se carga
+    function initSupabaseOnLoad() {
+      console.log('✅ Script de Supabase cargado desde CDN');
+      initSupabase();
+    }
+    
+    // Reintentar cada 200ms hasta 10 segundos si no está listo
+    let attempts = 0;
+    initInterval = setInterval(() => {
+      attempts++;
+      if (initSupabase()) {
+        clearInterval(initInterval);
+        console.log('✅ Supabase listo después de', attempts * 200, 'ms');
+      } else if (attempts > 50) {
+        clearInterval(initInterval);
+        console.error('❌ Supabase no se pudo cargar en 10 segundos');
+      }
+    }, 200);
+
+    // ========================================
+    // ESTADO GLOBAL DEL FLUJO STEP-3
+    // ========================================
+    window.step3State = {
+      allProfessionals: [],
+      currentProfessionalIndex: 0,
+      clientCategory: '',
+      isLoading: true,
+      hasError: false
+    };
+
+    // Función para generar avatar basado en categoría
+    function getAvatarForCategory(category) {
+      const avatars = {
+        'sanitario': '🚰',
+        'electricista': '⚡',
+        'plomero': '🔧',
+        'albañil': '🏗️',
+        'pintor': '🎨',
+        'mecánico': '🔩',
+        'mudanzas': '📦',
+        'carpintero': '🪵',
+        'cerrajero': '🔑',
+        'gasista': '🔥',
+        'network engineer': '🌐',
+        'default': '👤'
+      };
+      
+      const key = category ? category.toLowerCase() : 'default';
+      return avatars[key] || avatars['default'];
+    }
+
+    // Función para renderizar propuesta
+    function renderProposal(proposal) {
+      const card = document.getElementById('proposalCard');
+      const avatar = proposal.avatar || '👤';
+      const dailyRate = Math.round(proposal.hourlyRate * 8); // 8 horas de trabajo
+      
+      card.innerHTML = `
+        <div class="professional-header">
+          <div class="professional-avatar">${avatar}</div>
+          <div class="professional-info">
+            <h3>${proposal.name}</h3>
+            <p>${proposal.profession} | ${proposal.bio || 'Profesional verificado'}</p>
+            <div class="rating">
+              ${proposal.rating > 0 ? `${'⭐'.repeat(Math.floor(proposal.rating))} <span>(${proposal.rating} - ${proposal.reviews} reseñas)</span>` : '<span>Sin reseñas aún</span>'}
+            </div>
+          </div>
+        </div>
+
+        <div class="proposal-details">
+          <div class="detail-item">
+            <span class="detail-label">📍 Ubicación</span>
+            <div class="detail-value">
+              <div class="detail-value-main">${proposal.city}</div>
+            </div>
+          </div>
+
+          <div class="detail-item">
+            <span class="detail-label">💰 Tarifa horaria</span>
+            <div class="price-badge">$${proposal.hourlyRate.toLocaleString()}/h</div>
+          </div>
+
+          <div class="detail-item">
+            <span class="detail-label">📅 Tarifa diaria</span>
+            <div class="detail-value">
+              <div class="detail-value-main">$${dailyRate.toLocaleString()}</div>
+              <div class="detail-value-sub">(8 horas de trabajo)</div>
+            </div>
+          </div>
+
+          <div class="detail-item">
+            <span class="detail-label">📝 Experiencia</span>
+            <div class="detail-value">
+              <div class="detail-value-main">${proposal.experience} años</div>
+              <div class="detail-value-sub">${proposal.completedJobs} trabajos realizados</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Función para actualizar contador
+    function updateCounter() {
+      const state = window.step3State;
+      if (state.allProfessionals.length > 1) {
+        const counter = document.getElementById('counter');
+        counter.textContent = `Opción ${state.currentProfessionalIndex + 1} de ${state.allProfessionals.length}`;
+        counter.style.display = 'block';
+      }
+    }
+
+    // Función para convertir profesional de BD a propuesta
+    function convertToProposal(professional) {
+      const rating = parseFloat(professional.rating) || 0;
+      const hourlyRate = parseFloat(professional.hourly_rate) || 500;
+      
+      return {
+        id: professional.id,
+        name: professional.display_name || 'Profesional',
+        profession: professional.profession || 'Profesional',
+        avatar: getAvatarForCategory(professional.profession),
+        rating: rating,
+        reviews: professional.rating_count || 0,
+        bio: professional.bio || 'Profesional verificado en WorkingGo',
+        city: professional.city || 'Sin ubicación',
+        hourlyRate: hourlyRate,
+        experience: professional.years_experience || 0,
+        phone: professional.phone,
+        completedJobs: professional.completed_hires_count || 0
+      };
+    }
+
+    // Manejador de aceptar
+    document.getElementById('acceptBtn').addEventListener('click', () => {
+      const state = window.step3State;
+      const currentProf = state.allProfessionals[state.currentProfessionalIndex];
+      
+      if (!currentProf || !currentProf.id) {
+        alert('Por favor, espera a que cargue la propuesta.');
+        return;
+      }
+      
+      const proposal = convertToProposal(currentProf);
+      
+      sessionStorage.setItem('selectedProposal', JSON.stringify(proposal));
+      sessionStorage.setItem('selectedProfessional', JSON.stringify(currentProf));
+      localStorage.setItem('workinggo_proposal', JSON.stringify(proposal));
+
+      console.log('✅ Propuesta aceptada:', proposal.name);
+      window.location.href = './step-4-register.html';
+    });
+
+    // Funciones para modal de opciones
+    function openOptionsModal() {
+      const state = window.step3State;
+      
+      if (!state.allProfessionals || state.allProfessionals.length === 0) {
+        alert('No hay opciones disponibles.');
+        return;
+      }
+
+      const optionsList = document.getElementById('optionsList');
+      optionsList.innerHTML = '';
+
+      // Mostrar todos los profesionales disponibles (ya filtrados por categoría)
+      state.allProfessionals.forEach((prof, idx) => {
+        const proposal = convertToProposal(prof);
+        const isSelected = idx === state.currentProfessionalIndex;
+        
+        const optionDiv = document.createElement('div');
+        optionDiv.className = `option-item ${isSelected ? 'selected' : ''}`;
+        optionDiv.onclick = () => selectProfessional(idx);
+
+        optionDiv.innerHTML = `
+          <div class="option-avatar">${proposal.avatar}</div>
+          <div class="option-info">
+            <div class="option-name">${proposal.name}</div>
+            <div class="option-profession">${proposal.profession}</div>
+            <div class="option-rating">⭐ ${proposal.rating} (${proposal.reviews} reseñas)</div>
+          </div>
+          <div class="option-price">$${proposal.hourlyRate}/h</div>
+        `;
+
+        optionsList.appendChild(optionDiv);
+      });
+
+      document.getElementById('optionsModal').classList.add('show');
+    }
+
+    function closeOptionsModal() {
+      document.getElementById('optionsModal').classList.remove('show');
+    }
+
+    function selectProfessional(idx) {
+      const state = window.step3State;
+      state.currentProfessionalIndex = idx;
+      
+      const prof = state.allProfessionals[idx];
+      const proposal = convertToProposal(prof);
+      
+      renderProposal(proposal);
+      updateCounter();
+      
+      sessionStorage.setItem('selectedProfessional', JSON.stringify(prof));
+      
+      console.log('✅ Profesional seleccionado:', proposal.name, `(${idx + 1}/${state.allProfessionals.length})`);
+      
+      closeOptionsModal();
+    }
+
+    // Manejador de ver otra opción
+    document.getElementById('anotherBtn').addEventListener('click', () => {
+      openOptionsModal();
+    });
+
+    // Cerrar modal al hacer click fuera
+    document.getElementById('optionsModal').addEventListener('click', (e) => {
+      if (e.target.id === 'optionsModal') {
+        closeOptionsModal();
+      }
+    });
+
+    // Función para mostrar "no hay match"
+    function showNoMatch() {
+      document.getElementById('proposalCard').style.display = 'none';
+      document.getElementById('buttonGroup').style.display = 'none';
+      document.getElementById('noMatchCard').style.display = 'block';
+    }
+
+    // Función para cargar profesionales desde Supabase
+    async function loadProfessionals() {
+      try {
+        const clientIssue = JSON.parse(sessionStorage.getItem('clientIssue') || '{}');
+        let category = clientIssue.category || 'Sanitario';
+        
+        // Normalizar categoría (capitalizar primero)
+        category = category.trim().charAt(0).toUpperCase() + category.trim().slice(1).toLowerCase();
+        
+        window.step3State.clientCategory = category;
+        window.step3State.isLoading = true;
+
+        console.log('📍 Step-3: Buscando profesionales en categoría:', category);
+
+        // Esperar a que supabaseClient esté inicializado (máximo 5 segundos)
+        let waitAttempts = 0;
+        while (!supabaseReady && waitAttempts < 50) {
+          console.log(`⏳ Esperando a Supabase... (${(waitAttempts * 100)}ms)`);
+          await new Promise(resolve => setTimeout(resolve, 100));
+          waitAttempts++;
+        }
+
+        if (!supabaseReady || !supabaseClient) {
+          console.error('❌ Supabase no está listo después de 5 segundos', {
+            supabaseReady,
+            hasClient: !!supabaseClient
+          });
+          throw new Error('No se pudo inicializar el cliente de Supabase');
+        }
+
+        console.log('✅ Supabase está listo, consultando profesionales...');
+
+        // Cargar TODOS los profesionales activos
+        const { data, error } = await supabaseClient
+          .from('professionals')
+          .select(`
+            id,
+            user_id,
+            display_name,
+            profession,
+            bio,
+            phone,
+            city,
+            state,
+            hourly_rate,
+            rating,
+            rating_count,
+            years_experience,
+            completed_hires_count,
+            is_active
+          `)
+          .eq('is_active', true)
+          .order('rating', { ascending: false });
+
+        if (error) throw error;
+
+        console.log('✅ Total de profesionales activos en BD:', data?.length || 0);
+
+        // Separar: profesionales de la categoría + otros
+        let sameCategoryProfs = [];
+        let otherProfs = [];
+        
+        if (data && data.length > 0) {
+          data.forEach(prof => {
+            if (!prof.profession) return;
+            const profNormalized = prof.profession
+              .trim()
+              .charAt(0)
+              .toUpperCase() + prof.profession.trim().slice(1).toLowerCase();
+            
+            if (profNormalized === category) {
+              sameCategoryProfs.push(prof);
+            } else {
+              otherProfs.push(prof);
+            }
+          });
+        }
+
+        console.log(`✅ Profesionales en categoría "${category}":`, sameCategoryProfs.length);
+        console.log(`ℹ️ Otros profesionales disponibles:`, otherProfs.length);
+
+        // Combinar: primero los de la categoría, luego los mejores calificados de otras categorías
+        let allProfessionals = [
+          ...sameCategoryProfs,
+          ...otherProfs.slice(0, Math.max(0, 10 - sameCategoryProfs.length)) // Hasta 10 en total
+        ];
+
+        // Si hay menos de 1 profesional en total, mostrar no-match
+        if (allProfessionals.length === 0) {
+          console.warn('⚠️ No hay profesionales activos en la BD');
+          window.step3State.isLoading = false;
+          showNoMatch();
+          return;
+        }
+
+        // Guardar lista de profesionales
+        window.step3State.allProfessionals = allProfessionals;
+        window.step3State.currentProfessionalIndex = 0;
+
+        // Mostrar primer profesional
+        const firstProf = allProfessionals[0];
+        const proposal = convertToProposal(firstProf);
+        
+        renderProposal(proposal);
+        updateCounter();
+        
+        sessionStorage.setItem('selectedProfessional', JSON.stringify(firstProf));
+        
+        console.log('✅ Propuesta inicial cargada:', proposal.name, `(${proposal.profession})`);
+        console.log(`📊 Total de opciones disponibles: ${allProfessionals.length}`);
+
+        window.step3State.isLoading = false;
+      } catch (error) {
+        console.error('❌ Error cargando profesionales:', error);
+        window.step3State.hasError = true;
+        window.step3State.isLoading = false;
+        showNoMatch();
+      }
+    }
+
+    // Cargar profesionales cuando se carga la página
+    window.addEventListener('load', () => {
+      loadProfessionals();
+    });
+  </script>
+</body>
+</html>
