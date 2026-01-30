@@ -324,6 +324,86 @@
       color: #10b981;
       font-size: 14px;
     }
+    /* Grid de 2 opciones principales */
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    @media (min-width: 768px) {
+      .options-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    .option-card {
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 1.5rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-align: center;
+      position: relative;
+    }
+    .option-card:hover {
+      border-color: #10b981;
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.2);
+      transform: translateY(-4px);
+    }
+    .option-card.selected {
+      border-color: #10b981;
+      background: #f0fdf4;
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+    }
+    .option-card .checkmark {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 24px;
+      height: 24px;
+      background: #10b981;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      display: none;
+    }
+    .option-card.selected .checkmark {
+      display: flex;
+    }
+    .option-card-avatar {
+      font-size: 48px;
+      margin-bottom: 1rem;
+    }
+    .option-card-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 0.25rem;
+    }
+    .option-card-profession {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 0.75rem;
+    }
+    .option-card-rating {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 1rem;
+    }
+    .option-card-rate {
+      font-size: 16px;
+      font-weight: 700;
+      color: #10b981;
+      margin-bottom: 0.5rem;
+    }
+    .option-card-experience {
+      font-size: 12px;
+      color: #6b7280;
+    }
   </style>
 </head>
 <body>
@@ -339,42 +419,36 @@
     </div>
 
     <!-- Título del paso -->
-    <h2 class="step-title">Encontramos a alguien</h2>
-    <p class="step-subtitle">Este es el mejor match para tu problema</p>
+    <h2 class="step-title">Encontramos opciones</h2>
+    <p class="step-subtitle">Aquí tienes 2 profesionales en tu categoría</p>
 
     <!-- Mensaje de éxito (inicialmente oculto) -->
     <div class="success-message" id="successMessage">
       ✓ ¡Propuesta aceptada! Ahora necesitamos crear tu cuenta.
     </div>
 
-    <!-- Propuesta de profesional -->
-    <div class="proposal-card" id="proposalCard">
-      <div style="text-align: center; padding: 2rem;">
-        <div style="font-size: 48px; margin-bottom: 1rem;">⏳</div>
-        <div style="color: #6b7280;">Buscando el mejor profesional para ti...</div>
-      </div>
-    </div>
+    <!-- Grid de 3 opciones principales -->
+    <div id="optionsGrid" class="options-grid"></div>
 
     <!-- Card de no hay match (inicialmente oculta) -->
     <div class="no-match" id="noMatchCard" style="display: none;">
-      <div class="no-match-title">👀 Buscando...</div>
+      <div class="no-match-title">👀 No encontramos match</div>
       <div class="no-match-text">
-        Todavía no encontramos al profesional ideal, pero no te preocupes. Te avisaremos cuando aparezca alguien disponible.
+        Lo sentimos, no hay profesionales disponibles en tu categoría en este momento.
       </div>
       <button class="btn btn-secondary" onclick="window.location.href='./step-1-describe.html';">
-        Volver al inicio
+        Volver a buscar
       </button>
     </div>
 
     <!-- Botones -->
     <div class="button-group" id="buttonGroup">
       <button type="button" class="btn btn-primary" id="acceptBtn">
-        Aceptar propuesta
+        ✅ Continuar
       </button>
       <button type="button" class="btn btn-secondary" id="anotherBtn">
-        Ver otra opción
+        👀 Ver más opciones
       </button>
-      <div class="counter" id="counter" style="display: none;"></div>
     </div>
   </div>
 
@@ -480,64 +554,56 @@
       return avatars[key] || avatars['default'];
     }
 
-    // Función para renderizar propuesta
-    function renderProposal(proposal) {
-      const card = document.getElementById('proposalCard');
-      const avatar = proposal.avatar || '👤';
-      const dailyRate = Math.round(proposal.hourlyRate * 8); // 8 horas de trabajo
-      
-      card.innerHTML = `
-        <div class="professional-header">
-          <div class="professional-avatar">${avatar}</div>
-          <div class="professional-info">
-            <h3>${proposal.name}</h3>
-            <p>${proposal.profession} | ${proposal.bio || 'Profesional verificado'}</p>
-            <div class="rating">
-              ${proposal.rating > 0 ? `${'⭐'.repeat(Math.floor(proposal.rating))} <span>(${proposal.rating} - ${proposal.reviews} reseñas)</span>` : '<span>Sin reseñas aún</span>'}
-            </div>
-          </div>
-        </div>
-
-        <div class="proposal-details">
-          <div class="detail-item">
-            <span class="detail-label">📍 Ubicación</span>
-            <div class="detail-value">
-              <div class="detail-value-main">${proposal.city}</div>
-            </div>
-          </div>
-
-          <div class="detail-item">
-            <span class="detail-label">💰 Tarifa horaria</span>
-            <div class="price-badge">$${proposal.hourlyRate.toLocaleString()}/h</div>
-          </div>
-
-          <div class="detail-item">
-            <span class="detail-label">📅 Tarifa diaria</span>
-            <div class="detail-value">
-              <div class="detail-value-main">$${dailyRate.toLocaleString()}</div>
-              <div class="detail-value-sub">(8 horas de trabajo)</div>
-            </div>
-          </div>
-
-          <div class="detail-item">
-            <span class="detail-label">📝 Experiencia</span>
-            <div class="detail-value">
-              <div class="detail-value-main">${proposal.experience} años</div>
-              <div class="detail-value-sub">${proposal.completedJobs} trabajos realizados</div>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    // Función para actualizar contador
-    function updateCounter() {
+    // Función para renderizar las 2 opciones principales (random de la profesión)
+    function renderTopThreeOptions() {
       const state = window.step3State;
-      if (state.allProfessionals.length > 1) {
-        const counter = document.getElementById('counter');
-        counter.textContent = `Opción ${state.currentProfessionalIndex + 1} de ${state.allProfessionals.length}`;
-        counter.style.display = 'block';
+      const grid = document.getElementById('optionsGrid');
+      grid.innerHTML = '';
+
+      // Función para mezclar array (shuffle)
+      function shuffleArray(array) {
+        const arr = [...array];
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
       }
+
+      // Obtener solo los profesionales de la categoría seleccionada
+      let category = state.clientCategory;
+      let categoryProfs = state.allProfessionals.filter(prof => {
+        const profNormalized = prof.profession
+          .trim()
+          .charAt(0)
+          .toUpperCase() + prof.profession.trim().slice(1).toLowerCase();
+        return profNormalized === category;
+      });
+
+      // Mezclar y tomar las primeras 2
+      let shuffled = shuffleArray(categoryProfs);
+      const topTwo = shuffled.slice(0, 2);
+
+      topTwo.forEach((prof, idx) => {
+        const proposal = convertToProposal(prof);
+        const isSelected = idx === state.currentProfessionalIndex;
+
+        const card = document.createElement('div');
+        card.className = `option-card ${isSelected ? 'selected' : ''}`;
+        card.onclick = () => selectFromGrid(idx);
+
+        card.innerHTML = `
+          <div class="checkmark">✓</div>
+          <div class="option-card-avatar">${proposal.avatar}</div>
+          <div class="option-card-name">${proposal.name}</div>
+          <div class="option-card-profession">${proposal.profession}</div>
+          <div class="option-card-rating">⭐ ${proposal.rating.toFixed(1)} (${proposal.reviews} reseñas)</div>
+          <div class="option-card-rate">$${proposal.hourlyRate}/h</div>
+          <div class="option-card-experience">${proposal.experience} años exp.</div>
+        `;
+
+        grid.appendChild(card);
+      });
     }
 
     // Función para convertir profesional de BD a propuesta
@@ -593,7 +659,8 @@
       const optionsList = document.getElementById('optionsList');
       optionsList.innerHTML = '';
 
-      // Mostrar todos los profesionales disponibles (ya filtrados por categoría)
+      // Mostrar TODOS los profesionales de la categoría
+      // (allProfessionals ya están filtrados y mezclados por categoría)
       state.allProfessionals.forEach((prof, idx) => {
         const proposal = convertToProposal(prof);
         const isSelected = idx === state.currentProfessionalIndex;
@@ -607,7 +674,7 @@
           <div class="option-info">
             <div class="option-name">${proposal.name}</div>
             <div class="option-profession">${proposal.profession}</div>
-            <div class="option-rating">⭐ ${proposal.rating} (${proposal.reviews} reseñas)</div>
+            <div class="option-rating">⭐ ${proposal.rating.toFixed(1)} (${proposal.reviews} reseñas)</div>
           </div>
           <div class="option-price">$${proposal.hourlyRate}/h</div>
         `;
@@ -627,16 +694,27 @@
       state.currentProfessionalIndex = idx;
       
       const prof = state.allProfessionals[idx];
-      const proposal = convertToProposal(prof);
-      
-      renderProposal(proposal);
-      updateCounter();
-      
       sessionStorage.setItem('selectedProfessional', JSON.stringify(prof));
       
-      console.log('✅ Profesional seleccionado:', proposal.name, `(${idx + 1}/${state.allProfessionals.length})`);
+      // Re-renderizar grid para marcar selección
+      renderTopThreeOptions();
+      
+      console.log('✅ Profesional seleccionado:', prof.display_name, `(${idx + 1}/${state.allProfessionals.length})`);
       
       closeOptionsModal();
+    }
+
+    function selectFromGrid(idx) {
+      const state = window.step3State;
+      state.currentProfessionalIndex = idx;
+      
+      const prof = state.allProfessionals[idx];
+      sessionStorage.setItem('selectedProfessional', JSON.stringify(prof));
+      
+      // Re-renderizar grid para marcar selección
+      renderTopThreeOptions();
+      
+      console.log('✅ Profesional seleccionado:', prof.display_name, `(${idx + 1}/3)`);
     }
 
     // Manejador de ver otra opción
@@ -739,11 +817,29 @@
         console.log(`✅ Profesionales en categoría "${category}":`, sameCategoryProfs.length);
         console.log(`ℹ️ Otros profesionales disponibles:`, otherProfs.length);
 
-        // Combinar: primero los de la categoría, luego los mejores calificados de otras categorías
-        let allProfessionals = [
-          ...sameCategoryProfs,
-          ...otherProfs.slice(0, Math.max(0, 10 - sameCategoryProfs.length)) // Hasta 10 en total
-        ];
+        // Función para mezclar array (shuffle)
+        function shuffleArray(array) {
+          const arr = [...array];
+          for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+          }
+          return arr;
+        }
+
+        // Usar profesionales de la categoría (mezclados)
+        // Si hay menos de 35 de la categoría, completar con otros profesionales
+        let allProfessionals = [...sameCategoryProfs];
+        
+        // Si necesitamos más profesionales, agregar otros aleatorios
+        if (allProfessionals.length < 35) {
+          let otherProfsShuffled = shuffleArray(otherProfs);
+          let needed = Math.min(35 - allProfessionals.length, otherProfsShuffled.length);
+          allProfessionals = allProfessionals.concat(otherProfsShuffled.slice(0, needed));
+        }
+        
+        // Mezclar todo
+        allProfessionals = shuffleArray(allProfessionals);
 
         // Si hay menos de 1 profesional en total, mostrar no-match
         if (allProfessionals.length === 0) {
@@ -761,13 +857,12 @@
         const firstProf = allProfessionals[0];
         const proposal = convertToProposal(firstProf);
         
-        renderProposal(proposal);
-        updateCounter();
+        renderTopThreeOptions();
         
         sessionStorage.setItem('selectedProfessional', JSON.stringify(firstProf));
         
-        console.log('✅ Propuesta inicial cargada:', proposal.name, `(${proposal.profession})`);
-        console.log(`📊 Total de opciones disponibles: ${allProfessionals.length}`);
+        console.log('✅ Top 2 opciones (random) cargadas. Primera:', proposal.name, `(${proposal.profession})`);
+        console.log(`📊 Total de opciones disponibles en categoría: ${allProfessionals.length}`);
 
         window.step3State.isLoading = false;
       } catch (error) {
