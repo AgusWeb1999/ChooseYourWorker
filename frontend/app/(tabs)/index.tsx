@@ -8,6 +8,8 @@ import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useWindowDimensions } from '../../hooks/useWindowDimensions';
 import { getBarriosPorCiudad } from '../../utils/barrios';
+import OpenRequests from '../../components/OpenRequests';
+import PublishRequestModal from '../../components/PublishRequestModal';
 
 // 1. Interfaz actualizada con los nuevos campos de la tabla professionals
 interface Professional {
@@ -34,6 +36,17 @@ export default function HomeScreen() {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [filteredProfessionals, setFilteredProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Tabs del home unificado - profesionales solo ven 'requests'
+  const [activeTab, setActiveTab] = useState<'professionals' | 'requests'>(
+    userProfile?.is_professional ? 'requests' : 'professionals'
+  );
+  
+  // Modal de publicar solicitud
+  const [publishModalVisible, setPublishModalVisible] = useState(false);
+  
+  // Key para forzar refresh de OpenRequests
+  const [requestsKey, setRequestsKey] = useState(0);
   
   // Filtros
   const [searchQuery, setSearchQuery] = useState('');
@@ -345,7 +358,57 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.contentLimiter}>
+        {/* TABS UNIFICADOS: Profesionales vs Solicitudes */}
+        <View style={styles.tabsContainer}>
+          {/* Solo clientes ven el tab de Profesionales */}
+          {!userProfile?.is_professional && (
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'professionals' && styles.tabActive]}
+              onPress={() => setActiveTab('professionals')}
+            >
+              <Text style={[styles.tabText, activeTab === 'professionals' && styles.tabTextActive]}>
+                👥 Profesionales
+              </Text>
+            </TouchableOpacity>
+          )}
+          {/* Todos ven el tab de Solicitudes */}
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'requests' && styles.tabActive]}
+            onPress={() => setActiveTab('requests')}
+          >
+            <Text style={[styles.tabText, activeTab === 'requests' && styles.tabTextActive]}>
+              📋 Solicitudes
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* CONTENIDO SEGÚN TAB ACTIVO */}
+        {activeTab === 'requests' ? (
+          <View style={styles.requestsContainer}>
+            {!userProfile?.is_professional && (
+              <TouchableOpacity
+                style={styles.publishButton}
+                onPress={() => setPublishModalVisible(true)}
+              >
+                <Text style={styles.publishButtonText}>+ Publicar mi Solicitud</Text>
+              </TouchableOpacity>
+            )}
+            <OpenRequests key={requestsKey} onRefresh={fetchProfessionals} />
+            <PublishRequestModal
+              visible={publishModalVisible}
+              onClose={() => setPublishModalVisible(false)}
+              onSuccess={() => {
+                // Refrescar lista de solicitudes
+                setActiveTab('requests');
+                // Forzar refresh del componente OpenRequests
+                setRequestsKey(prev => prev + 1);
+                fetchProfessionals();
+              }}
+            />
+          </View>
+        ) : (
+          <>
+            {/* CONTENIDO DE PROFESIONALES (actual) */}
           {/* VISTA MOBILE / COMPACTA */}
           {(Platform.OS !== 'web' || width < 768) && (
             <>
@@ -598,7 +661,9 @@ export default function HomeScreen() {
               </View>
             </TouchableOpacity>
           </Modal>
-        </View>
+          </>
+        )}
+        {/* FIN DEL CONTENIDO CONDICIONAL DE TABS */}
       </View>
     </SafeAreaView>
   );
@@ -790,4 +855,54 @@ const styles = StyleSheet.create<Styles>({
   modalOptionText: { fontSize: 15, color: '#374151', fontWeight: '500' },
   modalOptionTextSelected: { color: '#6366f1', fontWeight: '600' },
   checkmark: { fontSize: 18, color: '#6366f1', fontWeight: 'bold', position: 'absolute', right: 10 },
+  
+  // Estilos para tabs unificados
+  tabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+    paddingHorizontal: 16,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderBottomWidth: 3,
+    borderBottomColor: 'transparent',
+  },
+  tabActive: {
+    borderBottomColor: '#6366f1',
+  },
+  tabText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  tabTextActive: {
+    color: '#6366f1',
+    fontWeight: '700',
+  },
+  requestsContainer: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  publishButton: {
+    backgroundColor: '#6366f1',
+    marginHorizontal: 16,
+    marginVertical: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  publishButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });

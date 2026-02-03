@@ -594,7 +594,9 @@
 
         card.innerHTML = `
           <div class="checkmark">✓</div>
-          <div class="option-card-avatar">${proposal.avatar}</div>
+          <div class="option-card-avatar">
+            ${proposal.profileImageUrl ? `<img src="${proposal.profileImageUrl}" alt="Avatar" style="width:48px;height:48px;border-radius:50%;object-fit:cover;" />` : proposal.avatar}
+          </div>
           <div class="option-card-name">${proposal.name}</div>
           <div class="option-card-profession">${proposal.profession}</div>
           <div class="option-card-rating">⭐ ${proposal.rating.toFixed(1)} (${proposal.reviews} reseñas)</div>
@@ -616,6 +618,7 @@
         name: professional.display_name || 'Profesional',
         profession: professional.profession || 'Profesional',
         avatar: getAvatarForCategory(professional.profession),
+        profileImageUrl: professional.avatar_url || null,
         rating: rating,
         reviews: professional.rating_count || 0,
         bio: professional.bio || 'Profesional verificado en WorkingGo',
@@ -670,7 +673,9 @@
         optionDiv.onclick = () => selectProfessional(idx);
 
         optionDiv.innerHTML = `
-          <div class="option-avatar">${proposal.avatar}</div>
+          <div class="option-avatar">
+            ${proposal.profileImageUrl ? `<img src="${proposal.profileImageUrl}" alt="Avatar" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />` : proposal.avatar}
+          </div>
           <div class="option-info">
             <div class="option-name">${proposal.name}</div>
             <div class="option-profession">${proposal.profession}</div>
@@ -785,7 +790,8 @@
             rating_count,
             years_experience,
             completed_hires_count,
-            is_active
+            is_active,
+            avatar_url
           `)
           .eq('is_active', true)
           .order('rating', { ascending: false });

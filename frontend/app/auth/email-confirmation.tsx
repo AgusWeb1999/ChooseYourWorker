@@ -26,14 +26,39 @@ export default function EmailConfirmationScreen() {
     setLoading(true);
     setError(null);
     try {
+      console.log('🔄 Intentando reenviar email de confirmación a:', emailStr);
+      
+      // Primero intentar con resend de signup
       const { error: resendError } = await supabase.auth.resend({ 
         type: 'signup', 
         email: emailStr 
       });
-      if (resendError) throw resendError;
+      
+      if (resendError) {
+        console.error('❌ Error en resend:', resendError);
+        
+        // Si falla, intentar actualizar el email del usuario (esto fuerza un nuevo envío)
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          console.log('🔄 Intentando actualizar email para forzar reenvío...');
+          const { error: updateError } = await supabase.auth.updateUser({ 
+            email: emailStr 
+          });
+          
+          if (updateError) {
+            throw new Error('No se pudo reenviar el correo. Por favor, cierra sesión y regístrate de nuevo.');
+          }
+        } else {
+          throw resendError;
+        }
+      }
+      
+      console.log('✅ Email de confirmación reenviado exitosamente');
       setResent(true);
+      setTimeout(() => setResent(false), 5000); // Reset después de 5 segundos
     } catch (err: any) {
-      setError(err.message || 'Error al reenviar el correo');
+      console.error('❌ Error al reenviar correo:', err);
+      setError(err.message || 'Error al reenviar el correo. Intenta cerrar sesión y registrarte nuevamente.');
     } finally {
       setLoading(false);
     }

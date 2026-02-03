@@ -48,6 +48,8 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
         .select(`
           id, created_at, status, proposal_message, client_id, professional_id,
           started_at, completed_at, accepted_at,
+          guest_client_email, guest_client_phone, guest_client_name,
+          service_description, service_category, service_location,
           client:client_id ( id, full_name, email, phone, address )
         `)
         .eq('professional_id', professionalId)
@@ -74,31 +76,21 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
         const isContactVisible = ['accepted', 'in_progress', 'waiting_client_approval', 'completed'].includes(item.status);
         const review = reviewsMap.get(item.id);
         
-        // Debug logging MÁS detallado para entender el problema
-        console.log('🔍 Debug Job COMPLETO:', {
-          id: item.id,
-          status: item.status,
-          client_id: item.client_id,
-          isContactVisible,
-          'client OBJECT': item.client,
-          'client.phone DIRECTO': item.client?.phone,
-          'client keys': item.client ? Object.keys(item.client) : 'NO CLIENT',
-          'phone type': typeof item.client?.phone,
-          'phone value': item.client?.phone ? `"${item.client.phone}"` : 'NULL/UNDEFINED'
-        });
+        // Determinar si es invitado o cliente registrado
+        const isGuest = !item.client_id && item.guest_client_email;
         
         return {
           id: item.id,
           created_at: item.created_at,
           client_id: item.client_id,
-          client_name: item.client?.full_name || 'Cliente',
-          client_email: isContactVisible ? item.client?.email : undefined,
+          client_name: isGuest ? (item.guest_client_name || 'Cliente invitado') : (item.client?.full_name || 'Cliente'),
+          client_email: isContactVisible ? (isGuest ? item.guest_client_email : item.client?.email) : undefined,
           status: item.status,
           service_date: item.started_at || item.accepted_at || item.created_at,
-          notes: '',
+          notes: item.service_description || '',
           proposal_message: item.proposal_message || '',
           client_contact_visible: isContactVisible,
-          client_phone: isContactVisible ? item.client?.phone : undefined,
+          client_phone: isContactVisible ? (isGuest ? item.guest_client_phone : item.client?.phone) : undefined,
           client_address: isContactVisible ? item.client?.address : undefined,
           rating: review?.rating,
           review: review?.comment,
@@ -238,8 +230,23 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
 
       if (updateError) throw updateError;
 
-      // Crear notificación
-      if (job) {
+      // Verificar si es un invitado (tiene guest_client_email)
+      if (job?.guest_client_email) {
+        // Es un invitado, enviar email en lugar de notificación
+        const frontendUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
+        const { error: emailError } = await supabase.functions.invoke('send-email', {
+          body: {
+            type: 'completion_requested_guest',
+            hireId: jobId,
+            frontendUrl
+          }
+        });
+
+        if (emailError) {
+          console.warn('Aviso: Email no enviado (pero trabajo se marcó como completado)', emailError);
+        }
+      } else if (job?.client_id) {
+        // Es un usuario registrado, crear notificación
         const { error: notifError } = await supabase.from('notifications').insert({
           type: 'trabajo_completado',
           user_id: job.client_id,
