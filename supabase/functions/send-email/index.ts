@@ -408,12 +408,12 @@ function getGuestContactClientTemplate(
   serviceCategory?: string,
   serviceDescription?: string,
   serviceLocation?: string,
-  profileUrl?: string,
+  baseUrl?: string,
   reviewToken?: string
 ) {
-  const baseUrl = Deno.env.get('FRONTEND_URL') || 'https://workinggo.com';
+  const finalBaseUrl = baseUrl || Deno.env.get('FRONTEND_URL') || 'https://workinggo.com';
   const reviewUrl = reviewToken 
-    ? `${baseUrl.replace(/\/$/, '')}/review/${reviewToken}`
+    ? `${finalBaseUrl.replace(/\/$/, '')}/review/${reviewToken}`
     : null;
 
   return {
@@ -990,7 +990,7 @@ Deno.serve(async (req) => {
           serviceCategory,
           serviceDescription,
           serviceLocation,
-          undefined,
+          baseUrl,
           hire.review_token
         );
 
