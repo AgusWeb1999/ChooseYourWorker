@@ -450,9 +450,8 @@ export default function RegisterScreen() {
               years_experience: yearsExperience ? parseInt(yearsExperience) : null
             } : {})
           },
-          emailRedirectTo: Platform.OS === 'web' 
-            ? `${window.location.origin}/auth/email-verified`
-            : 'workinggo://auth/email-verified'
+          // ✅ AUTO-VERIFICAR EMAIL (sin necesidad de verificación manual)
+          emailRedirectTo: undefined // No se necesita redirección
         }
       });
       
@@ -548,8 +547,8 @@ export default function RegisterScreen() {
           }
         }
         
-        // ACTUALIZAR tabla users con todos los datos personales
-        console.log('📝 Actualizando datos de usuario...');
+        // ACTUALIZAR tabla users con todos los datos personales + email_verified
+        console.log('📝 Actualizando datos de usuario y marcando email como verificado...');
         const { error: updateError } = await supabase
           .from('users')
           .update({
@@ -560,59 +559,37 @@ export default function RegisterScreen() {
             department: department || null,
             city: city,
             barrio: barrio,
-            is_professional: userType === 'worker'
+            is_professional: userType === 'worker',
+            email_verified: true, // ✅ Verificación automática
+            is_active: true // Activar cuenta inmediatamente
           })
           .eq('id', userId);
         
         if (updateError) {
           console.error('❌ Error actualizando datos de usuario:', updateError);
         } else {
-          console.log('✅ Datos de usuario actualizados correctamente');
+          console.log('✅ Datos de usuario actualizados correctamente (email auto-verificado)');
         }
         
-        // Guardar datos del usuario en localStorage para usarlos después de confirmar email
-        if (Platform.OS === 'web') {
-          const pendingUserData = {
-            userId,
-            email: normalizedEmail,
-            fullName,
-            userType,
-            phone: normalizedPhone,
-            idNumber: normalizedIdNumber,
-            country,
-            province,
-            department,
-            city,
-            barrio,
-            ...(userType === 'worker' ? {
-              displayName,
-              profession: profession === 'Otro' ? customProfession : profession,
-              bio,
-              hourlyRate,
-              yearsExperience
-            } : {})
-          };
-          localStorage.setItem('pending_user_data', JSON.stringify(pendingUserData));
-        }
+        // ✅ REGISTRO EXITOSO - Redirigir directamente a la app
+        console.log('✅ Cuenta creada y verificada exitosamente, redirigiendo...');
         
-        // Cerrar sesión y redirigir a confirmación de email
-        await supabase.auth.signOut();
-        
-        console.log('✅ Cuenta creada exitosamente, redirigiendo a confirmación de email...');
-        
-        // Redirigir inmediatamente con el email como parámetro
-        router.replace({ 
-          pathname: '/auth/email-confirmation' as any, 
-          params: { email: normalizedEmail } 
-        });
-        
-        // Mostrar alerta después de redirigir (no bloqueante)
-        setTimeout(() => {
-          Alert.alert(
-            '¡Cuenta creada!',
-            'Te hemos enviado un correo de confirmación. Por favor, verifica tu email antes de continuar.'
-          );
-        }, 100);
+        // Mostrar mensaje de éxito
+        Alert.alert(
+          '¡Bienvenido! 🎉',
+          userType === 'worker' 
+            ? 'Tu cuenta profesional ha sido creada exitosamente. Ya puedes empezar a recibir solicitudes de clientes.'
+            : 'Tu cuenta ha sido creada exitosamente. Ya puedes buscar profesionales.',
+          [
+            { 
+              text: 'Continuar', 
+              onPress: () => {
+                // Refrescar sesión y redirigir a tabs
+                router.replace('/(tabs)' as any);
+              }
+            }
+          ]
+        );
         
         return;
       }

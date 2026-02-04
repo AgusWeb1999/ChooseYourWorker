@@ -28,8 +28,8 @@ Debes ver al final del script:
 
 ## 🧪 Probar la App
 
-1. Ir a `/auth/welcome` SIN estar logueado
-2. Click "Buscar Profesionales"
+1. Ir a `/auth/login` SIN estar logueado
+2. Completar el formulario "¿Qué necesitás?"
 3. Completar descripción del servicio
 4. Seleccionar timing
 5. Ver profesionales con portfolios

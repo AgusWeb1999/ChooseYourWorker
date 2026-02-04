@@ -12,6 +12,7 @@ interface Job {
   client_id: string;
   client_name: string;
   client_email?: string;
+  guest_client_email?: string; // Para detectar si es invitado
   status: 'pending' | 'accepted' | 'rejected' | 'in_progress' | 'completed' | 'waiting_client_approval' | 'cancelled';
   service_date: string;
   notes: string;
@@ -85,6 +86,7 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
           client_id: item.client_id,
           client_name: isGuest ? (item.guest_client_name || 'Cliente invitado') : (item.client?.full_name || 'Cliente'),
           client_email: isContactVisible ? (isGuest ? item.guest_client_email : item.client?.email) : undefined,
+          guest_client_email: item.guest_client_email, // Importante: guardar para detectar invitados
           status: item.status,
           service_date: item.started_at || item.accepted_at || item.created_at,
           notes: item.service_description || '',
@@ -150,8 +152,32 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
 
       if (updateError) throw updateError;
 
-      // Crear notificación
-      if (job) {
+      // Obtener datos completos del hire para verificar si es invitado
+      const { data: hireData } = await supabase
+        .from('hires')
+        .select('guest_client_email, client_id')
+        .eq('id', jobId)
+        .single();
+
+      // Verificar si es un invitado (tiene guest_client_email)
+      if (hireData?.guest_client_email && !hireData?.client_id) {
+        // Es un invitado, enviar email con datos del profesional
+        const frontendUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
+        const { error: emailError } = await supabase.functions.invoke('send-email', {
+          body: {
+            type: 'guest_contact',
+            hireId: jobId,
+            frontendUrl
+          }
+        });
+
+        if (emailError) {
+          console.warn('Aviso: Email no enviado al invitado (pero trabajo se aceptó)', emailError);
+        } else {
+          console.log('✅ Email de contacto enviado al cliente invitado');
+        }
+      } else if (job?.client_id) {
+        // Es un usuario registrado, crear notificación
         const { error: notifError } = await supabase.from('notifications').insert({
           type: 'solicitud_aceptada',
           user_id: job.client_id,

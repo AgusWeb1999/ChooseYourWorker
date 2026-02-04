@@ -100,7 +100,7 @@ export default function GuestReviewPage() {
 
     try {
       // Insertar review
-      const { error: reviewError } = await supabase
+      const { data: reviewData, error: reviewError } = await supabase
         .from('reviews')
         .insert({
           professional_id: hire.professional_id,
@@ -109,17 +109,41 @@ export default function GuestReviewPage() {
           comment: comment.trim() || null,
           is_guest_review: true,
           guest_reviewer_name: hire.guest_client_name,
-        });
+        })
+        .select('id')
+        .single();
 
       if (reviewError) throw reviewError;
 
-      // Marcar como reviewed
+      // Marcar como reviewed y completado
       const { error: updateError } = await supabase
         .from('hires')
-        .update({ reviewed_by_guest: true })
+        .update({ 
+          reviewed_by_guest: true,
+          status: 'completed',
+          completed_at: new Date().toISOString()
+        })
         .eq('review_token', token);
 
       if (updateError) throw updateError;
+
+      // Enviar email al profesional notificándole de la nueva reseña
+      if (reviewData?.id) {
+        const frontendUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
+        const { error: emailError } = await supabase.functions.invoke('send-email', {
+          body: {
+            type: 'new_review',
+            reviewId: reviewData.id,
+            frontendUrl
+          }
+        });
+
+        if (emailError) {
+          console.warn('Aviso: Email no enviado al profesional (pero reseña se guardó)', emailError);
+        } else {
+          console.log('✅ Email de nueva reseña enviado al profesional');
+        }
+      }
 
       setSuccess(true);
     } catch (err) {

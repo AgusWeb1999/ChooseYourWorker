@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Modal, ScrollView, TextInput, Image } from 'react-native';
+import { router } from 'expo-router';
 import { supabase } from '../src/lib/supabase';
 import { useAuth } from '../src/contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -11,7 +12,8 @@ interface OpenRequest {
   service_category: string;
   service_location: string;
   proposal_message?: string;
-  client: {
+  client_id: string;
+  users?: {
     full_name: string;
     city?: string;
   }[];
@@ -37,7 +39,6 @@ export default function OpenRequests({ onRefresh }: OpenRequestsProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const { userProfile, user, professionalProfile } = useAuth();
   const { showToast } = useToast();
-  const [respondingId, setRespondingId] = useState<string | null>(null);
   
   // Estados para el modal de finalización
   const [showCompletionModal, setShowCompletionModal] = useState(false);
@@ -78,7 +79,7 @@ export default function OpenRequests({ onRefresh }: OpenRequestsProps) {
           proposal_message,
           status,
           client_id,
-          client:client_id (
+          users!hires_client_id_fkey (
             full_name,
             city
           )
@@ -127,49 +128,6 @@ export default function OpenRequests({ onRefresh }: OpenRequestsProps) {
     await fetchOpenRequests();
     setRefreshing(false);
     onRefresh?.();
-  }
-
-  async function handleRespondToRequest(requestId: string) {
-    if (!professionalProfile?.id || userProfile?.is_professional !== true) {
-      showToast('Solo los profesionales pueden responder', 'error');
-      return;
-    }
-
-    setRespondingId(requestId);
-
-    try {
-      const { error } = await supabase
-        .from('hires')
-        .update({
-          professional_id: professionalProfile.id,
-          status: 'accepted',
-          accepted_at: new Date().toISOString(),
-        })
-        .eq('id', requestId)
-        .is('professional_id', null);
-
-      if (error) throw error;
-
-      const { error: emailError } = await supabase.functions.invoke('send-email', {
-        body: {
-          type: 'proposal_accepted',
-          hireId: requestId,
-        },
-      });
-
-      if (emailError) {
-        console.error('Error enviando email al cliente:', emailError);
-      }
-
-      showToast('Contacto enviado al cliente', 'success');
-      fetchOpenRequests();
-      onRefresh?.();
-    } catch (err) {
-      console.error('Error al responder solicitud:', err);
-      showToast('No se pudo compartir tu contacto. Intenta de nuevo.', 'error');
-    } finally {
-      setRespondingId(null);
-    }
   }
 
   async function handleCancelRequest(requestId: string) {
@@ -348,7 +306,7 @@ export default function OpenRequests({ onRefresh }: OpenRequestsProps) {
           </View>
 
           {isProfessional && (
-            <Text style={styles.clientName}>👤 {item.client?.[0]?.full_name || 'Cliente'}</Text>
+            <Text style={styles.clientName}>👤 {item.users?.[0]?.full_name || 'Cliente'}</Text>
           )}
           
           <Text style={styles.description} numberOfLines={3}>
@@ -357,19 +315,14 @@ export default function OpenRequests({ onRefresh }: OpenRequestsProps) {
 
           <View style={styles.cardFooter}>
             <Text style={styles.location}>
-              📍 {item.service_location || item.client?.[0]?.city || 'Ubicación no especificada'}
+              📍 {item.service_location || item.users?.[0]?.city || 'Ubicación no especificada'}
             </Text>
             {isProfessional && (
               <TouchableOpacity
-                style={[styles.respondButton, respondingId === item.id && { opacity: 0.6 }]}
-                onPress={() => handleRespondToRequest(item.id)}
-                disabled={respondingId === item.id}
+                style={styles.messageButton}
+                onPress={() => router.push(`/chat/${item.client_id}` as any)}
               >
-                {respondingId === item.id ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.respondButtonText}>Responder</Text>
-                )}
+                <Text style={styles.messageButtonText}>💬 Mensaje</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -740,13 +693,13 @@ const styles = StyleSheet.create({
     color: '#64748b',
     flex: 1,
   },
-  respondButton: {
-    backgroundColor: '#6366f1',
-    paddingHorizontal: 16,
+  messageButton: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
   },
-  respondButtonText: {
+  messageButtonText: {
     color: '#fff',
     fontSize: 13,
     fontWeight: '600',

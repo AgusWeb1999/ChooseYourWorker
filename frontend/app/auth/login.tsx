@@ -4,6 +4,9 @@ import Head from 'expo-router/head';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, Image, ScrollView, KeyboardAvoidingView, Platform, Linking, Modal } from 'react-native';
 import { Link, router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
+import { DEPARTAMENTOS_URUGUAY, getCiudadesPorDepartamento } from '../../utils/uruguayData';
+import { getBarriosPorCiudad, Barrio } from '../../utils/barrios';
+import QuickServiceFlow from '../../components/QuickServiceFlow';
 
 interface ProfessionalPreview {
   id: string;
@@ -13,7 +16,52 @@ interface ProfessionalPreview {
   avatar_url: string | null;
 }
 
+const CATEGORIES = [
+  'Sanitario', 'Electricista', 'Plomero', 'Albañil', 'Pintor', 'Carpintero',
+  'Mecánico', 'Jardinero', 'Limpieza', 'Mudanzas', 'Cerrajero', 'Gasista',
+  'Techista', 'Decorador', 'Control de Plagas', 'Chofer', 'Niñera', 'Cuidador',
+  'Cocinero', 'Peluquero', 'Masajista', 'Fotógrafo', 'Diseñador Gráfico',
+  'Programador', 'Profesor Particular', 'Entrenador Personal', 'Otro'
+];
+
+const CATEGORY_PLACEHOLDERS: { [key: string]: string } = {
+  'Sanitario': 'Necesito reparar una pérdida de agua en el baño. El agua sale por debajo del lavabo...',
+  'Electricista': 'Necesito instalar un enchufe nuevo en el living. Tengo el material pero no sé cómo conectarlo...',
+  'Plomero': 'Se tapó el desagüe de la cocina y el agua no baja. Ya probé con destapador pero no funcionó...',
+  'Albañil': 'Necesito reparar una pared que tiene humedad y está descascarada. Es una pared exterior...',
+  'Pintor': 'Quiero pintar dos habitaciones de mi casa. Las paredes ya están preparadas...',
+  'Carpintero': 'Necesito hacer un placard a medida para el dormitorio. El espacio es de 2m x 2.5m...',
+  'Mecánico': 'Mi auto hace un ruido extraño al frenar. Creo que puede ser un problema con las pastillas...',
+  'Jardinero': 'Necesito que corten el césped y poden algunos árboles del jardín. Hace meses que no se mantiene...',
+  'Limpieza': 'Necesito una limpieza profunda de mi apartamento de 2 dormitorios antes de mudarme...',
+  'Mudanzas': 'Necesito mudar un apartamento de 1 dormitorio. Tengo algunos muebles grandes y cajas...',
+  'Cerrajero': 'Se trabó la cerradura de la puerta de entrada y no puedo abrir. La llave gira pero no abre...',
+  'Gasista': 'Necesito instalar una estufa a gas en el living. Ya tengo la salida de gas preparada...',
+  'Techista': 'Tengo goteras en el techo cuando llueve. Necesito que revisen las tejas y reparen...',
+  'Decorador': 'Quiero redecorar mi living. Necesito asesoramiento con colores, muebles y distribución...',
+  'Control de Plagas': 'Tengo hormigas en la cocina y necesito una fumigación. El problema viene hace semanas...',
+  'Chofer': 'Necesito un chofer para llevarme al aeropuerto el próximo viernes a las 6 AM...',
+  'Niñera': 'Busco niñera para cuidar a mi hijo de 5 años los martes y jueves de 14 a 18hs...',
+  'Cuidador': 'Necesito alguien que cuide a mi madre adulta mayor durante la mañana. Ella tiene movilidad reducida...',
+  'Cocinero': 'Necesito un cocinero para preparar la comida de un evento familiar de 20 personas...',
+  'Peluquero': 'Necesito corte de cabello y barba a domicilio. Prefiero que traiga sus propias herramientas...',
+  'Masajista': 'Busco masajista para sesiones de relajación a domicilio. Tengo tensión en cuello y espalda...',
+  'Fotógrafo': 'Necesito un fotógrafo para una sesión de fotos familiares el próximo domingo...',
+  'Diseñador Gráfico': 'Necesito diseñar un logo para mi nuevo emprendimiento. Tengo algunas ideas del estilo que busco...',
+  'Programador': 'Necesito desarrollar una página web para mi negocio. Debe tener catálogo de productos y formulario de contacto...',
+  'Profesor Particular': 'Busco profesor particular de matemática para mi hijo que está en 1er año de liceo...',
+  'Entrenador Personal': 'Necesito un entrenador personal para hacer ejercicio 3 veces por semana. Mi objetivo es tonificar...',
+};
+
 export default function LoginScreen() {
+  // Estado para controlar si muestra el flujo sin cuenta o formulario de login directo
+  const [showQuickFlow, setShowQuickFlow] = useState(false);
+  const [showAuthForm, setShowAuthForm] = useState(false);
+  
+  // Ref para rastrear si el componente está montado
+  const isMountedRef = useRef(true);
+  
+  // Auth form states
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,6 +76,50 @@ export default function LoginScreen() {
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const [cardsPerView, setCardsPerView] = useState(3);
   const [cardWidth, setCardWidth] = useState(250);
+
+  // Estados del formulario de servicio rápido
+  const [category, setCategory] = useState('');
+  const [categorySearch, setCategorySearch] = useState('');
+  const [description, setDescription] = useState('');
+  const [showCategories, setShowCategories] = useState(false);
+
+  // Ubicación
+  const [department, setDepartment] = useState('');
+  const [city, setCity] = useState('');
+  const [barrio, setBarrio] = useState('');
+  const [cityList, setCityList] = useState<{id:string, nombre:string}[]>([]);
+  const [barrioList, setBarrioList] = useState<Barrio[]>([]);
+  const [departmentModalVisible, setDepartmentModalVisible] = useState(false);
+  const [cityModalVisible, setCityModalVisible] = useState(false);
+  const [barrioModalVisible, setBarrioModalVisible] = useState(false);
+
+  // useEffect para cargar ciudades cuando se selecciona departamento
+  useEffect(() => {
+    if (department) {
+      const ciudades = getCiudadesPorDepartamento(department);
+      setCityList(ciudades);
+      setCity('');
+      setBarrio('');
+      setBarrioList([]);
+    }
+  }, [department]);
+
+  // useEffect para cargar barrios cuando se selecciona ciudad
+  useEffect(() => {
+    if (city) {
+      const barrios = getBarriosPorCiudad(city);
+      setBarrioList(barrios);
+      setBarrio('');
+    }
+  }, [city]);
+
+  // useEffect para limpiar cuando el componente se desmonta
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Responsive: ajustar cards por view y ancho de card
   useEffect(() => {
@@ -56,6 +148,7 @@ export default function LoginScreen() {
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
     // Traer 12 profesionales random/top-rated para preview
     (async () => {
       const { data, error } = await supabase
@@ -63,16 +156,23 @@ export default function LoginScreen() {
         .select('id, display_name, profession, city, avatar_url')
         .order('rating', { ascending: false })
         .limit(12);
-      if (!error && data) setProfessionals(data);
+      if (!error && data && isMounted) {
+        setProfessionals(data);
+      }
     })();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Carousel paginado: muestra un set de cards centradas, reemplaza el set completo al avanzar
   // Fade animation on card change
   useEffect(() => {
     if (professionals.length <= cardsPerView) return;
+    
+    let animationRef: any = null;
     const interval = setInterval(() => {
-      Animated.sequence([
+      animationRef = Animated.sequence([
         Animated.timing(fadeAnim, {
           toValue: 0,
           duration: 350,
@@ -89,7 +189,13 @@ export default function LoginScreen() {
         return prev >= maxIndex ? 0 : prev + 1;
       });
     }, 5000);
-    return () => clearInterval(interval);
+    
+    return () => {
+      clearInterval(interval);
+      if (animationRef) {
+        fadeAnim.stopAnimation();
+      }
+    };
   }, [professionals, cardsPerView, fadeAnim]);
 
   async function handleLogin() {
@@ -143,6 +249,8 @@ export default function LoginScreen() {
       password,
     });
 
+    if (!isMountedRef.current) return;
+
     if (error) {
       // Mensajes de error más claros y amigables
       let errorMessage = 'Usuario o contraseña incorrecto';
@@ -158,10 +266,12 @@ export default function LoginScreen() {
         
         // Redirigir a pantalla de confirmación después de mostrar el error
         setTimeout(() => {
-          router.push({ 
-            pathname: '/auth/email-confirmation', 
-            params: { email } 
-          });
+          if (isMountedRef.current) {
+            router.push({ 
+              pathname: '/auth/email-confirmation', 
+              params: { email } 
+            });
+          }
         }, 2000);
       } else if (error.message.includes('User not found')) {
         errorMessage = 'Usuario no encontrado';
@@ -206,6 +316,30 @@ export default function LoginScreen() {
     }
   }
 
+  // Si el usuario activa el flujo sin cuenta, mostrar QuickServiceFlow
+  if (showQuickFlow) {
+    return (
+      <QuickServiceFlow
+        initialData={{
+          category,
+          description,
+          department,
+          city,
+          barrio
+        }}
+        onComplete={() => {
+          // Al completar el flujo sin cuenta, redirigir a registro
+          router.push('/auth/register');
+        }}
+        onSkip={() => {
+          // Si omite, volver a la pantalla principal o mostrar login
+          setShowQuickFlow(false);
+          setShowAuthForm(true);
+        }}
+      />
+    );
+  }
+
   return (
     <>
       <Head>
@@ -228,24 +362,38 @@ export default function LoginScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* LOGO CENTRADO Y MÁS ESPACIO */}
-            <View style={{ alignItems: 'center', marginTop: 40, marginBottom: 24 }}>
-              <Image 
-                source={require('../../assets/images/icon.png')} 
-                style={{ width: 150, height: 150, marginBottom: 24 }}
-                resizeMode="contain"
-              />
+            {/* HEADER CON GRADIENTE */}
+            <View style={styles.heroSection}>
+              <View style={styles.heroContent}>
+                <Image 
+                  source={require('../../assets/images/icon.png')} 
+                  style={styles.heroLogo}
+                  resizeMode="contain"
+                />
+                <Text style={styles.heroTitle}>
+                  ✨ Encontrá al profesional que necesitás
+                </Text>
+                <Text style={styles.heroSubtitle}>
+                  Miles de profesionales verificados listos para ayudarte
+                </Text>
+                <View style={styles.heroBadges}>
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeIcon}>✅</Text>
+                    <Text style={styles.badgeText}>Verificados</Text>
+                  </View>
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeIcon}>⭐</Text>
+                    <Text style={styles.badgeText}>Top rated</Text>
+                  </View>
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeIcon}>💬</Text>
+                    <Text style={styles.badgeText}>Chat directo</Text>
+                  </View>
+                </View>
+              </View>
             </View>
-            {/* TITULO Y FRASE INTRODUCTORIA CENTRADOS Y MÁS ESPACIO */}
-            <View style={{ alignItems: 'center', marginBottom: 18, maxWidth: 500 }}>
-              <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#6366f1', marginBottom: 14, textAlign: 'center' }}>
-                Bienvenido a WorkingGo
-              </Text>
-              <Text style={{ fontSize: 17, color: '#334155', marginBottom: 12, textAlign: 'center' }}>
-                Encontrá profesionales verificados para tu hogar, empresa o proyecto. Mirá algunos de los trabajadores disponibles y registrate o iniciá sesión para contactar o publicar tu servicio.
-              </Text>
-            </View>
-            {/* PREVIEW PROFESIONALES - CARRUSEL DE 3 */}
+            
+            {/* PREVIEW PROFESIONALES - CARRUSEL */}
             <View style={[styles.previewSection, { alignItems: 'center', width: '100%' }]}> 
               <Text style={[styles.previewTitle, { textAlign: 'center', alignSelf: 'center', marginLeft: 0 }]}>Conocé algunos profesionales disponibles</Text>
               <Animated.View style={{ width: cardWidth * cardsPerView + 32, alignSelf: 'center', maxWidth: '100%', flexDirection: 'row', justifyContent: 'center', opacity: fadeAnim }}>
@@ -270,15 +418,209 @@ export default function LoginScreen() {
                     </View>
                   ))}
               </Animated.View>
-              <View style={styles.ctaRow}>
-                <TouchableOpacity style={styles.ctaButton} onPress={() => setShowLoginModal(true)}>
-                  <Text style={styles.ctaButtonText}>Buscar trabajadores</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.ctaButton, styles.ctaButtonOutline]} onPress={() => setShowLoginModal(true)}>
-                  <Text style={[styles.ctaButtonText, styles.ctaButtonOutlineText]}>Publicar mi servicio</Text>
-                </TouchableOpacity>
-              </View>
             </View>
+
+            {/* FORMULARIO DE SERVICIO RÁPIDO */}
+            <View style={styles.formSection}>
+              <View style={styles.formHeader}>
+                <Text style={styles.formTitle}>
+                  🔍 ¿Qué necesitás?
+                </Text>
+                <Text style={styles.formSubtitle}>
+                  Contanos qué problema querés resolver y te conectamos con los mejores profesionales
+                </Text>
+              </View>
+
+              {/* Categoría del servicio */}
+              <Text style={styles.label}>Categoría del servicio</Text>
+              <TouchableOpacity 
+                style={styles.selectButton}
+                onPress={() => setShowCategories(!showCategories)}
+              >
+                <Text style={category ? styles.selectButtonTextSelected : styles.selectButtonText}>
+                  {category || 'Seleccionar categoría...'}
+                </Text>
+                <Text style={styles.selectButtonArrow}>{showCategories ? '▲' : '▼'}</Text>
+              </TouchableOpacity>
+
+              {showCategories && (
+                <View style={styles.categoriesContainer}>
+                  <TextInput
+                    style={styles.categorySearchInput}
+                    placeholder="🔍 Buscar categoría..."
+                    placeholderTextColor="#9ca3af"
+                    value={categorySearch}
+                    onChangeText={setCategorySearch}
+                    autoCapitalize="none"
+                  />
+                  <ScrollView style={styles.categoriesList} nestedScrollEnabled>
+                    {CATEGORIES
+                      .filter(cat => cat.toLowerCase().includes(categorySearch.toLowerCase()))
+                      .map((cat) => (
+                      <TouchableOpacity
+                        key={cat}
+                        style={styles.categoryItem}
+                        onPress={() => {
+                          setCategory(cat);
+                          setShowCategories(false);
+                          setCategorySearch('');
+                        }}
+                      >
+                        <Text style={styles.categoryItemText}>{cat}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* Descripción del problema */}
+              <Text style={styles.label}>Descripción del problema</Text>
+              <TextInput
+                style={[styles.textArea, description.length < 20 && description.length > 0 && styles.inputError]}
+                placeholder={category && CATEGORY_PLACEHOLDERS[category] ? CATEGORY_PLACEHOLDERS[category] : "Describe tu problema con detalle (mínimo 20 caracteres)..."}
+                placeholderTextColor="#9ca3af"
+                value={description}
+                onChangeText={setDescription}
+                multiline
+                numberOfLines={4}
+                maxLength={500}
+              />
+              <Text style={styles.charCount}>{description.length}/500 caracteres (mínimo 20)</Text>
+
+              {/* Ubicación */}
+              <Text style={styles.label}>Ubicación</Text>
+              <TouchableOpacity 
+                style={styles.selectButton}
+                onPress={() => setDepartmentModalVisible(true)}
+              >
+                <Text style={department ? styles.selectButtonTextSelected : styles.selectButtonText}>
+                  {department 
+                    ? DEPARTAMENTOS_URUGUAY.find(d => d.id === department)?.nombre || department
+                    : 'Seleccionar departamento...'}
+                </Text>
+                <Text style={styles.selectButtonArrow}>▼</Text>
+              </TouchableOpacity>
+
+              {department && (
+                <TouchableOpacity 
+                  style={[styles.selectButton, { marginTop: 12 }]}
+                  onPress={() => setCityModalVisible(true)}
+                >
+                  <Text style={city ? styles.selectButtonTextSelected : styles.selectButtonText}>
+                    {city 
+                      ? cityList.find(c => c.id === city)?.nombre || city
+                      : 'Seleccionar ciudad...'}
+                  </Text>
+                  <Text style={styles.selectButtonArrow}>▼</Text>
+                </TouchableOpacity>
+              )}
+
+              {city && barrioList.length > 0 && (
+                <TouchableOpacity 
+                  style={[styles.selectButton, { marginTop: 12 }]}
+                  onPress={() => setBarrioModalVisible(true)}
+                >
+                  <Text style={barrio ? styles.selectButtonTextSelected : styles.selectButtonText}>
+                    {barrio 
+                      ? barrioList.find(b => b.id === barrio)?.nombre || barrio
+                      : 'Seleccionar barrio (opcional)...'}
+                  </Text>
+                  <Text style={styles.selectButtonArrow}>▼</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Botón de búsqueda */}
+              <TouchableOpacity 
+                style={[styles.searchButton, (!category || description.length < 20 || !department || !city) && styles.searchButtonDisabled]}
+                onPress={() => {
+                  if (!category || description.length < 20 || !department || !city) {
+                    Alert.alert('Campos incompletos', 'Por favor completa todos los campos para continuar');
+                    return;
+                  }
+                  // Activar el flujo sin cuenta con los datos pre-cargados
+                  setShowQuickFlow(true);
+                }}
+              >
+                <Text style={styles.searchButtonText}>Buscar profesionales</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* MODALES DE UBICACIÓN */}
+            <Modal visible={departmentModalVisible} animationType="slide" transparent onRequestClose={() => setDepartmentModalVisible(false)}>
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>Seleccionar Departamento</Text>
+                  <ScrollView style={styles.modalScroll}>
+                    {DEPARTAMENTOS_URUGUAY.map((dept) => (
+                      <TouchableOpacity
+                        key={dept.id}
+                        style={styles.modalItem}
+                        onPress={() => {
+                          setDepartment(dept.id);
+                          setDepartmentModalVisible(false);
+                        }}
+                      >
+                        <Text style={styles.modalItemText}>{dept.nombre}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  <TouchableOpacity style={styles.modalCloseButton} onPress={() => setDepartmentModalVisible(false)}>
+                    <Text style={styles.modalCloseButtonText}>Cerrar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+
+            <Modal visible={cityModalVisible} animationType="slide" transparent onRequestClose={() => setCityModalVisible(false)}>
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>Seleccionar Ciudad</Text>
+                  <ScrollView style={styles.modalScroll}>
+                    {cityList.map((c) => (
+                      <TouchableOpacity
+                        key={c.id}
+                        style={styles.modalItem}
+                        onPress={() => {
+                          setCity(c.id);
+                          setCityModalVisible(false);
+                        }}
+                      >
+                        <Text style={styles.modalItemText}>{c.nombre}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  <TouchableOpacity style={styles.modalCloseButton} onPress={() => setCityModalVisible(false)}>
+                    <Text style={styles.modalCloseButtonText}>Cerrar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+
+            <Modal visible={barrioModalVisible} animationType="slide" transparent onRequestClose={() => setBarrioModalVisible(false)}>
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>Seleccionar Barrio</Text>
+                  <ScrollView style={styles.modalScroll}>
+                    {barrioList.map((b) => (
+                      <TouchableOpacity
+                        key={b.id}
+                        style={styles.modalItem}
+                        onPress={() => {
+                          setBarrio(b.id);
+                          setBarrioModalVisible(false);
+                        }}
+                      >
+                        <Text style={styles.modalItemText}>{b.nombre}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  <TouchableOpacity style={styles.modalCloseButton} onPress={() => setBarrioModalVisible(false)}>
+                    <Text style={styles.modalCloseButtonText}>Cerrar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+
             {/* MODAL LOGIN WALL */}
             <Modal visible={showLoginModal} animationType="fade" transparent onRequestClose={() => setShowLoginModal(false)}>
               <View style={styles.modalOverlay}>
@@ -290,99 +632,134 @@ export default function LoginScreen() {
                 </View>
               </View>
             </Modal>
-            {/* LOGIN FORM CENTRADO */}
-            <View style={{ maxWidth: 400, marginTop: 16, width: '100%', alignSelf: 'center' }}>
-              <View style={styles.container}>
-                <Text style={[styles.subtitle, { textAlign: 'center' }]}>Iniciá sesión en tu cuenta</Text>
-                {errorMsg ? (
-                  <View style={styles.errorBox}>
-                    <Text style={styles.errorText}>{errorMsg}</Text>
-                  </View>
-                ) : null}
-                <TextInput
-                  style={[styles.input, errors.email && styles.inputError]}
-                  placeholder="Email"
-                  placeholderTextColor="#999"
-                  value={email}
-                  onChangeText={(text) => {
-                    setEmail(text);
-                    if (errors.email) setErrors({ ...errors, email: undefined });
-                    setErrorMsg(null);
-                  }}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-                <TextInput
-                  style={[styles.input, errors.password && styles.inputError]}
-                  placeholder="Contraseña"
-                  placeholderTextColor="#999"
-                  value={password}
-                  onChangeText={(text) => {
-                    setPassword(text);
-                    if (errors.password) setErrors({ ...errors, password: undefined });
-                    setErrorMsg(null);
-                  }}
-                  secureTextEntry
-                />
-                <View style={styles.termsContainer}>
-                  <TouchableOpacity
-                    style={styles.checkbox}
-                    onPress={() => setTermsAccepted(!termsAccepted)}
-                  >
-                    <View style={[styles.checkboxInner, termsAccepted && styles.checkboxChecked]}>
-                      {termsAccepted && <Text style={styles.checkmark}>✓</Text>}
+
+            {/* SEPARADOR */}
+            {showAuthForm && (
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+              </View>
+            )}
+
+            {/* LOGIN/REGISTRO FORM */}
+            {showAuthForm && (
+              <View style={{ maxWidth: 400, marginTop: 16, width: '100%', alignSelf: 'center' }}>
+                <View style={styles.container}>
+                  <Text style={[styles.subtitle, { textAlign: 'center' }]}>Para continuar, iniciá sesión o registrate</Text>
+                  {errorMsg ? (
+                    <View style={styles.errorBox}>
+                      <Text style={styles.errorText}>{errorMsg}</Text>
                     </View>
+                  ) : null}
+                  <TextInput
+                    style={[styles.input, errors.email && styles.inputError]}
+                    placeholder="Email"
+                    placeholderTextColor="#999"
+                    value={email}
+                    onChangeText={(text) => {
+                      setEmail(text);
+                      if (errors.email) setErrors({ ...errors, email: undefined });
+                      setErrorMsg(null);
+                    }}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                  <TextInput
+                    style={[styles.input, errors.password && styles.inputError]}
+                    placeholder="Contraseña"
+                    placeholderTextColor="#999"
+                    value={password}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      if (errors.password) setErrors({ ...errors, password: undefined });
+                      setErrorMsg(null);
+                    }}
+                    secureTextEntry
+                  />
+                  <View style={styles.termsContainer}>
+                    <TouchableOpacity
+                      style={styles.checkbox}
+                      onPress={() => setTermsAccepted(!termsAccepted)}
+                    >
+                      <View style={[styles.checkboxInner, termsAccepted && styles.checkboxChecked]}>
+                        {termsAccepted && <Text style={styles.checkmark}>✓</Text>}
+                      </View>
+                    </TouchableOpacity>
+                    <View style={styles.termsText}>
+                      <Text style={styles.termsLabel}>He leído y acepto los </Text>
+                      {/* @ts-ignore */}
+                      <Link href="/auth/terms-of-service" asChild>
+                        <TouchableOpacity>
+                          <Text style={styles.termsLink}>Términos de Servicio</Text>
+                        </TouchableOpacity>
+                      </Link>
+                    </View>
+                  </View>
+                  <TouchableOpacity 
+                    style={[styles.button, loading && styles.buttonDisabled]} 
+                    onPress={handleLogin}
+                    disabled={loading}
+                  >
+                    <Text style={styles.buttonText}>
+                      {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+                    </Text>
                   </TouchableOpacity>
-                  <View style={styles.termsText}>
-                    <Text style={styles.termsLabel}>He leído y acepto los </Text>
+                  <TouchableOpacity 
+                    style={styles.forgotPassword}
+                    onPress={() => router.push('/auth/forgot-password')}
+                  >
+                    <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
+                  </TouchableOpacity>
+                  <View style={styles.footer}>
+                    <Text style={styles.footerText}>¿No tenés cuenta? </Text>
                     {/* @ts-ignore */}
-                    <Link href="/auth/terms-of-service" asChild>
+                    <Link href="/auth/register" asChild>
                       <TouchableOpacity>
-                        <Text style={styles.termsLink}>Términos de Servicio</Text>
+                        <Text style={styles.link}>Registrate</Text>
                       </TouchableOpacity>
                     </Link>
                   </View>
+                  <TouchableOpacity 
+                    style={styles.supportLink}
+                    onPress={async () => {
+                      const url = 'mailto:workinggoam@gmail.com?subject=Consulta%20desde%20Login';
+                      const supported = await Linking.canOpenURL(url);
+                      if (supported) {
+                        await Linking.openURL(url);
+                      } else {
+                        Alert.alert('Error', 'No se pudo abrir la aplicación de correo.');
+                      }
+                    }}
+                  >
+                    <Text style={styles.supportLinkText}>¿Necesitas ayuda? Contacta soporte</Text>
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity 
-                  style={[styles.button, loading && styles.buttonDisabled]} 
-                  onPress={handleLogin}
-                  disabled={loading}
-                >
-                  <Text style={styles.buttonText}>
-                    {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.forgotPassword}
-                  onPress={() => router.push('/auth/forgot-password')}
-                >
-                  <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
-                </TouchableOpacity>
-                <View style={styles.footer}>
-                  <Text style={styles.footerText}>¿No tenés cuenta? </Text>
-                  {/* @ts-ignore */}
-                  <Link href="/auth/register" asChild>
-                    <TouchableOpacity>
-                      <Text style={styles.link}>Registrate</Text>
-                    </TouchableOpacity>
-                  </Link>
+              </View>
+            )}
+
+            {/* Si no mostró el auth form, mostrar botones de acción */}
+            {!showAuthForm && (
+              <View style={{ maxWidth: 500, marginTop: 32, width: '100%', alignSelf: 'center', paddingHorizontal: 20 }}>
+                <View style={styles.divider}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>o</Text>
+                  <View style={styles.dividerLine} />
                 </View>
-                <TouchableOpacity 
-                  style={styles.supportLink}
-                  onPress={async () => {
-                    const url = 'mailto:workinggoam@gmail.com?subject=Consulta%20desde%20Login';
-                    const supported = await Linking.canOpenURL(url);
-                    if (supported) {
-                      await Linking.openURL(url);
-                    } else {
-                      Alert.alert('Error', 'No se pudo abrir la aplicación de correo.');
-                    }
-                  }}
+                
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => setShowAuthForm(true)}
                 >
-                  <Text style={styles.supportLinkText}>¿Necesitas ayuda? Contacta soporte</Text>
+                  <Text style={styles.actionButtonText}>Ya tengo cuenta - Iniciar sesión</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.actionButtonOutline]}
+                  onPress={() => router.push('/auth/register')}
+                >
+                  <Text style={[styles.actionButtonText, styles.actionButtonOutlineText]}>Crear cuenta nueva</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            )}
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -391,14 +768,119 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
+  // Hero section con gradiente
+  heroSection: {
+    width: '100%',
+    backgroundColor: '#f0f9ff',
+    paddingTop: 40,
+    paddingBottom: 40,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  heroContent: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  heroLogo: {
+    width: 120,
+    height: 120,
+    marginBottom: 20,
+  },
+  heroTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginBottom: 12,
+    textAlign: 'center',
+    letterSpacing: -0.5,
+  },
+  heroSubtitle: {
+    fontSize: 17,
+    color: '#64748b',
+    marginBottom: 24,
+    textAlign: 'center',
+    maxWidth: 450,
+    lineHeight: 24,
+  },
+  heroBadges: {
+    flexDirection: 'row',
+    gap: 12,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  badgeIcon: {
+    fontSize: 16,
+  },
+  badgeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  // Form section
+  formSection: {
+    maxWidth: 550,
+    marginTop: 40,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: 20,
+    backgroundColor: 'white',
+    borderRadius: 24,
+    padding: 28,
+    marginHorizontal: 20,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#e0e7ff',
+  },
+  formHeader: {
+    alignItems: 'center',
+    marginBottom: 28,
+  },
+  formTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  formSubtitle: {
+    fontSize: 15,
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
   previewSection: {
     marginBottom: 32,
-    marginTop: 16,
+    marginTop: 24,
     alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 20,
   },
   previewTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#1e293b',
     marginBottom: 12,
     textAlign: 'center',
@@ -414,33 +896,35 @@ const styles = StyleSheet.create({
     minWidth: 160,
     maxWidth: 240,
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 12,
+    borderRadius: 20,
+    padding: 16,
     alignItems: 'center',
     marginRight: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: '#e0e7ef',
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
+    borderWidth: 2,
+    borderColor: '#f0f9ff',
     flexDirection: 'column',
     justifyContent: 'flex-start',
-    minHeight: 210,
-    maxHeight: 210,
+    minHeight: 220,
+    maxHeight: 220,
     flex: 1,
     overflow: 'hidden',
   },
   previewAvatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: '#6366f1',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
     overflow: 'hidden',
+    borderWidth: 3,
+    borderColor: '#f0f9ff',
   },
   previewAvatarImg: {
     width: 54,
@@ -479,15 +963,20 @@ const styles = StyleSheet.create({
   },
   previewButton: {
     backgroundColor: '#6366f1',
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    marginTop: 4,
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    marginTop: 6,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   previewButtonText: {
     color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
   },
   ctaRow: {
     flexDirection: 'row',
@@ -555,7 +1044,7 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    backgroundColor: '#f5f7fa',
+    backgroundColor: '#fafbff',
   },
   keyboardView: {
     flex: 1,
@@ -713,5 +1202,210 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9ca3af',
     textDecorationLine: 'underline',
+  },
+  // Estilos del formulario de servicio rápido
+  label: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 10,
+    marginTop: 20,
+  },
+  selectButton: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    borderRadius: 14,
+    padding: 18,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  selectButtonText: {
+    fontSize: 16,
+    color: '#94a3b8',
+  },
+  selectButtonTextSelected: {
+    fontSize: 16,
+    color: '#1e293b',
+    fontWeight: '600',
+  },
+  selectButtonArrow: {
+    fontSize: 14,
+    color: '#6366f1',
+    fontWeight: 'bold',
+  },
+  categoriesContainer: {
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    borderRadius: 14,
+    marginTop: 10,
+    maxHeight: 280,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  categorySearchInput: {
+    backgroundColor: '#f8fafc',
+    borderBottomWidth: 2,
+    borderBottomColor: '#e2e8f0',
+    padding: 14,
+    fontSize: 15,
+    color: '#1e293b',
+    fontWeight: '500',
+  },
+  categoriesList: {
+    maxHeight: 220,
+  },
+  categoryItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  categoryItemText: {
+    fontSize: 15,
+    color: '#475569',
+    fontWeight: '500',
+  },
+  textArea: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    borderRadius: 14,
+    padding: 18,
+    fontSize: 16,
+    minHeight: 130,
+    textAlignVertical: 'top',
+    color: '#1e293b',
+    lineHeight: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  charCount: {
+    fontSize: 13,
+    color: '#94a3b8',
+    marginTop: 8,
+    textAlign: 'right',
+    fontWeight: '500',
+  },
+  searchButton: {
+    backgroundColor: '#6366f1',
+    padding: 20,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginTop: 32,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 2,
+    borderColor: '#818cf8',
+  },
+  searchButtonDisabled: {
+    opacity: 0.5,
+  },
+  searchButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
+    maxHeight: '70%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalScroll: {
+    maxHeight: 400,
+  },
+  modalItem: {
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  modalItemText: {
+    fontSize: 15,
+    color: '#374151',
+  },
+  modalCloseButton: {
+    backgroundColor: '#6366f1',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  modalCloseButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 15,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 500,
+    marginVertical: 24,
+    paddingHorizontal: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e5e7eb',
+  },
+  dividerText: {
+    marginHorizontal: 12,
+    fontSize: 14,
+    color: '#9ca3af',
+    fontWeight: '600',
+  },
+  actionButton: {
+    backgroundColor: '#6366f1',
+    padding: 18,
+    borderRadius: 14,
+    alignItems: 'center',
+    marginBottom: 14,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  actionButtonOutline: {
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#6366f1',
+    shadowOpacity: 0.1,
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  actionButtonOutlineText: {
+    color: '#6366f1',
   },
 });

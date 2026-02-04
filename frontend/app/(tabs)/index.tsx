@@ -38,9 +38,14 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   
   // Tabs del home unificado - profesionales solo ven 'requests'
-  const [activeTab, setActiveTab] = useState<'professionals' | 'requests'>(
-    userProfile?.is_professional ? 'requests' : 'professionals'
-  );
+  const [activeTab, setActiveTab] = useState<'professionals' | 'requests'>('professionals');
+  
+  // Asegurar que profesionales siempre estén en tab de solicitudes
+  useEffect(() => {
+    if (userProfile?.is_professional) {
+      setActiveTab('requests');
+    }
+  }, [userProfile?.is_professional]);
   
   // Modal de publicar solicitud
   const [publishModalVisible, setPublishModalVisible] = useState(false);
@@ -135,6 +140,12 @@ export default function HomeScreen() {
 
   // --- FETCH DE DATOS OPTIMIZADO ---
   async function fetchProfessionals() {
+    // Si es profesional, no necesita cargar la lista de otros profesionales
+    if (userProfile?.is_professional) {
+      setLoading(false);
+      return;
+    }
+    
     try {
       // Ahora pedimos is_premium y subscription_end_date directamente de esta tabla
       const { data, error } = await supabase
@@ -359,9 +370,9 @@ export default function HomeScreen() {
         </View>
 
         {/* TABS UNIFICADOS: Profesionales vs Solicitudes */}
-        <View style={styles.tabsContainer}>
-          {/* Solo clientes ven el tab de Profesionales */}
-          {!userProfile?.is_professional && (
+        {/* Los profesionales no ven tabs, solo solicitudes directamente */}
+        {!userProfile?.is_professional && (
+          <View style={styles.tabsContainer}>
             <TouchableOpacity
               style={[styles.tab, activeTab === 'professionals' && styles.tabActive]}
               onPress={() => setActiveTab('professionals')}
@@ -370,20 +381,20 @@ export default function HomeScreen() {
                 👥 Profesionales
               </Text>
             </TouchableOpacity>
-          )}
-          {/* Todos ven el tab de Solicitudes */}
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'requests' && styles.tabActive]}
-            onPress={() => setActiveTab('requests')}
-          >
-            <Text style={[styles.tabText, activeTab === 'requests' && styles.tabTextActive]}>
-              📋 Solicitudes
-            </Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'requests' && styles.tabActive]}
+              onPress={() => setActiveTab('requests')}
+            >
+              <Text style={[styles.tabText, activeTab === 'requests' && styles.tabTextActive]}>
+                📋 Solicitudes
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* CONTENIDO SEGÚN TAB ACTIVO */}
-        {activeTab === 'requests' ? (
+        {/* Profesionales siempre ven solicitudes, clientes pueden cambiar entre tabs */}
+        {(userProfile?.is_professional || activeTab === 'requests') ? (
           <View style={styles.requestsContainer}>
             {!userProfile?.is_professional && (
               <TouchableOpacity

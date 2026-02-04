@@ -34,29 +34,18 @@ function RootLayoutNav() {
       isWorker,
       isClient,
       needsProfileCompletion,
-      emailVerified: userProfile?.email_verified,
       userProfile: userProfile ? { id: userProfile.id, is_professional: userProfile.is_professional, phone: userProfile.phone } : null,
     });
 
-    // No session -> go to welcome (flujo sin cuenta)
+    // No session -> go to login (página unificada)
     if (!session && !inAuthGroup) {
-      console.log('➡️ Redirecting to welcome (no session)');
-      router.replace('/auth/welcome' as any);
+      console.log('➡️ Redirecting to login (no session)');
+      router.replace('/auth/login' as any);
       return;
     }
 
-    // ✅ VERIFICACIÓN DE EMAIL ACTIVADA
-    // Has session but email not verified -> go to email confirmation (and stay there)
-    if (
-      session &&
-      userProfile &&
-      (userProfile.email_verified === false || userProfile.is_active === false) &&
-      !inEmailConfirmation
-    ) {
-      console.log('✉️ Email no verificado o cuenta inactiva, redirigiendo a confirmación');
-      router.replace({ pathname: '/auth/email-confirmation', params: { email: userProfile.email || session.user.email } } as any);
-      return;
-    }
+    // ✅ VERIFICACIÓN DE EMAIL DESACTIVADA - Auto-verificación en registro
+    // Los usuarios ya no necesitan verificar su email manualmente
 
     // Email verified, profile complete, in auth -> go to tabs
     if (session && !needsProfileCompletion && inAuthGroup && !inEmailConfirmation) {
@@ -77,7 +66,6 @@ function RootLayoutNav() {
     <View style={styles.appContainer}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="auth/welcome" />
         <Stack.Screen name="auth/login" />
         <Stack.Screen name="auth/register" />
         <Stack.Screen name="auth/email-confirmation" />

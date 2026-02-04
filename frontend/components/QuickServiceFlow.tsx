@@ -65,23 +65,30 @@ interface Professional {
 interface QuickServiceFlowProps {
   onComplete?: () => void;
   onSkip?: () => void;
+  initialData?: {
+    category?: string;
+    description?: string;
+    department?: string;
+    city?: string;
+    barrio?: string;
+  };
 }
 
-export default function QuickServiceFlow({ onComplete, onSkip }: QuickServiceFlowProps) {
-  // Step tracking
-  const [currentStep, setCurrentStep] = useState(1); // 1: describe, 2: timing, 3: professionals, 4: contact info, 5: confirmation
+export default function QuickServiceFlow({ onComplete, onSkip, initialData }: QuickServiceFlowProps) {
+  // Step tracking - Si hay datos iniciales, empezar en el paso 2 (timing)
+  const [currentStep, setCurrentStep] = useState(initialData?.category && initialData?.description ? 2 : 1);
   const { showToast } = useToast();
 
-  // Step 1: Description
-  const [category, setCategory] = useState('');
-  const [description, setDescription] = useState('');
+  // Step 1: Description - usar datos iniciales si existen
+  const [category, setCategory] = useState(initialData?.category || '');
+  const [description, setDescription] = useState(initialData?.description || '');
   const [showCategories, setShowCategories] = useState(false);
   const [categorySearch, setCategorySearch] = useState('');
 
-  // Ubicación (Uruguay)
-  const [department, setDepartment] = useState('');
-  const [city, setCity] = useState('');
-  const [barrio, setBarrio] = useState('');
+  // Ubicación (Uruguay) - usar datos iniciales si existen
+  const [department, setDepartment] = useState(initialData?.department || '');
+  const [city, setCity] = useState(initialData?.city || '');
+  const [barrio, setBarrio] = useState(initialData?.barrio || '');
   const [cityList, setCityList] = useState<{id:string, nombre:string}[]>([]);
   const [barrioList, setBarrioList] = useState<Barrio[]>([]);
   

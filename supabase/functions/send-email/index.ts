@@ -412,9 +412,6 @@ function getGuestContactClientTemplate(
   reviewToken?: string
 ) {
   const finalBaseUrl = baseUrl || Deno.env.get('FRONTEND_URL') || 'https://workinggo.com';
-  const reviewUrl = reviewToken 
-    ? `${finalBaseUrl.replace(/\/$/, '')}/review/${reviewToken}`
-    : null;
 
   return {
     subject: '📞 Datos de contacto del profesional - WorkingGo',
@@ -427,33 +424,32 @@ function getGuestContactClientTemplate(
           <tr><td align="center">
             <table width="600" cellpadding="0" cellspacing="0" style="background-color:#fff;border-radius:16px;box-shadow:0 4px 6px rgba(0,0,0,0.1);overflow:hidden;">
               <tr><td style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);padding:40px 30px;text-align:center;">
-                <h1 style="color:#fff;margin:0;font-size:32px;font-weight:700;">Contacto listo</h1>
+                <h1 style="color:#fff;margin:0;font-size:32px;font-weight:700;">✅ Profesional aceptado</h1>
               </td></tr>
               <tr><td style="padding:32px 28px;">
                 <h2 style="color:#0f172a;margin:0 0 16px 0;font-size:22px;font-weight:700;">Hola ${clientName}!</h2>
-                <p style="color:#334155;font-size:16px;line-height:1.6;margin:0 0 20px 0;">Te compartimos los datos del profesional para que coordines directamente.</p>
-                <div style="background-color:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:18px 16px;margin-bottom:18px;">
-                  <p style="color:#0f172a;font-size:15px;line-height:1.8;margin:0;"><strong>Profesional:</strong> ${professionalName}</p>
-                  <p style="color:#0f172a;font-size:15px;line-height:1.8;margin:0;"><strong>Teléfono:</strong> ${professionalPhone}</p>
-                  <p style="color:#0f172a;font-size:15px;line-height:1.8;margin:0;"><strong>Email:</strong> ${professionalEmail}</p>
+                <p style="color:#334155;font-size:16px;line-height:1.6;margin:0 0 20px 0;">
+                  ¡Buenas noticias! <strong style="color:#10b981;">${professionalName}</strong> ha aceptado tu solicitud. Te compartimos sus datos de contacto para que coordinen directamente.
+                </p>
+                <div style="background-color:#f0fdf4;border:2px solid #10b981;border-radius:12px;padding:20px 18px;margin-bottom:20px;">
+                  <p style="color:#0f172a;font-size:16px;line-height:1.8;margin:0 0 8px 0;"><strong>👤 Profesional:</strong> ${professionalName}</p>
+                  <p style="color:#0f172a;font-size:16px;line-height:1.8;margin:0 0 8px 0;"><strong>📞 Teléfono:</strong> ${professionalPhone}</p>
+                  <p style="color:#0f172a;font-size:16px;line-height:1.8;margin:0;"><strong>✉️ Email:</strong> ${professionalEmail}</p>
                 </div>
                 <div style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:18px 16px;margin-bottom:20px;">
-                  <p style="color:#0f172a;font-size:15px;line-height:1.6;margin:0 0 10px 0;"><strong>Tu solicitud</strong></p>
+                  <p style="color:#0f172a;font-size:15px;line-height:1.6;margin:0 0 10px 0;"><strong>📝 Tu solicitud</strong></p>
                   ${serviceCategory ? `<p style="color:#0f172a;font-size:15px;line-height:1.6;margin:0;"><strong>Categoría:</strong> ${serviceCategory}</p>` : ''}
                   ${serviceLocation ? `<p style="color:#0f172a;font-size:15px;line-height:1.6;margin:4px 0 0 0;"><strong>Ubicación:</strong> ${serviceLocation}</p>` : ''}
                   ${serviceDescription ? `<p style="color:#0f172a;font-size:15px;line-height:1.6;margin:12px 0 0 0;white-space:pre-line;">${serviceDescription}</p>` : ''}
                 </div>
-                ${reviewUrl ? `
-                <div style="background-color:#fef3c7;border:1px solid #fbbf24;border-radius:12px;padding:20px;margin-bottom:20px;">
-                  <p style="color:#78350f;font-size:14px;font-weight:600;margin:0 0 8px 0;">⭐ Importante</p>
-                  <p style="color:#78350f;font-size:14px;line-height:1.6;margin:0 0 14px 0;">Cuando el profesional termine el trabajo, usa el siguiente enlace para calificar el servicio:</p>
-                  <table width="100%" cellpadding="0" cellspacing="0">
-                    <tr><td align="center">
-                      <a href="${reviewUrl}" style="display:inline-block;background:#fbbf24;color:#78350f;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:600;box-shadow:0 2px 8px rgba(251,191,36,0.3);">Calificar servicio</a>
-                    </td></tr>
-                  </table>
-                </div>` : ''}
-                <p style="color:#64748b;font-size:14px;line-height:1.6;margin:22px 0 0 0;">Tip: envía un mensaje o llama al profesional para confirmar horarios y costo.</p>
+                <div style="background-color:#eff6ff;border:1px solid #3b82f6;border-radius:12px;padding:18px;margin-bottom:20px;">
+                  <p style="color:#1e40af;font-size:14px;font-weight:600;margin:0 0 8px 0;">💡 Próximos pasos:</p>
+                  <p style="color:#1e40af;font-size:14px;line-height:1.6;margin:0;">
+                    1. Contacta al profesional por teléfono o email<br>
+                    2. Confirma horarios, costo y detalles del trabajo<br>
+                    3. Una vez completado el trabajo, recibirás un email para calificar el servicio
+                  </p>
+                </div>
               </td></tr>
               <tr><td style="background-color:#f8fafc;padding:26px;text-align:center;border-top:1px solid #e2e8f0;">
                 <p style="color:#94a3b8;font-size:12px;margin:0;">© ${new Date().getFullYear()} WorkingGo. Todos los derechos reservados.</p>
