@@ -248,17 +248,31 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
     try {
       const job = jobs.find(j => j.id === jobId);
       
+      // Si es un invitado, marcar directamente como completado
+      // Si es un usuario registrado, pedir confirmación
+      const isGuest = !!job?.guest_client_email;
+      const newStatus = isGuest ? 'completed' : 'waiting_client_approval';
+      
       // Actualizar el hire
+      const updateData: any = {
+        status: newStatus,
+        completion_requested_at: new Date().toISOString()
+      };
+      
+      if (isGuest) {
+        updateData.completed_at = new Date().toISOString();
+      }
+      
       const { error: updateError } = await supabase
         .from('hires')
-        .update({ status: 'waiting_client_approval', completion_requested_at: new Date().toISOString() })
+        .update(updateData)
         .eq('id', jobId);
 
       if (updateError) throw updateError;
 
       // Verificar si es un invitado (tiene guest_client_email)
       if (job?.guest_client_email) {
-        // Es un invitado, enviar email en lugar de notificación
+        // Es un invitado, enviar email de trabajo completado
         const frontendUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
         const { error: emailError } = await supabase.functions.invoke('send-email', {
           body: {
@@ -271,6 +285,7 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
         if (emailError) {
           console.warn('Aviso: Email no enviado (pero trabajo se marcó como completado)', emailError);
         }
+        showToast('Trabajo completado exitosamente', 'success');
       } else if (job?.client_id) {
         // Es un usuario registrado, crear notificación
         const { error: notifError } = await supabase.from('notifications').insert({
@@ -287,9 +302,9 @@ export default function ProfessionalJobs({ professionalId }: ProfessionalJobsPro
         if (notifError) {
           console.warn('Aviso: Notificación no enviada (pero trabajo se marcó como completado)', notifError);
         }
+        showToast('Solicitud de finalización enviada', 'success');
       }
       
-      showToast('Solicitud de finalización enviada', 'success');
       // Re-fetch jobs después de un pequeño delay para asegurar que los datos estén actualizados
       await new Promise(resolve => setTimeout(resolve, 500));
       fetchJobs();

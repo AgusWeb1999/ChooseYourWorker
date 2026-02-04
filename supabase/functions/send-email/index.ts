@@ -352,7 +352,6 @@ function getGuestContactWorkerTemplate(
   serviceLocation?: string,
   baseUrl?: string
 ) {
-  const profileUrl = baseUrl ? `${baseUrl.replace(/\/$/, '')}/professional` : null;
   return {
     subject: '🆕 Nueva solicitud de invitado - WorkingGo',
     html: `
@@ -380,12 +379,6 @@ function getGuestContactWorkerTemplate(
                   ${serviceLocation ? `<p style="color:#0f172a;font-size:15px;line-height:1.6;margin:4px 0 0 0;"><strong>Ubicación:</strong> ${serviceLocation}</p>` : ''}
                   ${serviceDescription ? `<p style="color:#0f172a;font-size:15px;line-height:1.6;margin:12px 0 0 0;white-space:pre-line;">${serviceDescription}</p>` : ''}
                 </div>
-                ${profileUrl ? `
-                <table width="100%" cellpadding="0" cellspacing="0">
-                  <tr><td align="center" style="padding:24px 0 6px 0;">
-                    <a href="${profileUrl}" style="display:inline-block;background:linear-gradient(135deg,#0ea5e9 0%,#0284c7 100%);color:#fff;text-decoration:none;padding:14px 34px;border-radius:12px;font-size:15px;font-weight:600;box-shadow:0 4px 12px rgba(14,165,233,0.3);">Ver tu perfil</a>
-                  </td></tr>
-                </table>` : ''}
               </td></tr>
               <tr><td style="background-color:#f8fafc;padding:26px;text-align:center;border-top:1px solid #e2e8f0;">
                 <p style="color:#94a3b8;font-size:12px;margin:0;">© ${new Date().getFullYear()} WorkingGo. Todos los derechos reservados.</p>

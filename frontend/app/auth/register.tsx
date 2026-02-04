@@ -571,25 +571,53 @@ export default function RegisterScreen() {
           console.log('✅ Datos de usuario actualizados correctamente (email auto-verificado)');
         }
         
-        // ✅ REGISTRO EXITOSO - Redirigir directamente a la app
-        console.log('✅ Cuenta creada y verificada exitosamente, redirigiendo...');
+        // ✅ REGISTRO EXITOSO - Confirmar email y redirigir
+        console.log('✅ Cuenta creada y verificada exitosamente, confirmando email...');
         
-        // Mostrar mensaje de éxito
-        Alert.alert(
-          '¡Bienvenido! 🎉',
-          userType === 'worker' 
-            ? 'Tu cuenta profesional ha sido creada exitosamente. Ya puedes empezar a recibir solicitudes de clientes.'
-            : 'Tu cuenta ha sido creada exitosamente. Ya puedes buscar profesionales.',
-          [
-            { 
-              text: 'Continuar', 
-              onPress: () => {
-                // Refrescar sesión y redirigir a tabs
-                router.replace('/(tabs)' as any);
-              }
-            }
-          ]
-        );
+        // Confirmar email usando edge function (con service role)
+        const { error: confirmError } = await supabase.functions.invoke('confirm-email', {
+          body: { userId: userId }
+        });
+        
+        if (confirmError) {
+          console.error('⚠️ Error al confirmar email:', confirmError);
+          // Continuar de todas formas, el usuario puede verificar manualmente
+        } else {
+          console.log('✅ Email confirmado en Auth');
+        }
+        
+        // Hacer login automático para crear la sesión
+        console.log('🔐 Iniciando sesión automáticamente...');
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: password,
+        });
+        
+        if (signInError) {
+          console.error('❌ Error al iniciar sesión automáticamente:', signInError);
+          // Si falla el login automático, redirigir al login manual
+          Alert.alert(
+            'Cuenta creada',
+            'Tu cuenta fue creada exitosamente. Por favor inicia sesión.',
+            [{ text: 'OK', onPress: () => router.replace('/auth/login' as any) }]
+          );
+          return;
+        }
+        
+        console.log('✅ Sesión creada:', { hasSession: !!signInData?.session });
+        
+        // Redirigir a tabs
+        router.replace('/(tabs)' as any);
+        
+        // Mostrar mensaje de éxito después (en segundo plano)
+        setTimeout(() => {
+          Alert.alert(
+            '¡Bienvenido! 🎉',
+            userType === 'worker' 
+              ? 'Tu cuenta profesional ha sido creada exitosamente. Ya puedes empezar a recibir solicitudes de clientes.'
+              : 'Tu cuenta ha sido creada exitosamente. Ya puedes buscar profesionales.'
+          );
+        }, 1000);
         
         return;
       }

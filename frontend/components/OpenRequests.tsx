@@ -453,7 +453,7 @@ export default function OpenRequests({ onRefresh }: OpenRequestsProps) {
               <Text style={styles.modalTitle}>📝 Finalizar Solicitud</Text>
               
               {/* Pregunta 1: ¿Resolviste con la plataforma? */}
-              <Text style={styles.questionText}>¿Resolviste el servicio a través de Choose Your Worker?</Text>
+              <Text style={styles.questionText}>¿Resolviste el servicio a través de WorkinGO?</Text>
               <View style={styles.optionsRow}>
                 <TouchableOpacity
                   style={[styles.optionButton, resolvedWithPlatform === true && styles.optionButtonSelected]}

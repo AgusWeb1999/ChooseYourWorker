@@ -69,6 +69,10 @@ export default function GuestReviewPage() {
 
       if (data.reviewed_by_guest) {
         setError('Ya has dejado una reseña para este trabajo.');
+        // Redirigir al login después de 3 segundos
+        setTimeout(() => {
+          router.replace('/auth/login');
+        }, 3000);
         return;
       }
 
@@ -146,6 +150,11 @@ export default function GuestReviewPage() {
       }
 
       setSuccess(true);
+      
+      // Redirigir al login después de 3 segundos
+      setTimeout(() => {
+        router.replace('/auth/login');
+      }, 3000);
     } catch (err) {
       console.error('Error submitting review:', err);
       setError('No se pudo enviar la reseña. Por favor intenta de nuevo.');
@@ -187,6 +196,15 @@ export default function GuestReviewPage() {
         <Text style={styles.errorIcon}>❌</Text>
         <Text style={styles.errorTitle}>Enlace inválido</Text>
         <Text style={styles.errorMessage}>{error}</Text>
+        <Text style={styles.redirectText}>
+          Redirigiendo al login en unos segundos...
+        </Text>
+        <TouchableOpacity
+          style={styles.loginButton}
+          onPress={() => router.replace('/auth/login')}
+        >
+          <Text style={styles.loginButtonText}>Ir al login ahora</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -202,6 +220,15 @@ export default function GuestReviewPage() {
         <Text style={styles.successSubtext}>
           Las reseñas ayudan a otros usuarios a encontrar profesionales de confianza.
         </Text>
+        <Text style={styles.redirectText}>
+          Redirigiendo al login en unos segundos...
+        </Text>
+        <TouchableOpacity
+          style={styles.loginButton}
+          onPress={() => router.replace('/auth/login')}
+        >
+          <Text style={styles.loginButtonText}>Ir al login ahora</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -473,5 +500,24 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     textAlign: 'center',
     lineHeight: 18,
+  },
+  redirectText: {
+    fontSize: 14,
+    color: '#6366f1',
+    textAlign: 'center',
+    marginTop: 16,
+    fontWeight: '500',
+  },
+  loginButton: {
+    marginTop: 20,
+    backgroundColor: '#6366f1',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  loginButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

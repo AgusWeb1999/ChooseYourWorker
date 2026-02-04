@@ -22,6 +22,7 @@ function RootLayoutNav() {
 
     const inAuthGroup = (segments[0] as string) === 'auth';
     const inEmailConfirmation = segments.join('/').includes('auth/email-confirmation');
+    const inReviewPage = (segments[0] as string) === 'review';
     const isWorker = userProfile?.is_professional === true;
     const isClient = userProfile?.is_professional === false;
 
@@ -31,14 +32,15 @@ function RootLayoutNav() {
       segments: segments.join('/'),
       inAuthGroup,
       inEmailConfirmation,
+      inReviewPage,
       isWorker,
       isClient,
       needsProfileCompletion,
       userProfile: userProfile ? { id: userProfile.id, is_professional: userProfile.is_professional, phone: userProfile.phone } : null,
     });
 
-    // No session -> go to login (página unificada)
-    if (!session && !inAuthGroup) {
+    // No session -> go to login (página unificada), excepto en páginas públicas como review
+    if (!session && !inAuthGroup && !inReviewPage) {
       console.log('➡️ Redirecting to login (no session)');
       router.replace('/auth/login' as any);
       return;
