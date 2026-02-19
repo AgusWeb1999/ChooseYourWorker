@@ -532,11 +532,26 @@ export default function LoginScreen() {
               {/* Botón de búsqueda */}
               <TouchableOpacity 
                 style={[styles.searchButton, (!category || description.length < 20 || !department || !city) && styles.searchButtonDisabled]}
-                onPress={() => {
+                onPress={async () => {
                   if (!category || description.length < 20 || !department || !city) {
                     Alert.alert('Campos incompletos', 'Por favor completa todos los campos para continuar');
                     return;
                   }
+                  
+                  // Registrar evento de tracking (funciona para usuarios logueados y no logueados)
+                  try {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    await supabase.from('user_actions').insert({
+                      action_type: 'search_professionals_clicked',
+                      action_data: { category, city, department },
+                      source: 'login_page',
+                      user_id: user?.id || null // Incluye user_id solo si está autenticado
+                    });
+                  } catch (error) {
+                    // No bloqueamos la acción si falla el tracking
+                    console.log('Error tracking event:', error);
+                  }
+                  
                   // Activar el flujo sin cuenta con los datos pre-cargados
                   setShowQuickFlow(true);
                 }}

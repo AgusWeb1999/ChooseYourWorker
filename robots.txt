@@ -1,14 +1,33 @@
+# WorkingGo - Robots Configuration
+# Optimizado para SEO con páginas dinámicas por profesión
+
 User-agent: *
 Allow: /
 Allow: /index.html
+Allow: /servicios/
 Disallow: /admin/
 Disallow: /auth/
 Disallow: /*.json$
 Disallow: /*.sql$
+Disallow: /backend/
+Disallow: /_expo/
+Disallow: /seo-pages/
 Sitemap: https://working-go.com/sitemap.xml
 
+# Optimización para Google
 User-agent: Googlebot
 Allow: /
+Allow: /servicios/
+Crawl-delay: 0
 
+# Optimización para Bing
 User-agent: Bingbot
 Allow: /
+Allow: /servicios/
+Crawl-delay: 0
+
+# Robots sociales para mejorar Open Graph
+User-agent: facebookexternalhit
+User-agent: Twitterbot
+Allow: /
+Allow: /servicios/

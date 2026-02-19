@@ -6,7 +6,30 @@ Cuando haces cambios en el código y los subes a GitHub, **los cambios NO se ven
 
 Esto es porque GitHub Pages sirve archivos estáticos que se generan con una "build" (compilación). Si solo subes el código fuente sin reconstruir, la web seguirá mostrando la versión anterior.
 
-## 📋 Pasos para desplegar cambios a producción
+## ⭐ NUEVO: Despliegue con SEO Automático (RECOMENDADO)
+
+### Usa el script unificado que incluye optimización SEO:
+
+```bash
+./deploy-with-seo.sh
+```
+
+Este script hace todo automáticamente:
+1. ✅ Genera 1,250 páginas HTML optimizadas para SEO
+2. ✅ Actualiza el sitemap.xml
+3. ✅ Sincroniza con el repositorio
+4. ✅ Construye la aplicación web
+5. ✅ Despliega a GitHub Pages
+
+**Beneficios del SEO:**
+- 📈 Mejor posicionamiento en Google para búsquedas como "electricista montevideo"
+- 🎯 1,250 páginas optimizadas (50 profesiones × 24 ciudades + variantes)
+- 🔍 ~18,750 combinaciones de keywords cubiertas
+- 🚀 Redirección automática a la home después de indexar
+
+---
+
+## 📋 Método Manual (Sin SEO automático)
 
 ### Cada vez que hagas cambios y quieras que se vean en la web, ejecuta:
 
@@ -37,13 +60,73 @@ git push
 
 ### ⏱️ Tiempo de despliegue
 
-- La build tarda: **1-2 minutos**
-- GitHub Pages actualiza en: **2-5 minutos** después del push
-- **Total:** ~5-7 minutos desde que ejecutas los comandos hasta que se ve en la web
+- **Con SEO automático (./deploy-with-seo.sh):**
+  - Generación SEO: ~10 segundos
+  - Build de Expo: ~1-2 minutos
+  - GitHub Pages: ~2-5 minutos
+  - **Total:** ~3-7 minutos
+
+- **Sin SEO (método manual):**
+  - Build de Expo: ~1-2 minutos
+  - GitHub Pages: ~2-5 minutos
+  - **Total:** ~3-7 minutos
+
+## 🔍 SEO: Optimización para motores de búsqueda
+
+### ¿Qué páginas SEO se generan?
+
+Se crean automáticamente páginas para cada combinación de profesión + ciudad:
+- Ejemplo: `/electricista-a-domicilio-montevideo.html`
+- Ejemplo: `/plomero-a-domicilio-maldonado.html`
+- Y 1,248 páginas más...
+
+### Verificar páginas SEO después del despliegue:
+
+1. **Probar páginas individuales:**
+   - https://working-go.com/electricista-a-domicilio-montevideo.html
+   - https://working-go.com/plomero-a-domicilio-maldonado.html
+
+2. **Verificar sitemap:**
+   - https://working-go.com/sitemap.xml
+
+3. **Enviar a Google Search Console:**
+   - Ve a [Google Search Console](https://search.google.com/search-console)
+   - Sección "Sitemaps"
+   - Envía: `https://working-go.com/sitemap.xml`
+
+4. **Solicitar indexación prioritaria:**
+   - En Search Console, "Inspección de URL"
+   - Ingresa URLs importantes
+   - Click en "Solicitar indexación"
+
+### Regenerar páginas SEO manualmente:
+
+Si solo quieres actualizar las páginas SEO sin hacer un despliegue completo:
+
+```bash
+node build-seo.js
+git add -A
+git commit -m "seo: Actualizar páginas de optimización"
+git push
+```
+
+## 📚 Documentación adicional
+
+- **Guía completa de SEO:** Ver [SEO-README.md](SEO-README.md)
+- **Scripts disponibles:**
+  - `generate-seo-pages.js` - Genera páginas HTML para SEO
+  - `generate-sitemap.js` - Actualiza sitemap.xml
+  - `build-seo.js` - Proceso completo de optimización
+  - `deploy-with-seo.sh` - Despliegue unificado con SEO
 
 ## 🎯 Versión corta (un solo comando)
 
-Si estás en el directorio raíz del proyecto, puedes ejecutar todo de una vez:
+### Con SEO (recomendado):
+```bash
+./deploy-with-seo.sh
+```
+
+### Sin SEO (método anterior):
 
 ```bash
 cd frontend && npx expo export -p web && cd .. && cp -r frontend/dist/* . && git add -A && git commit -m "build: Actualizar web" && git push

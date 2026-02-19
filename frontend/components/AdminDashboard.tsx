@@ -28,6 +28,20 @@ interface DashboardStats {
   totalJobRequests: number;
 }
 
+interface TrackingStats {
+  totalActions: number;
+  searchClicks: number;
+  topCategories: Array<{ category: string; count: number }>;
+  topCities: Array<{ city: string; count: number }>;
+  recentActions: Array<{
+    id: string;
+    action_type: string;
+    action_data: any;
+    created_at: string;
+    source: string;
+  }>;
+}
+
 interface DailyStats {
   date: string;
   clients: number;
@@ -90,7 +104,14 @@ export default function AdminDashboard() {
   const [filterType, setFilterType] = useState<'all' | 'clients' | 'professionals'>('all');
   const [hireFilterStatus, setHireFilterStatus] = useState<'all' | 'pending' | 'accepted' | 'completed' | 'cancelled'>('all');
   const [chartPeriod, setChartPeriod] = useState<7 | 30 | 90>(30);
-  const [activeSection, setActiveSection] = useState<'stats' | 'clients' | 'professionals' | 'hires'>('stats');
+  const [activeSection, setActiveSection] = useState<'stats' | 'clients' | 'professionals' | 'hires' | 'tracking'>('stats');
+  const [trackingStats, setTrackingStats] = useState<TrackingStats>({
+    totalActions: 0,
+    searchClicks: 0,
+    topCategories: [],
+    topCities: [],
+    recentActions: [],
+  });
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
@@ -111,6 +132,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (isAdmin) {
       loadDashboardData();
+      loadTrackingStats();
     }
   }, [isAdmin, chartPeriod]);
 
@@ -350,6 +372,81 @@ export default function AdminDashboard() {
     }
   }
 
+  async function loadTrackingStats() {
+    try {
+      console.log('📊 Cargando estadísticas de tracking...');
+      
+      // Cargar todas las acciones
+      const { data: actions, error } = await supabase
+        .from('user_actions')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading tracking stats:', error);
+        return;
+      }
+
+      if (!actions) {
+        console.log('No hay acciones de tracking');
+        return;
+      }
+
+      console.log('✅ Total acciones cargadas:', actions.length);
+
+      // Contar clicks en "Buscar profesionales"
+      const searchClicks = actions.filter(a => a.action_type === 'search_professionals_clicked').length;
+
+      // Top categorías
+      const categoryCount: { [key: string]: number } = {};
+      actions.forEach(action => {
+        if (action.action_type === 'search_professionals_clicked' && action.action_data?.category) {
+          const cat = action.action_data.category;
+          categoryCount[cat] = (categoryCount[cat] || 0) + 1;
+        }
+      });
+
+      const topCategories = Object.entries(categoryCount)
+        .map(([category, count]) => ({ category, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+      // Top ciudades
+      const cityCount: { [key: string]: number } = {};
+      actions.forEach(action => {
+        if (action.action_type === 'search_professionals_clicked' && action.action_data?.city) {
+          const city = action.action_data.city;
+          cityCount[city] = (cityCount[city] || 0) + 1;
+        }
+      });
+
+      const topCities = Object.entries(cityCount)
+        .map(([city, count]) => ({ city, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+      // Últimas 20 acciones
+      const recentActions = actions.slice(0, 20);
+
+      setTrackingStats({
+        totalActions: actions.length,
+        searchClicks,
+        topCategories,
+        topCities,
+        recentActions,
+      });
+
+      console.log('📊 Tracking stats loaded:', {
+        totalActions: actions.length,
+        searchClicks,
+        topCategoriesCount: topCategories.length,
+        topCitiesCount: topCities.length,
+      });
+    } catch (error) {
+      console.error('❌ Error loading tracking stats:', error);
+    }
+  }
+
   function filterHires() {
     let filtered = hires;
 
@@ -571,6 +668,14 @@ export default function AdminDashboard() {
           >
             <Text style={[styles.tabButtonText, activeSection === 'hires' && styles.tabButtonTextActive]}>
               🤝 Contrataciones
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabButton, activeSection === 'tracking' && styles.tabButtonActive]}
+            onPress={() => setActiveSection('tracking')}
+          >
+            <Text style={[styles.tabButtonText, activeSection === 'tracking' && styles.tabButtonTextActive]}>
+              📊 Tracking
             </Text>
           </TouchableOpacity>
         </View>
@@ -1063,6 +1168,140 @@ export default function AdminDashboard() {
               </View>
             )}
           </View>
+        </View>
+        </>
+        )}
+
+        {/* Tracking Section */}
+        {activeSection === 'tracking' && (
+        <>
+        <View style={styles.trackingSection}>
+          <Text style={styles.sectionTitle}>📊 Tracking de Acciones</Text>
+          
+          {/* Stats Cards */}
+          <View style={styles.statsGrid}>
+            <View style={[styles.statCard, styles.statCardPurple]}>
+              <Text style={styles.statNumber}>{trackingStats.totalActions}</Text>
+              <Text style={styles.statLabel}>Total Acciones</Text>
+            </View>
+            <View style={[styles.statCard, styles.statCardBlue]}>
+              <Text style={styles.statNumber}>{trackingStats.searchClicks}</Text>
+              <Text style={styles.statLabel}>Búsquedas</Text>
+            </View>
+            <View style={[styles.statCard, styles.statCardGreen]}>
+              <Text style={styles.statNumber}>{trackingStats.topCategories.length}</Text>
+              <Text style={styles.statLabel}>Categorías Activas</Text>
+            </View>
+            <View style={[styles.statCard, styles.statCardYellow]}>
+              <Text style={styles.statNumber}>{trackingStats.topCities.length}</Text>
+              <Text style={styles.statLabel}>Ciudades</Text>
+            </View>
+          </View>
+
+          {/* Top Categories */}
+          {trackingStats.topCategories.length > 0 && (
+            <View style={styles.trackingCard}>
+              <Text style={styles.trackingCardTitle}>🏆 Categorías Más Buscadas</Text>
+              {trackingStats.topCategories.map((item, index) => (
+                <View key={item.category} style={styles.trackingItem}>
+                  <View style={styles.trackingItemLeft}>
+                    <Text style={styles.trackingRank}>#{index + 1}</Text>
+                    <Text style={styles.trackingLabel}>{item.category}</Text>
+                  </View>
+                  <View style={styles.trackingItemRight}>
+                    <Text style={styles.trackingCount}>{item.count}</Text>
+                    <View style={styles.trackingBar}>
+                      <View 
+                        style={[
+                          styles.trackingBarFill, 
+                          { 
+                            width: `${(item.count / trackingStats.topCategories[0].count) * 100}%`,
+                            backgroundColor: '#6366f1'
+                          }
+                        ]} 
+                      />
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Top Cities */}
+          {trackingStats.topCities.length > 0 && (
+            <View style={styles.trackingCard}>
+              <Text style={styles.trackingCardTitle}>📍 Ciudades Más Buscadas</Text>
+              {trackingStats.topCities.map((item, index) => (
+                <View key={item.city} style={styles.trackingItem}>
+                  <View style={styles.trackingItemLeft}>
+                    <Text style={styles.trackingRank}>#{index + 1}</Text>
+                    <Text style={styles.trackingLabel}>{item.city}</Text>
+                  </View>
+                  <View style={styles.trackingItemRight}>
+                    <Text style={styles.trackingCount}>{item.count}</Text>
+                    <View style={styles.trackingBar}>
+                      <View 
+                        style={[
+                          styles.trackingBarFill, 
+                          { 
+                            width: `${(item.count / trackingStats.topCities[0].count) * 100}%`,
+                            backgroundColor: '#10b981'
+                          }
+                        ]} 
+                      />
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Recent Actions */}
+          {trackingStats.recentActions.length > 0 && (
+            <View style={styles.trackingCard}>
+              <Text style={styles.trackingCardTitle}>🕒 Últimas Acciones</Text>
+              {trackingStats.recentActions.map((action) => (
+                <View key={action.id} style={styles.actionItem}>
+                  <View style={styles.actionHeader}>
+                    <Text style={styles.actionType}>
+                      {action.action_type === 'search_professionals_clicked' ? '🔍 Búsqueda de profesional' : action.action_type}
+                    </Text>
+                    <Text style={styles.actionDate}>
+                      {new Date(action.created_at).toLocaleDateString('es-ES', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </Text>
+                  </View>
+                  {action.action_data && (
+                    <View style={styles.actionData}>
+                      {action.action_data.category && (
+                        <Text style={styles.actionDataText}>📂 {action.action_data.category}</Text>
+                      )}
+                      {action.action_data.city && (
+                        <Text style={styles.actionDataText}>📍 {action.action_data.city}</Text>
+                      )}
+                      {action.action_data.department && (
+                        <Text style={styles.actionDataText}>🗺️ {action.action_data.department}</Text>
+                      )}
+                    </View>
+                  )}
+                  <Text style={styles.actionSource}>Origen: {action.source || 'N/A'}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {trackingStats.totalActions === 0 && (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No hay datos de tracking aún</Text>
+              <Text style={styles.emptySubtext}>
+                Las acciones de los usuarios aparecerán aquí cuando interactúen con la aplicación
+              </Text>
+            </View>
+          )}
         </View>
         </>
         )}
@@ -1842,5 +2081,121 @@ const styles = StyleSheet.create({
   },
   tabButtonTextActive: {
     color: '#fff',
+  },
+  // Tracking Section Styles
+  trackingSection: {
+    padding: 16,
+  },
+  trackingCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  trackingCardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 20,
+  },
+  trackingItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  trackingItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  trackingRank: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#6366f1',
+    marginRight: 12,
+    minWidth: 30,
+  },
+  trackingLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#334155',
+    flex: 1,
+  },
+  trackingItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  trackingCount: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1e293b',
+    minWidth: 40,
+    textAlign: 'right',
+  },
+  trackingBar: {
+    width: 100,
+    height: 8,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  trackingBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  actionItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  actionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  actionType: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1e293b',
+    flex: 1,
+  },
+  actionDate: {
+    fontSize: 13,
+    color: '#64748b',
+  },
+  actionData: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 8,
+  },
+  actionDataText: {
+    fontSize: 13,
+    color: '#475569',
+    backgroundColor: '#f8fafc',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  actionSource: {
+    fontSize: 12,
+    color: '#94a3b8',
+    fontStyle: 'italic',
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#94a3b8',
+    textAlign: 'center',
+    marginTop: 8,
   },
 });
