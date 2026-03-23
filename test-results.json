@@ -1,0 +1,68 @@
+{
+  "timestamp": "2026-03-23T16:47:33.270169",
+  "total_tests": 6,
+  "passed_tests": 4,
+  "failed_tests": 2,
+  "warnings": 0,
+  "test_results": [
+    {
+      "test": "XML Sitemap Validity",
+      "status": "PASS",
+      "message": "Valid XML with 12 URLs"
+    },
+    {
+      "test": "Required Files Exist",
+      "status": "PASS",
+      "message": "All 10 required files exist"
+    },
+    {
+      "test": "Landing SEO Quality",
+      "status": "FAIL",
+      "message": "2/6 landings pass SEO quality checks"
+    },
+    {
+      "subtest": "albaniles-obreros-uruguay.html",
+      "status": "WARNING",
+      "issues": [
+        "Word count too low (1143/1500)"
+      ]
+    },
+    {
+      "subtest": "obreros-construccion-uruguay.html",
+      "status": "WARNING",
+      "issues": [
+        "Word count too low (1073/1500)"
+      ]
+    },
+    {
+      "subtest": "mantenimiento-edificios-administradoras.html",
+      "status": "WARNING",
+      "issues": [
+        "Word count too low (1051/1500)",
+        "Missing FAQ section"
+      ]
+    },
+    {
+      "subtest": "servicios-construccion-uruguay.html",
+      "status": "WARNING",
+      "issues": [
+        "Word count too low (1244/1500)"
+      ]
+    },
+    {
+      "test": "Internal Linking",
+      "status": "FAIL",
+      "message": "Landings without internal links: sanitarios-uruguay.html, plomeros-sanitarios-uruguay.html, albaniles-obreros-uruguay.html, obreros-construccion-uruguay.html, mantenimiento-edificios-administradoras.html, servicios-construccion-uruguay.html"
+    },
+    {
+      "test": "Robots.txt Configuration",
+      "status": "PASS",
+      "message": "robots.txt is properly configured"
+    },
+    {
+      "test": "File Size Optimization",
+      "status": "PASS",
+      "message": "All landing files are optimally sized"
+    }
+  ]
+}
